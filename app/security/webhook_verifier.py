@@ -3,7 +3,7 @@ import base64
 import hashlib
 import hmac
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Callable, Optional
 
 
 class WebhookVerifier(ABC):
@@ -37,7 +37,7 @@ class TelegramWebhookVerifier(WebhookVerifier):
         return hmac.compare_digest(expected, signature)
 
 
-VERIFIERS: dict[str, type[WebhookVerifier]] = {
+VERIFIERS: dict[str, Callable[[str], WebhookVerifier]] = {
     "line": LineWebhookVerifier,
     "telegram": TelegramWebhookVerifier,
 }

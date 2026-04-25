@@ -1,5 +1,6 @@
 """SQLAlchemy models and database schema"""
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
     Boolean,
@@ -13,10 +14,11 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import DeclarativeBase, relationship
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
 class User(Base):
@@ -28,7 +30,7 @@ class User(Base):
     platform = Column(String(20), nullable=False)
     platform_user_id = Column(String(100), nullable=False)
     profile = Column(JSONB)
-    preference_tags = Column(ARRAY(Text))
+    preference_tags: Any = Column(ARRAY(Text))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -84,7 +86,7 @@ class KnowledgeBase(Base):
     category = Column(String(50), nullable=False)
     question = Column(Text, nullable=False)
     answer = Column(Text, nullable=False)
-    keywords = Column(ARRAY(Text))
+    keywords: Any = Column(ARRAY(Text))  # type: ignore
     embeddings = Column(JSONB)  # vector(384) - Phase 2 with pgvector
     embedding_model = Column(String(100), default='paraphrase-multilingual-MiniLM-L12-v2')
     version = Column(Integer, default=1)

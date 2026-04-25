@@ -29,7 +29,7 @@ class TokenBucket:
 class RateLimiter:
     """Per-platform per-user rate limiter"""
     def __init__(self, default_rps: int = 100):
-        self._buckets = {}
+        self._buckets: dict[str, TokenBucket] = {}
         self._default_rps = default_rps
 
     def check(self, platform: str, user_id: str) -> bool:

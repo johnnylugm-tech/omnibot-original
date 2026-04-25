@@ -19,6 +19,14 @@ pii_masking = PIIMasking()
 rate_limiter = RateLimiter()
 logger = StructuredLogger("omnibot")
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error("unhandled_error", error=str(exc))
+    return JSONResponse(
+        status_code=500,
+        content={"success": False, "error": "Internal server error"}
+    )
+
 
 def verify_signature(platform: str, body: bytes, signature: str, secret: str) -> bool:
     """Verify webhook signature"""
