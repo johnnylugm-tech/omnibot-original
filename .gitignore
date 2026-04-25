@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coveragerc
+htmlcov/
+
+# Quality Framework Artifacts
+round_*/
+*.json
+!requirements.txt # 除非有特別用途，否則保留 txt
+issue_registry.json
+
+# OS files
+.DS_Store
+Thumbs.db
