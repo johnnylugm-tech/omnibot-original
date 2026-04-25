@@ -1,5 +1,4 @@
 """Basic escalation manager - Phase 1 (no SLA)"""
-from typing import Optional
 from app.models import EscalationRequest
 
 

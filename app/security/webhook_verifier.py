@@ -1,7 +1,7 @@
 """Security layer for OmniBot Phase 1 - Webhook verification"""
-import hmac
-import hashlib
 import base64
+import hashlib
+import hmac
 from abc import ABC, abstractmethod
 from typing import Optional
 

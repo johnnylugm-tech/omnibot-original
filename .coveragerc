@@ -1,0 +1,7 @@
+[run]
+source = app
+
+[report]
+omit =
+    */site-packages/*
+    tests/*

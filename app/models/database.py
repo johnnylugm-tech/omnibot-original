@@ -1,12 +1,20 @@
 """SQLAlchemy models and database schema"""
+from datetime import datetime
+
 from sqlalchemy import (
-    Column, Integer, String, Boolean, Float, DateTime, Text, ForeignKey,
-    UniqueConstraint, Index, CheckConstraint
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from datetime import datetime
 
 Base = declarative_base()
 

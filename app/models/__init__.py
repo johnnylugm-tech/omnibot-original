@@ -2,7 +2,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Optional, List, TypeVar, Generic
+from typing import Generic, List, Optional, TypeVar
 
 T = TypeVar("T")
 
