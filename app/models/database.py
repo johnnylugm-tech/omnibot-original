@@ -82,7 +82,7 @@ class Message(Base):
     intent_detected = Column(String(50))
     sentiment_category = Column(String(20))
     sentiment_intensity = Column(Float)
-    confidence_score = Column(Float)
+    confidence = Column(Float)
     knowledge_source = Column(String(20))
     user_feedback = Column(String(20))
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -275,6 +275,18 @@ class RetryLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class EncryptionConfig(Base):
+    """Configuration for TDE and encryption keys (Phase 3)"""
+    __tablename__ = "encryption_config"
+
+    id = Column(Integer, primary_key=True)
+    key_id = Column(String(100), nullable=False, unique=True)
+    algorithm = Column(String(50), default="AES-256-GCM")
+    is_active = Column(Boolean, default=True)
+    rotated_at = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 # SQL Schema (for direct execution without ORM)
 SCHEMA_SQL = """
 -- Users table (cross-platform)
@@ -463,6 +475,16 @@ CREATE TABLE IF NOT EXISTS retry_log (
     delay_seconds FLOAT,
     error_message TEXT,
     status VARCHAR(20) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Encryption Config
+CREATE TABLE IF NOT EXISTS encryption_config (
+    id SERIAL PRIMARY KEY,
+    key_id VARCHAR(100) UNIQUE NOT NULL,
+    algorithm VARCHAR(50) DEFAULT 'AES-256-GCM',
+    is_active BOOLEAN DEFAULT TRUE,
+    rotated_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 """

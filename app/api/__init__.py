@@ -284,6 +284,7 @@ async def line_webhook(
                 conversation_id=conv.id,
                 role="assistant",
                 content=result.content,
+                confidence=result.confidence,
                 knowledge_source=result.source
             ))
             
