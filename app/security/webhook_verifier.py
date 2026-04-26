@@ -37,9 +37,37 @@ class TelegramWebhookVerifier(WebhookVerifier):
         return hmac.compare_digest(expected, signature)
 
 
+class MessengerWebhookVerifier(WebhookVerifier):
+    """Facebook Messenger Webhook signature verifier"""
+    def __init__(self, app_secret: str):
+        self.app_secret = app_secret.encode("utf-8")
+
+    def verify(self, body: bytes, signature: str) -> bool:
+        # Messenger uses sha1 (historical)
+        expected = "sha1=" + hmac.new(
+            self.app_secret, body, hashlib.sha1
+        ).hexdigest()
+        return hmac.compare_digest(expected, signature)
+
+
+class WhatsAppWebhookVerifier(WebhookVerifier):
+    """WhatsApp Business API signature verifier"""
+    def __init__(self, app_secret: str):
+        self.app_secret = app_secret.encode("utf-8")
+
+    def verify(self, body: bytes, signature: str) -> bool:
+        # WhatsApp uses sha256
+        expected = "sha256=" + hmac.new(
+            self.app_secret, body, hashlib.sha256
+        ).hexdigest()
+        return hmac.compare_digest(expected, signature)
+
+
 VERIFIERS: dict[str, Callable[[str], WebhookVerifier]] = {
     "line": LineWebhookVerifier,
     "telegram": TelegramWebhookVerifier,
+    "messenger": MessengerWebhookVerifier,
+    "whatsapp": WhatsAppWebhookVerifier,
 }
 
 

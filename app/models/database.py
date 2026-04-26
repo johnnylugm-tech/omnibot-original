@@ -162,6 +162,40 @@ class SecurityLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class EmotionHistory(Base):
+    """Historical emotion scores for decay calculation (Phase 2)"""
+    __tablename__ = "emotion_history"
+
+    id = Column(Integer, primary_key=True)
+    conversation_id = Column(Integer, ForeignKey('conversations.id'), nullable=False)
+    category = Column(String(20), nullable=False)
+    intensity = Column(Float, nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+
+class EdgeCase(Base):
+    """Tracking for grounding failures and unusual inputs (Phase 2)"""
+    __tablename__ = "edge_cases"
+
+    id = Column(Integer, primary_key=True)
+    conversation_id = Column(Integer, ForeignKey('conversations.id'))
+    message_id = Column(Integer, ForeignKey('messages.id'))
+    case_type = Column(String(50), nullable=False)  # grounding_fail | unusual_input
+    raw_content = Column(Text)
+    llm_output = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SchemaMigration(Base):
+    """Tracking schema versions (Phase 3)"""
+    __tablename__ = "schema_migrations"
+
+    version = Column(String(20), primary_key=True)
+    description = Column(Text, nullable=False)
+    applied_at = Column(DateTime, default=datetime.utcnow)
+    checksum = Column(String(64), nullable=False)
+
+
 class Role(Base):
     """RBAC Role definitions"""
     __tablename__ = "roles"

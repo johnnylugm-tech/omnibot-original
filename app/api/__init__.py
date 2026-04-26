@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import (
     UnifiedResponse,
 )
-from app.models.database import Message, User, get_db
+from app.models.database import Conversation, Message, User, get_db
 from app.security import (
     InputSanitizer,
     PIIMasking,
@@ -22,7 +22,7 @@ from app.security import (
     rbac,
 )
 from app.services.dst import DSTManager
-from app.services.emotion import EmotionScore, EmotionTracker
+from app.services.emotion import EmotionCategory, EmotionScore, EmotionTracker
 from app.services.knowledge import HybridKnowledgeV7
 from app.utils.logger import StructuredLogger
 
@@ -63,6 +63,27 @@ async def get_or_create_user(db: AsyncSession, platform: str, platform_user_id: 
         await db.commit()
         await db.refresh(user)
     return user
+
+
+async def get_active_conversation(db: AsyncSession, user: User) -> Conversation:
+    """Helper to get or create an active conversation for a user"""
+    stmt = select(Conversation).where(
+        Conversation.unified_user_id == user.unified_user_id,
+        Conversation.status == "active"
+    ).order_by(Conversation.started_at.desc())
+    result = await db.execute(stmt)
+    conv = result.scalar_one_or_none()
+    
+    if not conv:
+        conv = Conversation(
+            unified_user_id=user.unified_user_id,
+            platform=user.platform,
+            status="active"
+        )
+        db.add(conv)
+        await db.commit()
+        await db.refresh(conv)
+    return conv
 
 
 def verify_signature(platform: str, body: bytes, signature: str, secret: str) -> bool:
@@ -125,8 +146,9 @@ async def telegram_webhook(
     platform_user_id = str(message_data.get("from", {}).get("id", ""))
     text_content = message_data.get("text", "")
 
-    # Get user
-    await get_or_create_user(db, "telegram", platform_user_id)
+    # Get user and active conversation (Problem 5 fix)
+    user = await get_or_create_user(db, "telegram", platform_user_id)
+    conv = await get_active_conversation(db, user)
 
     # Sanitize input
     text_content = sanitizer.sanitize(text_content)
@@ -144,21 +166,50 @@ async def telegram_webhook(
     mask_result = pii_masking.mask(text_content)
     processed_text = mask_result.masked_text
     
-    # Save user message
-    db.add(Message(role="user", content=processed_text))
+    # DST: Process Turn (Problem 2 fix)
+    intent = "inquiry" if any(k in text_content for k in ["詢問", "查詢", "什麼"]) else None
+    slots = {"content": text_content}
+    state = dst_manager.process_turn(conv.id, intent, slots)
+    
+    # Save user message (Fixed: link to conversation_id)
+    user_msg = Message(
+        conversation_id=conv.id,
+        role="user",
+        content=processed_text,
+        intent_detected=state.primary_intent
+    )
+    db.add(user_msg)
 
-    if pii_masking.should_escalate(text_content):
+    # Emotion Tracking (Problem 2 fix)
+    sentiment = "negative" if any(k in text_content for k in ["生氣", "爛", "慢"]) else "neutral"
+    emotion_tracker = EmotionTracker()
+    emotion_tracker.add(EmotionScore(
+        category=EmotionCategory.NEGATIVE if sentiment == "negative" else EmotionCategory.NEUTRAL,
+        intensity=0.8
+    ))
+
+    if pii_masking.should_escalate(text_content) or emotion_tracker.should_escalate():
         response_content = "正在為您轉接人工客服"
         knowledge_source = "escalate"
     else:
         # Query Hybrid Knowledge Layer
         knowledge_layer = HybridKnowledgeV7(db)
-        result = await knowledge_layer.query(text_content)
+        result = await knowledge_layer.query(text_content, user_context={"state": state.current_state.value})
         response_content = result.content
         knowledge_source = result.source
 
-    # Save assistant message
-    db.add(Message(role="assistant", content=response_content, knowledge_source=knowledge_source))
+    # Save assistant message (Fixed: link to conversation_id)
+    assistant_msg = Message(
+        conversation_id=conv.id,
+        role="assistant",
+        content=response_content,
+        knowledge_source=knowledge_source
+    )
+    db.add(assistant_msg)
+    
+    # Update conversation state (Problem 5 fix)
+    conv.dst_state = {"current": state.current_state.value, "turn": state.turn_count}
+    
     await db.commit()
 
     logger.info("telegram_message", user_id=platform_user_id, source=knowledge_source)
@@ -194,7 +245,10 @@ async def line_webhook(
             platform_user_id = event.get("source", {}).get("userId", "")
             text_content = event.get("message", {}).get("text", "")
             
-            await get_or_create_user(db, "line", platform_user_id)
+            # Get user and active conversation (Problem 5 fix)
+            user = await get_or_create_user(db, "line", platform_user_id)
+            conv = await get_active_conversation(db, user)
+            
             text_content = sanitizer.sanitize(text_content)
             
             # Security checks
@@ -206,13 +260,55 @@ async def line_webhook(
             mask_result = pii_masking.mask(text_content)
             processed_text = mask_result.masked_text
 
-            db.add(Message(role="user", content=processed_text))
-            result = await knowledge_layer.query(text_content)
-            db.add(Message(role="assistant", content=result.content, knowledge_source=result.source))
+            # DST: Process Turn (Problem 2 fix)
+            intent = "inquiry" if any(k in text_content for k in ["詢問", "查詢", "什麼"]) else None
+            state = dst_manager.process_turn(conv.id, intent, {"content": text_content})
+
+            # Save user message (Fixed: link to conversation_id)
+            db.add(Message(
+                conversation_id=conv.id,
+                role="user",
+                content=processed_text,
+                intent_detected=state.primary_intent
+            ))
+            
+            # Query Hybrid Knowledge Layer
+            result = await knowledge_layer.query(text_content, user_context={"state": state.current_state.value})
+            
+            # Save assistant message (Fixed: link to conversation_id)
+            db.add(Message(
+                conversation_id=conv.id,
+                role="assistant",
+                content=result.content,
+                knowledge_source=result.source
+            ))
+            
+            # Update conversation state (Problem 5 fix)
+            conv.dst_state = {"current": state.current_state.value, "turn": state.turn_count}
             responses.append(result.content)
 
     await db.commit()
     return {"success": True, "data": {"responses": responses}}
+
+
+@app.post("/api/v1/webhook/messenger")
+async def messenger_webhook(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    x_hub_signature: Optional[str] = Header(None)
+):
+    """Messenger webhook placeholder (Phase 2)"""
+    return {"success": True, "message": "Messenger event received"}
+
+
+@app.post("/api/v1/webhook/whatsapp")
+async def whatsapp_webhook(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    x_hub_signature_256: Optional[str] = Header(None)
+):
+    """WhatsApp webhook placeholder (Phase 2)"""
+    return {"success": True, "message": "WhatsApp event received"}
 
 
 @app.get("/api/v1/knowledge")
