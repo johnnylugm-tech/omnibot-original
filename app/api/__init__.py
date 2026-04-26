@@ -1,4 +1,4 @@
-"""API endpoints - Phase 1"""
+"""API endpoints - Phase 3"""
 import os
 import time
 from typing import Optional
@@ -6,7 +6,7 @@ from typing import Optional
 import redis.asyncio as aioredis
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
-from sqlalchemy import text
+from sqlalchemy import text, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
@@ -19,6 +19,7 @@ from app.security import (
     PromptInjectionDefense,
     RateLimiter,
     get_verifier,
+    rbac,
 )
 from app.services.dst import DSTManager
 from app.services.emotion import EmotionScore, EmotionTracker
@@ -52,7 +53,6 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 async def get_or_create_user(db: AsyncSession, platform: str, platform_user_id: str) -> User:
     """Helper to get or create a user across platforms"""
-    from sqlalchemy import select
     stmt = select(User).where(User.platform == platform, User.platform_user_id == platform_user_id)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
@@ -88,7 +88,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
     try:
         redis_client = await aioredis.from_url(REDIS_URL)
         await redis_client.ping()
-        await redis_client.close()
+        await redis_client.aclose()
         redis_ok = True
     except Exception as e:
         logger.error("health_check_redis_failed", error=str(e))
@@ -115,11 +115,10 @@ async def telegram_webhook(
     if not rate_limiter.check("telegram", "user"):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
-    # Signature verification (Phase 1 requirement)
+    # Signature verification
     if x_telegram_bot_api_secret and TELEGRAM_BOT_TOKEN:
         if not verify_signature("telegram", body, x_telegram_bot_api_secret, TELEGRAM_BOT_TOKEN):
             logger.warn("telegram_invalid_signature")
-            # raise HTTPException(status_code=401, detail="Invalid signature")
 
     data = await request.json()
     message_data = data.get("message", {})
@@ -127,7 +126,7 @@ async def telegram_webhook(
     text_content = message_data.get("text", "")
 
     # Get user
-    user = await get_or_create_user(db, "telegram", platform_user_id)
+    await get_or_create_user(db, "telegram", platform_user_id)
 
     # Sanitize input
     text_content = sanitizer.sanitize(text_content)
@@ -141,32 +140,28 @@ async def telegram_webhook(
             status_code=400
         )
 
-    # PII masking (Fixed: use returned masked text)
+    # PII masking
     mask_result = pii_masking.mask(text_content)
     processed_text = mask_result.masked_text
-
+    
     # Save user message
-    user_msg = Message(role="user", content=processed_text)
-    db.add(user_msg)
+    db.add(Message(role="user", content=processed_text))
 
     if pii_masking.should_escalate(text_content):
         response_content = "正在為您轉接人工客服"
         knowledge_source = "escalate"
     else:
-        # Query Hybrid Knowledge Layer (Phase 2: RAG + LLM)
+        # Query Hybrid Knowledge Layer
         knowledge_layer = HybridKnowledgeV7(db)
         result = await knowledge_layer.query(text_content)
         response_content = result.content
         knowledge_source = result.source
 
     # Save assistant message
-    assistant_msg = Message(role="assistant", content=response_content, knowledge_source=knowledge_source)
-    db.add(assistant_msg)
+    db.add(Message(role="assistant", content=response_content, knowledge_source=knowledge_source))
     await db.commit()
 
-
     logger.info("telegram_message", user_id=platform_user_id, source=knowledge_source)
-
     return {"success": True, "data": {"response": response_content}}
 
 
@@ -199,28 +194,20 @@ async def line_webhook(
             platform_user_id = event.get("source", {}).get("userId", "")
             text_content = event.get("message", {}).get("text", "")
             
-            # Get user
             await get_or_create_user(db, "line", platform_user_id)
-
             text_content = sanitizer.sanitize(text_content)
             
-            # Security checks (Phase 2)
+            # Security checks
             security_check = prompt_defense.check_input(text_content)
             if not security_check.is_safe:
                 responses.append("Security violation detected")
                 continue
 
-            # PII masking (Fixed)
             mask_result = pii_masking.mask(text_content)
             processed_text = mask_result.masked_text
 
-            # Save user message
             db.add(Message(role="user", content=processed_text))
-
-            # Query actual knowledge (Phase 2: Hybrid)
             result = await knowledge_layer.query(text_content)
-            
-            # Save assistant message
             db.add(Message(role="assistant", content=result.content, knowledge_source=result.source))
             responses.append(result.content)
 
@@ -240,25 +227,29 @@ async def query_knowledge(
 
 
 @app.post("/api/v1/knowledge")
-async def create_knowledge(item: dict):
+@rbac.require("knowledge", "write")
+async def create_knowledge(request: Request, item: dict):
     """Create knowledge entry"""
     return {"success": True, "data": {"id": 1}}
 
 
 @app.put("/api/v1/knowledge/{id}")
-async def update_knowledge(id: int, item: dict):
+@rbac.require("knowledge", "write")
+async def update_knowledge(request: Request, id: int, item: dict):
     """Update knowledge entry"""
     return {"success": True, "data": {"id": id}}
 
 
 @app.delete("/api/v1/knowledge/{id}")
-async def delete_knowledge(id: int):
+@rbac.require("knowledge", "delete")
+async def delete_knowledge(request: Request, id: int):
     """Delete knowledge entry"""
     return {"success": True, "data": {"deleted": True}}
 
 
 @app.post("/api/v1/knowledge/bulk")
-async def bulk_import(items: list):
+@rbac.require("knowledge", "write")
+async def bulk_import(request: Request, items: list):
     """Bulk import knowledge"""
     return {"success": True, "data": {"imported": len(items)}}
 

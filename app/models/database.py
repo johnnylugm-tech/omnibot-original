@@ -162,6 +162,85 @@ class SecurityLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class Role(Base):
+    """RBAC Role definitions"""
+    __tablename__ = "roles"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(50), unique=True, nullable=False)
+    description = Column(Text)
+    permissions = Column(JSONB, nullable=False)  # Map of resource -> actions
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class RoleAssignment(Base):
+    """User-to-Role assignments"""
+    __tablename__ = "role_assignments"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.unified_user_id'))
+    role_id = Column(Integer, ForeignKey('roles.id'))
+    assigned_at = Column(DateTime, default=datetime.utcnow)
+    assigned_by = Column(UUID(as_uuid=True), ForeignKey('users.unified_user_id'))
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'role_id', name='uq_user_role'),
+    )
+
+
+class PIIAuditLog(Base):
+    """Audit logs for PII masking actions"""
+    __tablename__ = "pii_audit_log"
+
+    id = Column(Integer, primary_key=True)
+    conversation_id = Column(Integer, ForeignKey('conversations.id'))
+    mask_count = Column(Integer, nullable=False)
+    pii_types = Column(ARRAY(Text))
+    action = Column(String(20), nullable=False)
+    performed_by = Column(UUID(as_uuid=True), ForeignKey('users.unified_user_id'))
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Experiment(Base):
+    """A/B Testing experiments"""
+    __tablename__ = "experiments"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    description = Column(Text)
+    variants = Column(JSONB, nullable=False)  # Variant config
+    traffic_split = Column(JSONB, nullable=False)  # Split percentages
+    status = Column(String(20), default='draft')  # draft | running | completed | aborted
+    started_at = Column(DateTime)
+    ended_at = Column(DateTime)
+
+
+class ExperimentResult(Base):
+    """A/B Testing results"""
+    __tablename__ = "experiment_results"
+
+    id = Column(Integer, primary_key=True)
+    experiment_id = Column(Integer, ForeignKey('experiments.id'))
+    variant = Column(String(50), nullable=False)
+    metric_name = Column(String(50), nullable=False)
+    metric_value = Column(Float, nullable=False)
+    sample_size = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class RetryLog(Base):
+    """Log of retried operations"""
+    __tablename__ = "retry_log"
+
+    id = Column(Integer, primary_key=True)
+    operation = Column(String(100), nullable=False)
+    attempt_count = Column(Integer, nullable=False)
+    delay_seconds = Column(Float)
+    error_message = Column(Text)
+    status = Column(String(20), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 # SQL Schema (for direct execution without ORM)
 SCHEMA_SQL = """
 -- Users table (cross-platform)
@@ -285,4 +364,71 @@ CREATE TABLE IF NOT EXISTS security_logs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_security_logs_date ON security_logs (created_at);
+
+-- RBAC Roles
+CREATE TABLE IF NOT EXISTS roles (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT,
+    permissions JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Role Assignments
+CREATE TABLE IF NOT EXISTS role_assignments (
+    id SERIAL PRIMARY KEY,
+    user_id UUID REFERENCES users(unified_user_id),
+    role_id INTEGER REFERENCES roles(id),
+    assigned_at TIMESTAMPTZ DEFAULT NOW(),
+    assigned_by UUID REFERENCES users(unified_user_id),
+    UNIQUE(user_id, role_id)
+);
+
+-- PII Audit Log
+CREATE TABLE IF NOT EXISTS pii_audit_log (
+    id SERIAL PRIMARY KEY,
+    conversation_id INTEGER REFERENCES conversations(id),
+    mask_count INTEGER NOT NULL,
+    pii_types TEXT[],
+    action VARCHAR(20) NOT NULL,
+    performed_by UUID REFERENCES users(unified_user_id),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pii_audit_date ON pii_audit_log (created_at);
+
+-- A/B Testing Experiments
+CREATE TABLE IF NOT EXISTS experiments (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    variants JSONB NOT NULL,
+    traffic_split JSONB NOT NULL,
+    status VARCHAR(20) DEFAULT 'draft'
+        CHECK (status IN ('draft', 'running', 'completed', 'aborted')),
+    started_at TIMESTAMPTZ,
+    ended_at TIMESTAMPTZ
+);
+
+-- Experiment Results
+CREATE TABLE IF NOT EXISTS experiment_results (
+    id SERIAL PRIMARY KEY,
+    experiment_id INTEGER REFERENCES experiments(id),
+    variant VARCHAR(50) NOT NULL,
+    metric_name VARCHAR(50) NOT NULL,
+    metric_value FLOAT NOT NULL,
+    sample_size INTEGER NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Retry Logs
+CREATE TABLE IF NOT EXISTS retry_log (
+    id SERIAL PRIMARY KEY,
+    operation VARCHAR(100) NOT NULL,
+    attempt_count INTEGER NOT NULL,
+    delay_seconds FLOAT,
+    error_message TEXT,
+    status VARCHAR(20) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 """

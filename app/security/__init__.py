@@ -8,6 +8,7 @@ from app.security.prompt_injection import (
     SecurityCheckResult as SecurityCheckResult,
 )
 from app.security.rate_limiter import RateLimiter as RateLimiter
+from app.security.rbac import rbac as rbac
 from app.security.rate_limiter import TokenBucket as TokenBucket
 from app.security.webhook_verifier import (
     LineWebhookVerifier as LineWebhookVerifier,
