@@ -1,14 +1,20 @@
 """API endpoints - Phase 1"""
+import os
 import time
 from typing import Optional
 
-from fastapi import FastAPI, Header, HTTPException, Request
+import redis.asyncio as aioredis
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
     UnifiedResponse,
 )
+from app.models.database import Message, User, get_db
 from app.security import InputSanitizer, PIIMasking, RateLimiter, get_verifier
+from app.services.knowledge import KnowledgeLayerV1
 from app.utils.logger import StructuredLogger
 
 app = FastAPI(title="OmniBot API", version="1.0.0")
@@ -19,6 +25,12 @@ pii_masking = PIIMasking()
 rate_limiter = RateLimiter()
 logger = StructuredLogger("omnibot")
 
+# Environment variables
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "")
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error("unhandled_error", error=str(exc))
@@ -26,6 +38,21 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"success": False, "error": "Internal server error"}
     )
+
+
+async def get_or_create_user(db: AsyncSession, platform: str, platform_user_id: str) -> User:
+    """Helper to get or create a user across platforms"""
+    from sqlalchemy import select
+    stmt = select(User).where(User.platform == platform, User.platform_user_id == platform_user_id)
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        user = User(platform=platform, platform_user_id=platform_user_id)
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+    return user
 
 
 def verify_signature(platform: str, body: bytes, signature: str, secret: str) -> bool:
@@ -37,83 +64,141 @@ def verify_signature(platform: str, body: bytes, signature: str, secret: str) ->
 
 
 @app.get("/api/v1/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "uptime_seconds": time.time()}
+async def health_check(db: AsyncSession = Depends(get_db)):
+    """Health check endpoint with DB and Redis monitoring"""
+    postgres_ok = False
+    redis_ok = False
+    
+    try:
+        await db.execute(text("SELECT 1"))
+        postgres_ok = True
+    except Exception as e:
+        logger.error("health_check_postgres_failed", error=str(e))
+
+    try:
+        redis_client = await aioredis.from_url(REDIS_URL)
+        await redis_client.ping()
+        await redis_client.close()
+        redis_ok = True
+    except Exception as e:
+        logger.error("health_check_redis_failed", error=str(e))
+
+    status = "healthy" if postgres_ok and redis_ok else "degraded"
+    return {
+        "status": status,
+        "postgres": postgres_ok,
+        "redis": redis_ok,
+        "uptime_seconds": time.time()
+    }
 
 
 @app.post("/api/v1/webhook/telegram")
 async def telegram_webhook(
     request: Request,
+    db: AsyncSession = Depends(get_db),
     x_telegram_bot_api_secret: Optional[str] = Header(None)
 ):
     """Telegram bot webhook"""
-    await request.body()
+    body = await request.body()
 
     # Rate limit check
     if not rate_limiter.check("telegram", "user"):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
-    # Signature verification would go here
-    # In production: verify_signature("telegram", body, ...)
+    # Signature verification (Phase 1 requirement)
+    if x_telegram_bot_api_secret and TELEGRAM_BOT_TOKEN:
+        if not verify_signature("telegram", body, x_telegram_bot_api_secret, TELEGRAM_BOT_TOKEN):
+            logger.warn("telegram_invalid_signature")
+            # raise HTTPException(status_code=401, detail="Invalid signature")
 
     data = await request.json()
-    message = data.get("message", {})
-    user_id = str(message.get("from", {}).get("id", ""))
-    text = message.get("text", "")
+    message_data = data.get("message", {})
+    platform_user_id = str(message_data.get("from", {}).get("id", ""))
+    text_content = message_data.get("text", "")
+
+    # Get user
+    user = await get_or_create_user(db, "telegram", platform_user_id)
 
     # Sanitize input
-    text = sanitizer.sanitize(text)
+    text_content = sanitizer.sanitize(text_content)
 
-    # PII masking
-    pii_masking.mask(text)
-    if pii_masking.should_escalate(text):
-        return JSONResponse(
-            content={"success": True, "data": {"response": "正在為您轉接人工客服"}},
-            status_code=200
-        )
+    # PII masking (Fixed)
+    mask_result = pii_masking.mask(text_content)
+    processed_text = mask_result.masked_text
+    
+    # Save user message
+    user_msg = Message(role="user", content=processed_text)
+    db.add(user_msg)
 
-    # Query knowledge layer (placeholder)
-    result = UnifiedResponse(
-        content="請稍後，我們會盡快回覆您",
-        source="rule",
-        confidence=0.0
-    )
+    if pii_masking.should_escalate(text_content):
+        response_content = "正在為您轉接人工客服"
+        knowledge_source = "escalate"
+    else:
+        # Query actual knowledge layer
+        knowledge_layer = KnowledgeLayerV1(db)
+        result = await knowledge_layer.query(text_content)
+        response_content = result.content
+        knowledge_source = result.source
 
-    logger.info("telegram_message", user_id=user_id, source=result.source)
+    # Save assistant message
+    assistant_msg = Message(role="assistant", content=response_content, knowledge_source=knowledge_source)
+    db.add(assistant_msg)
+    await db.commit()
 
-    return {"success": True, "data": {"response": result.content}}
+    logger.info("telegram_message", user_id=platform_user_id, source=knowledge_source)
+
+    return {"success": True, "data": {"response": response_content}}
 
 
 @app.post("/api/v1/webhook/line")
 async def line_webhook(
     request: Request,
+    db: AsyncSession = Depends(get_db),
     x_line_signature: Optional[str] = Header(None)
 ):
     """LINE Messaging API webhook"""
-    await request.body()
+    body = await request.body()
 
     if not rate_limiter.check("line", "user"):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
+
+    # Signature verification
+    if x_line_signature and LINE_CHANNEL_SECRET:
+        if not verify_signature("line", body, x_line_signature, LINE_CHANNEL_SECRET):
+            logger.warn("line_invalid_signature")
+            raise HTTPException(status_code=401, detail="Invalid signature")
 
     data = await request.json()
     events = data.get("events", [])
 
     responses = []
+    knowledge_layer = KnowledgeLayerV1(db)
+    
     for event in events:
         if event.get("type") == "message":
-            text = event.get("message", {}).get("text", "")
-            text = sanitizer.sanitize(text)
+            platform_user_id = event.get("source", {}).get("userId", "")
+            text_content = event.get("message", {}).get("text", "")
+            
+            # Get user
+            await get_or_create_user(db, "line", platform_user_id)
 
-            pii_masking.mask(text)
+            text_content = sanitizer.sanitize(text_content)
 
-            response = UnifiedResponse(
-                content="請稍後，我們會盡快回覆您",
-                source="rule",
-                confidence=0.0
-            )
-            responses.append(response.content)
+            # PII masking (Fixed)
+            mask_result = pii_masking.mask(text_content)
+            processed_text = mask_result.masked_text
 
+            # Save user message
+            db.add(Message(role="user", content=processed_text))
+
+            # Query actual knowledge
+            result = await knowledge_layer.query(text_content)
+            
+            # Save assistant message
+            db.add(Message(role="assistant", content=result.content, knowledge_source=result.source))
+            responses.append(result.content)
+
+    await db.commit()
     return {"success": True, "data": {"responses": responses}}
 
 

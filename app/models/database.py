@@ -1,6 +1,7 @@
 """SQLAlchemy models and database schema"""
+import os
 from datetime import datetime
-from typing import Any
+from typing import Any, AsyncGenerator
 
 from sqlalchemy import (
     Boolean,
@@ -14,7 +15,18 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, relationship
+
+# Database setup
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://omnibot:password@localhost:5432/omnibot")
+engine = create_async_engine(DATABASE_URL, pool_pre_ping=True)
+AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """Dependency for getting DB session"""
+    async with AsyncSessionLocal() as session:
+        yield session
 
 
 class Base(DeclarativeBase):

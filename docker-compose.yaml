@@ -6,10 +6,10 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://omnibot:${DB_PASSWORD}@postgres:5432/omnibot
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
-      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - DATABASE_URL=postgresql+asyncpg://omnibot:${DB_PASSWORD:-password}@postgres:5432/omnibot
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-password}@redis:6379/0
+      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -26,7 +26,7 @@ services:
     environment:
       POSTGRES_DB: omnibot
       POSTGRES_USER: omnibot
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -35,9 +35,9 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: redis-server --requirepass ${REDIS_PASSWORD}
+    command: redis-server --requirepass ${REDIS_PASSWORD:-password}
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-password}", "ping"]
       interval: 10s
 
 volumes:

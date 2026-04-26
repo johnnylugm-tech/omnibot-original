@@ -1,6 +1,41 @@
 from app.security.pii_masking import PIIMasking
 from app.security.rate_limiter import RateLimiter, TokenBucket
+from app.security.input_sanitizer import InputSanitizer
+from app.security.webhook_verifier import LineWebhookVerifier, TelegramWebhookVerifier
 
+
+def test_input_sanitizer():
+    sanitizer = InputSanitizer()
+    # Test normalization (NFKC)
+    assert sanitizer.sanitize("Ｈｅｌｌｏ") == "Hello"
+    # Test control character removal
+    assert sanitizer.sanitize("Hello\x00World") == "HelloWorld"
+    # Test whitespace stripping
+    assert sanitizer.sanitize("  Hello  ") == "Hello"
+
+def test_line_verifier():
+    # Mock channel secret
+    secret = "test_secret"
+    verifier = LineWebhookVerifier(secret)
+    body = b"test_body"
+    # Valid signature would be HMAC-SHA256(secret, body) base64 encoded
+    import hmac, hashlib, base64
+    digest = hmac.new(secret.encode(), body, hashlib.sha256).digest()
+    valid_sig = base64.b64encode(digest).decode()
+    
+    assert verifier.verify(body, valid_sig) is True
+    assert verifier.verify(body, "invalid_sig") is False
+
+def test_telegram_verifier():
+    bot_token = "test_token"
+    verifier = TelegramWebhookVerifier(bot_token)
+    body = b"test_body"
+    import hmac, hashlib
+    secret_key = hashlib.sha256(bot_token.encode()).digest()
+    valid_sig = hmac.new(secret_key, body, hashlib.sha256).hexdigest()
+    
+    assert verifier.verify(body, valid_sig) is True
+    assert verifier.verify(body, "wrong") is False
 
 def test_pii_masking_phone():
     masker = PIIMasking()
