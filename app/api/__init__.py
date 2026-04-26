@@ -136,8 +136,8 @@ async def telegram_webhook(
     if not rate_limiter.check("telegram", "user"):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
-    # Signature verification
-    if x_telegram_bot_api_secret_token and TELEGRAM_BOT_TOKEN:
+    # Signature verification — if header is provided, always verify
+    if x_telegram_bot_api_secret_token:
         if not verify_signature("telegram", body, x_telegram_bot_api_secret_token, TELEGRAM_BOT_TOKEN):
             logger.warn("telegram_invalid_signature")
             return JSONResponse(
@@ -232,11 +232,14 @@ async def line_webhook(
     if not rate_limiter.check("line", "user"):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
-    # Signature verification
-    if x_line_signature and LINE_CHANNEL_SECRET:
+    # Signature verification — if header is provided, always verify
+    if x_line_signature:
         if not verify_signature("line", body, x_line_signature, LINE_CHANNEL_SECRET):
             logger.warn("line_invalid_signature")
-            raise HTTPException(status_code=401, detail="Invalid signature")
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Invalid signature", "error_code": "AUTH_INVALID_SIGNATURE"}
+            )
 
     data = await request.json()
     events = data.get("events", [])
