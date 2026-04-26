@@ -107,7 +107,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         logger.error("health_check_postgres_failed", error=str(e))
 
     try:
-        redis_client = await aioredis.from_url(REDIS_URL)
+        redis_client = aioredis.from_url(REDIS_URL)
         await redis_client.ping()
         await redis_client.aclose()
         redis_ok = True
@@ -127,7 +127,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
 async def telegram_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    x_telegram_bot_api_secret: Optional[str] = Header(None)
+    x_telegram_bot_api_secret_token: Optional[str] = Header(None, alias="X-Telegram-Bot-Api-Secret-Token")
 ):
     """Telegram bot webhook"""
     body = await request.body()
@@ -137,9 +137,13 @@ async def telegram_webhook(
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
     # Signature verification
-    if x_telegram_bot_api_secret and TELEGRAM_BOT_TOKEN:
-        if not verify_signature("telegram", body, x_telegram_bot_api_secret, TELEGRAM_BOT_TOKEN):
+    if x_telegram_bot_api_secret_token and TELEGRAM_BOT_TOKEN:
+        if not verify_signature("telegram", body, x_telegram_bot_api_secret_token, TELEGRAM_BOT_TOKEN):
             logger.warn("telegram_invalid_signature")
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Invalid signature", "error_code": "AUTH_INVALID_SIGNATURE"}
+            )
 
     data = await request.json()
     message_data = data.get("message", {})

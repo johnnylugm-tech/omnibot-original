@@ -109,7 +109,7 @@ class HybridKnowledgeV7:
             KnowledgeResult(
                 id=row.id,
                 content=row.answer,
-                confidence=0.95 if query_text.lower() in row.question.lower() else 0.7,
+                confidence=0.95 if query_text.lower() == row.question.lower() else 0.7,
                 source="rule",
                 knowledge_id=row.id,
             )
