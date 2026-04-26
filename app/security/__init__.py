@@ -1,6 +1,12 @@
 """Security module"""
 from app.security.input_sanitizer import InputSanitizer as InputSanitizer
 from app.security.pii_masking import PIIMasking as PIIMasking
+from app.security.prompt_injection import (
+    PromptInjectionDefense as PromptInjectionDefense,
+)
+from app.security.prompt_injection import (
+    SecurityCheckResult as SecurityCheckResult,
+)
 from app.security.rate_limiter import RateLimiter as RateLimiter
 from app.security.rate_limiter import TokenBucket as TokenBucket
 from app.security.webhook_verifier import (

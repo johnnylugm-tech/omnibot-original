@@ -1,17 +1,18 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from app.services.knowledge import KnowledgeLayerV1
+from app.services.knowledge import HybridKnowledgeV7
 
 @pytest.mark.asyncio
-async def test_knowledge_layer():
+async def test_hybrid_knowledge_layer():
     # Mock DB
     mock_db = AsyncMock()
-    # Mock execute result to be empty
+    # Mock execute result to be empty for both rule match and RAG
     mock_execute_result = MagicMock()
     mock_execute_result.scalars.return_value.all.return_value = []
+    mock_execute_result.fetchall.return_value = []
     mock_db.execute.return_value = mock_execute_result
     
-    layer = KnowledgeLayerV1(db=mock_db)
+    layer = HybridKnowledgeV7(db=mock_db)
 
     # query method
     res = await layer.query("test")

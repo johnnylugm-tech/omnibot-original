@@ -13,8 +13,16 @@ from app.models import (
     UnifiedResponse,
 )
 from app.models.database import Message, User, get_db
-from app.security import InputSanitizer, PIIMasking, RateLimiter, get_verifier
-from app.services.knowledge import KnowledgeLayerV1
+from app.security import (
+    InputSanitizer,
+    PIIMasking,
+    PromptInjectionDefense,
+    RateLimiter,
+    get_verifier,
+)
+from app.services.dst import DSTManager
+from app.services.emotion import EmotionScore, EmotionTracker
+from app.services.knowledge import HybridKnowledgeV7
 from app.utils.logger import StructuredLogger
 
 app = FastAPI(title="OmniBot API", version="1.0.0")
@@ -22,7 +30,9 @@ app = FastAPI(title="OmniBot API", version="1.0.0")
 # Dependencies (initialized on startup)
 sanitizer = InputSanitizer()
 pii_masking = PIIMasking()
+prompt_defense = PromptInjectionDefense()
 rate_limiter = RateLimiter()
+dst_manager = DSTManager()
 logger = StructuredLogger("omnibot")
 
 # Environment variables
@@ -122,10 +132,19 @@ async def telegram_webhook(
     # Sanitize input
     text_content = sanitizer.sanitize(text_content)
 
-    # PII masking (Fixed)
+    # Prompt Injection Check (L3 - Phase 2)
+    security_check = prompt_defense.check_input(text_content)
+    if not security_check.is_safe:
+        logger.warn("prompt_injection_detected", reason=security_check.blocked_reason)
+        return JSONResponse(
+            content={"success": False, "error": "Security violation detected"},
+            status_code=400
+        )
+
+    # PII masking (Fixed: use returned masked text)
     mask_result = pii_masking.mask(text_content)
     processed_text = mask_result.masked_text
-    
+
     # Save user message
     user_msg = Message(role="user", content=processed_text)
     db.add(user_msg)
@@ -134,8 +153,8 @@ async def telegram_webhook(
         response_content = "正在為您轉接人工客服"
         knowledge_source = "escalate"
     else:
-        # Query actual knowledge layer
-        knowledge_layer = KnowledgeLayerV1(db)
+        # Query Hybrid Knowledge Layer (Phase 2: RAG + LLM)
+        knowledge_layer = HybridKnowledgeV7(db)
         result = await knowledge_layer.query(text_content)
         response_content = result.content
         knowledge_source = result.source
@@ -144,6 +163,7 @@ async def telegram_webhook(
     assistant_msg = Message(role="assistant", content=response_content, knowledge_source=knowledge_source)
     db.add(assistant_msg)
     await db.commit()
+
 
     logger.info("telegram_message", user_id=platform_user_id, source=knowledge_source)
 
@@ -172,7 +192,7 @@ async def line_webhook(
     events = data.get("events", [])
 
     responses = []
-    knowledge_layer = KnowledgeLayerV1(db)
+    knowledge_layer = HybridKnowledgeV7(db)
     
     for event in events:
         if event.get("type") == "message":
@@ -183,6 +203,12 @@ async def line_webhook(
             await get_or_create_user(db, "line", platform_user_id)
 
             text_content = sanitizer.sanitize(text_content)
+            
+            # Security checks (Phase 2)
+            security_check = prompt_defense.check_input(text_content)
+            if not security_check.is_safe:
+                responses.append("Security violation detected")
+                continue
 
             # PII masking (Fixed)
             mask_result = pii_masking.mask(text_content)
@@ -191,7 +217,7 @@ async def line_webhook(
             # Save user message
             db.add(Message(role="user", content=processed_text))
 
-            # Query actual knowledge
+            # Query actual knowledge (Phase 2: Hybrid)
             result = await knowledge_layer.query(text_content)
             
             # Save assistant message

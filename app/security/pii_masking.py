@@ -12,7 +12,7 @@ class PIIMasking:
     Phase 2: Credit card Luhn validation.
     """
 
-    # Taiwan phone patterns: 0912-345-678, 0912345678, 02-1234-5678
+    # Taiwan phone patterns, email, address, and credit card
     PATTERNS = {
         "phone": re.compile(
             r"\b(?:\d{4}-\d{3,4}-\d{3,4}|\d{10,11})\b"
@@ -25,6 +25,9 @@ class PIIMasking:
             r"苗栗|彰化|南投|雲林|屏東|宜蘭|花蓮|澎湖|金門|連江)"
             r"(?:市|縣).{2,30}?(?:路|街|巷|弄|號|樓)"
         ),
+        "credit_card": re.compile(
+            r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b"
+        ),
     }
 
     # Sensitive keywords that trigger escalation
@@ -36,7 +39,7 @@ class PIIMasking:
     ]
 
     def mask(self, text: str) -> PIIMaskResult:
-        """Mask PII in text"""
+        """Mask PII in text with Luhn validation for credit cards"""
         masked = text
         count = 0
         pii_types: List[str] = []
@@ -44,6 +47,12 @@ class PIIMasking:
         for pii_type, pattern in self.PATTERNS.items():
             matches = list(pattern.finditer(masked))
             for match in reversed(matches):
+                value = match.group()
+                
+                # Luhn check for credit cards
+                if pii_type == "credit_card" and not self._luhn_check(value):
+                    continue
+                    
                 start, end = match.start(), match.end()
                 masked = masked[:start] + f"[{pii_type}_masked]" + masked[end:]
                 count += 1
@@ -59,3 +68,19 @@ class PIIMasking:
     def should_escalate(self, text: str) -> bool:
         """Check if text contains sensitive keywords"""
         return any(p.search(text) for p in self.SENSITIVE_KEYWORDS)
+
+    @staticmethod
+    def _luhn_check(card_number: str) -> bool:
+        """Luhn algorithm validation for credit card numbers"""
+        digits = [int(d) for d in card_number if d.isdigit()]
+        if len(digits) < 13 or len(digits) > 19:
+            return False
+        
+        checksum = 0
+        for i, d in enumerate(reversed(digits)):
+            if i % 2 == 1:
+                d *= 2
+                if d > 9:
+                    d -= 9
+            checksum += d
+        return checksum % 10 == 0
