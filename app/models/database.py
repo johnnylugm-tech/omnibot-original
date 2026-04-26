@@ -19,9 +19,27 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 # Database setup
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://omnibot:password@localhost:5432/omnibot")
-engine = create_async_engine(DATABASE_URL, pool_pre_ping=True)
-AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://omnibot:password@localhost:5433/omnibot")
+
+def get_engine():
+    # Detect if we need async or sync engine
+    if "asyncpg" in DATABASE_URL:
+        return create_async_engine(DATABASE_URL, pool_pre_ping=True)
+    else:
+        # Fallback for sync tools like Alembic if url is changed
+        from sqlalchemy import create_engine
+        return create_engine(DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://"))
+
+engine = get_engine()
+
+def get_session_factory():
+    if hasattr(engine, "connect"): # Sync engine
+        from sqlalchemy.orm import sessionmaker
+        return sessionmaker(bind=engine, expire_on_commit=False)
+    else: # Async engine
+        return async_sessionmaker(engine, expire_on_commit=False)
+
+AsyncSessionLocal = get_session_factory()
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency for getting DB session"""
@@ -83,6 +101,7 @@ class Message(Base):
     sentiment_category = Column(String(20))
     sentiment_intensity = Column(Float)
     confidence = Column(Float)
+    duration_ms = Column(Integer)
     knowledge_source = Column(String(20))
     user_feedback = Column(String(20))
     created_at = Column(DateTime, default=datetime.utcnow)
