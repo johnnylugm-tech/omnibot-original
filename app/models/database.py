@@ -352,7 +352,8 @@ CREATE TABLE IF NOT EXISTS messages (
     intent_detected VARCHAR(50),
     sentiment_category VARCHAR(20),
     sentiment_intensity FLOAT,
-    confidence_score FLOAT,
+    confidence FLOAT,
+    duration_ms INTEGER,
     knowledge_source VARCHAR(20),
     user_feedback VARCHAR(20),
     created_at TIMESTAMPTZ DEFAULT NOW()
