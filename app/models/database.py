@@ -33,17 +33,19 @@ def get_engine():
 engine = get_engine()
 
 def get_session_factory():
-    if hasattr(engine, "connect"): # Sync engine
+    from sqlalchemy.ext.asyncio import AsyncEngine
+    if isinstance(engine, AsyncEngine):
+        return async_sessionmaker(engine, expire_on_commit=False)
+    else:
         from sqlalchemy.orm import sessionmaker
         return sessionmaker(bind=engine, expire_on_commit=False)
-    else: # Async engine
-        return async_sessionmaker(engine, expire_on_commit=False)
 
 AsyncSessionLocal = get_session_factory()
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency for getting DB session"""
-    async with AsyncSessionLocal() as session:
+    SessionFactory = get_session_factory()
+    async with SessionFactory() as session:
         yield session
 
 

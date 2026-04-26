@@ -18,6 +18,19 @@ def mock_db():
     db.execute.return_value = mock_result
     return db
 
+# Separate fixture for test_500 that creates a dedicated crashing mock_db
+# to avoid polluting the shared mock_db used by autouse override
+@pytest.fixture
+def crashing_db():
+    db = AsyncMock(spec=AsyncSession)
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = []
+    mock_result.fetchone.return_value = None
+    mock_result.scalar_one_or_none.return_value = None
+    db.execute.return_value = mock_result
+    db.execute.side_effect = Exception("DB Crash")
+    return db
+
 @pytest.fixture(autouse=True)
 def override_get_db(mock_db):
     app.dependency_overrides[get_db] = lambda: mock_db
@@ -102,12 +115,13 @@ class TestErrorCodes:
             response = client.post("/api/v1/webhook/telegram", json={})
             assert response.status_code == 429
 
-    def test_500_internal_server_error(self, mock_db):
-        # Mock DB to raise exception
-        mock_db.execute.side_effect = Exception("DB Crash")
+    def test_500_internal_server_error(self, crashing_db):
+        # Use a dedicated crashing db fixture to avoid polluting the autouse mock_db
+        app.dependency_overrides[get_db] = lambda: crashing_db
         response = client.get("/api/v1/health")
-        # FastAPI might return 200 but status=degraded if handled, 
+        # FastAPI might return 200 but status=degraded if handled,
         # but let's check a direct crash endpoint if exists or use health degraded
         data = response.json()
         assert data["postgres"] is False
         assert data["status"] == "degraded"
+        app.dependency_overrides.pop(get_db, None)
