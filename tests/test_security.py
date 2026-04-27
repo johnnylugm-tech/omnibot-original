@@ -92,9 +92,12 @@ def test_token_bucket_consume():
     assert bucket.consume(1) is True
     assert bucket.consume(1) is False
 
-def test_rate_limiter_per_user():
+import pytest
+
+@pytest.mark.asyncio
+async def test_rate_limiter_per_user():
     limiter = RateLimiter(default_rps=1)
-    assert limiter.check("line", "user1") is True
-    assert limiter.check("line", "user1") is False
-    assert limiter.check("line", "user2") is True
-    assert limiter.check("line", "user2") is False
+    assert await limiter.check("line", "user1") is True
+    assert await limiter.check("line", "user1") is False
+    assert await limiter.check("line", "user2") is True
+    assert await limiter.check("line", "user2") is False

@@ -80,18 +80,14 @@ class DSTManager:
                 state.slots[name].value = value
 
         # Check for missing slots
-        if state.current_state == ConversationState.INTENT_DETECTED:
-            # First turn of intent detection: don't move to processing yet
-            # so the system can acknowledge the intent
-            if state.missing_slots():
-                state.current_state = ConversationState.SLOT_FILLING
-        elif state.current_state == ConversationState.SLOT_FILLING:
+        if state.current_state in [ConversationState.INTENT_DETECTED, ConversationState.SLOT_FILLING]:
             if not state.missing_slots():
                 state.current_state = ConversationState.PROCESSING
+            else:
+                state.current_state = ConversationState.SLOT_FILLING
         
         # Escalation logic (more than 3 turns in slot filling)
-        # Note: turn_count is incremented at the end, so we check if this turn (state.turn_count + 1) exceeds limit
-        if state.current_state == ConversationState.SLOT_FILLING and (state.turn_count + 1) >= 3:
+        if state.current_state == ConversationState.SLOT_FILLING and state.turn_count >= 3:
             state.current_state = ConversationState.ESCALATED
             
         state.turn_count += 1

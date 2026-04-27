@@ -24,8 +24,6 @@ services:
 
   postgres:
     image: pgvector/pgvector:pg16
-    ports:
-      - "5433:5432"
     environment:
       POSTGRES_DB: omnibot
       POSTGRES_USER: omnibot
@@ -38,8 +36,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6380:6379"
     command: redis-server --requirepass ${REDIS_PASSWORD:-password}
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-password}", "ping"]

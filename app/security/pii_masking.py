@@ -14,11 +14,8 @@ class PIIMasking:
 
     # Taiwan phone patterns, email, address, and credit card
     PATTERNS = {
-        "credit_card": re.compile(
-            r"\b(?:\d{4}[\s-]?){3}\d{4}\b"
-        ),
         "phone": re.compile(
-            r"\b(?:\d{4}-\d{3}-\d{3}|09\d{8})\b"
+            r"\b(?:\d{4}-\d{3,4}-\d{3,4}|\d{10,11})\b"
         ),
         "email": re.compile(
             r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b"
@@ -26,7 +23,10 @@ class PIIMasking:
         "address": re.compile(
             r"(?:(?:台|臺)(?:北|中|南|東)?|新北|桃園|高雄|基隆|新竹|嘉義|"
             r"苗栗|彰化|南投|雲林|屏東|宜蘭|花蓮|澎湖|金門|連江)"
-            r"(?:市|縣).{2,30}?(?:路|街|巷|弄|號|樓)[\d樓號]*"
+            r"(?:市|縣).{2,30}?(?:路|街|巷|弄|號|樓)"
+        ),
+        "credit_card": re.compile(
+            r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b"
         ),
     }
 
@@ -54,7 +54,7 @@ class PIIMasking:
                     continue
                     
                 start, end = match.start(), match.end()
-                masked = masked[:start] + f" [{pii_type}_masked]" + masked[end:]
+                masked = masked[:start] + f"[{pii_type}_masked]" + masked[end:]
                 count += 1
                 if pii_type not in pii_types:
                     pii_types.append(pii_type)

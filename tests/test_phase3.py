@@ -18,23 +18,22 @@ def test_rbac_check():
     assert enforcer.check("user", "knowledge", "read") is True
 
 @pytest.mark.asyncio
-async def test_rbac_decorator():
+async def test_rbac_dependency():
     enforcer = RBACEnforcer({"admin": {"system": ["read"]}})
     
-    @enforcer.require("system", "read")
-    async def protected_endpoint(request: Request):
-        return "success"
+    # Now it's a dependency, not a decorator
+    dependency = enforcer.require("system", "read")
 
     # Mock success request
     mock_request_ok = MagicMock(spec=Request)
     mock_request_ok.headers = {"X-User-Role": "admin"}
-    assert await protected_endpoint(mock_request_ok) == "success"
+    assert await dependency(mock_request_ok) == "admin"
 
     # Mock fail request
     mock_request_fail = MagicMock(spec=Request)
     mock_request_fail.headers = {"X-User-Role": "user"}
     with pytest.raises(HTTPException) as exc:
-        await protected_endpoint(mock_request_fail)
+        await dependency(mock_request_fail)
     assert exc.value.status_code == 403
 
 # 2. A/B Testing Tests

@@ -19,33 +19,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 # Database setup
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://omnibot:password@localhost:5433/omnibot")
-
-def get_engine():
-    # Detect if we need async or sync engine
-    if "asyncpg" in DATABASE_URL:
-        return create_async_engine(DATABASE_URL, pool_pre_ping=True)
-    else:
-        # Fallback for sync tools like Alembic if url is changed
-        from sqlalchemy import create_engine
-        return create_engine(DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://"))
-
-engine = get_engine()
-
-def get_session_factory():
-    from sqlalchemy.ext.asyncio import AsyncEngine
-    if isinstance(engine, AsyncEngine):
-        return async_sessionmaker(engine, expire_on_commit=False)
-    else:
-        from sqlalchemy.orm import sessionmaker
-        return sessionmaker(bind=engine, expire_on_commit=False)
-
-AsyncSessionLocal = get_session_factory()
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://omnibot:password@localhost:5432/omnibot")
+engine = create_async_engine(DATABASE_URL, pool_pre_ping=True)
+AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency for getting DB session"""
-    SessionFactory = get_session_factory()
-    async with SessionFactory() as session:
+    async with AsyncSessionLocal() as session:
         yield session
 
 
@@ -296,18 +276,6 @@ class RetryLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
-class EncryptionConfig(Base):
-    """Configuration for TDE and encryption keys (Phase 3)"""
-    __tablename__ = "encryption_config"
-
-    id = Column(Integer, primary_key=True)
-    key_id = Column(String(100), nullable=False, unique=True)
-    algorithm = Column(String(50), default="AES-256-GCM")
-    is_active = Column(Boolean, default=True)
-    rotated_at = Column(DateTime)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-
 # SQL Schema (for direct execution without ORM)
 SCHEMA_SQL = """
 -- Users table (cross-platform)
@@ -354,8 +322,7 @@ CREATE TABLE IF NOT EXISTS messages (
     intent_detected VARCHAR(50),
     sentiment_category VARCHAR(20),
     sentiment_intensity FLOAT,
-    confidence FLOAT,
-    duration_ms INTEGER,
+    confidence_score FLOAT,
     knowledge_source VARCHAR(20),
     user_feedback VARCHAR(20),
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -497,16 +464,6 @@ CREATE TABLE IF NOT EXISTS retry_log (
     delay_seconds FLOAT,
     error_message TEXT,
     status VARCHAR(20) NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Encryption Config
-CREATE TABLE IF NOT EXISTS encryption_config (
-    id SERIAL PRIMARY KEY,
-    key_id VARCHAR(100) UNIQUE NOT NULL,
-    algorithm VARCHAR(50) DEFAULT 'AES-256-GCM',
-    is_active BOOLEAN DEFAULT TRUE,
-    rotated_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 """

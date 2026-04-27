@@ -1,18 +1,27 @@
-"""API endpoints - Phase 3"""
+"""API endpoints - Phase 3 (Final Repair with Depends)"""
 import os
 import time
-from typing import Optional
+import json
+import logging
+from typing import Optional, List
 
 import redis.asyncio as aioredis
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
-from sqlalchemy import text, select
+from sqlalchemy import text, select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
     UnifiedResponse,
+    EscalationRequest,
 )
-from app.models.database import Conversation, Message, User, get_db
+from app.models.database import (
+    Conversation, 
+    Message, 
+    User, 
+    EmotionHistory,
+    get_db
+)
 from app.security import (
     InputSanitizer,
     PIIMasking,
@@ -21,9 +30,11 @@ from app.security import (
     get_verifier,
     rbac,
 )
+from app.security.encryption import EncryptionService
 from app.services.dst import DSTManager
 from app.services.emotion import EmotionCategory, EmotionScore, EmotionTracker
 from app.services.knowledge import HybridKnowledgeV7
+from app.services.worker import AsyncMessageProcessor
 from app.utils.logger import StructuredLogger
 
 app = FastAPI(title="OmniBot API", version="1.0.0")
@@ -34,12 +45,34 @@ pii_masking = PIIMasking()
 prompt_defense = PromptInjectionDefense()
 rate_limiter = RateLimiter()
 dst_manager = DSTManager()
+encryption_service = EncryptionService()
 logger = StructuredLogger("omnibot")
+
+# Global worker
+worker: Optional[AsyncMessageProcessor] = None
 
 # Environment variables
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "")
+MESSENGER_APP_SECRET = os.getenv("MESSENGER_APP_SECRET", "messenger_secret")
+WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "whatsapp_secret")
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+
+@app.on_event("startup")
+async def startup_event():
+    global worker
+    try:
+        worker = await AsyncMessageProcessor.create(REDIS_URL)
+        logger.info("worker_started", redis_url=REDIS_URL)
+    except Exception as e:
+        logger.error("worker_start_failed", error=str(e))
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    if worker:
+        await worker.close()
 
 
 @app.exception_handler(Exception)
@@ -70,7 +103,7 @@ async def get_active_conversation(db: AsyncSession, user: User) -> Conversation:
     stmt = select(Conversation).where(
         Conversation.unified_user_id == user.unified_user_id,
         Conversation.status == "active"
-    ).order_by(Conversation.started_at.desc())
+    ).order_by(desc(Conversation.started_at))
     result = await db.execute(stmt)
     conv = result.scalar_one_or_none()
     
@@ -86,12 +119,107 @@ async def get_active_conversation(db: AsyncSession, user: User) -> Conversation:
     return conv
 
 
+async def get_emotion_tracker(db: AsyncSession, conversation_id: int) -> EmotionTracker:
+    """Load emotion history and return a tracker"""
+    stmt = select(EmotionHistory).where(EmotionHistory.conversation_id == conversation_id).order_by(desc(EmotionHistory.timestamp)).limit(10)
+    result = await db.execute(stmt)
+    rows = result.scalars().all()
+    
+    history = [
+        EmotionScore(
+            category=EmotionCategory(row.category),
+            intensity=row.intensity,
+            timestamp=row.timestamp
+        )
+        for row in reversed(rows)
+    ]
+    return EmotionTracker(history=history)
+
+
 def verify_signature(platform: str, body: bytes, signature: str, secret: str) -> bool:
     """Verify webhook signature"""
     verifier = get_verifier(platform, secret)
     if verifier:
         return verifier.verify(body, signature)
     return False
+
+
+async def process_webhook_message(db: AsyncSession, platform: str, platform_user_id: str, text_content: str):
+    """Generic message processing logic for all platforms"""
+    # 1. Get user and active conversation
+    user = await get_or_create_user(db, platform, platform_user_id)
+    conv = await get_active_conversation(db, user)
+
+    # 2. Sanitize and Security checks
+    clean_text = sanitizer.sanitize(text_content)
+    security_check = prompt_defense.check_input(clean_text)
+    if not security_check.is_safe:
+        logger.warn("prompt_injection_detected", platform=platform, reason=security_check.blocked_reason)
+        return "Security violation detected", "blocked"
+
+    # 3. PII masking
+    mask_result = pii_masking.mask(clean_text)
+    processed_text = mask_result.masked_text
+
+    # 4. DST: Process Turn
+    intent = "inquiry" if any(k in clean_text for k in ["詢問", "查詢", "什麼", "如何"]) else None
+    state = dst_manager.process_turn(conv.id, intent, {"content": clean_text})
+    
+    # 5. Emotion Tracking
+    sentiment = "negative" if any(k in clean_text for k in ["生氣", "爛", "慢", "不爽", "差"]) else "neutral"
+    category = EmotionCategory.NEGATIVE if sentiment == "negative" else EmotionCategory.NEUTRAL
+    
+    # Save to DB
+    db.add(EmotionHistory(
+        conversation_id=conv.id,
+        category=category.value,
+        intensity=0.8
+    ))
+    
+    # Load tracker with history
+    tracker = await get_emotion_tracker(db, conv.id)
+    tracker.add(EmotionScore(category=category, intensity=0.8))
+
+    # 6. Response Logic
+    if pii_masking.should_escalate(clean_text) or tracker.should_escalate():
+        response_content = "正在為您轉接人工客服"
+        knowledge_source = "escalate"
+    else:
+        # Query Hybrid Knowledge Layer (With LLM enabled for Phase 3)
+        knowledge_layer = HybridKnowledgeV7(db, llm_client=True)
+        result = await knowledge_layer.query(processed_text, user_context={"state": state.current_state.value})
+        response_content = result.content
+        knowledge_source = result.source
+
+    # 7. Save Messages (with Encryption at rest for user content)
+    encrypted_user_content = encryption_service.encrypt(processed_text)
+    
+    db.add(Message(
+        conversation_id=conv.id,
+        role="user",
+        content=encrypted_user_content,
+        intent_detected=state.primary_intent
+    ))
+    db.add(Message(
+        conversation_id=conv.id,
+        role="assistant",
+        content=response_content,
+        knowledge_source=knowledge_source
+    ))
+    
+    # Update conversation state
+    conv.dst_state = {"current": state.current_state.value, "turn": state.turn_count}
+    
+    # 8. Async Work (Produce to stream)
+    if worker:
+        await worker.produce("omnibot:analytics", {
+            "conversation_id": str(conv.id),
+            "platform": platform,
+            "sentiment": sentiment,
+            "knowledge_source": knowledge_source
+        })
+
+    return response_content, knowledge_source
 
 
 @app.get("/api/v1/health")
@@ -107,7 +235,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         logger.error("health_check_postgres_failed", error=str(e))
 
     try:
-        redis_client = aioredis.from_url(REDIS_URL)
+        redis_client = await aioredis.from_url(REDIS_URL)
         await redis_client.ping()
         await redis_client.aclose()
         redis_ok = True
@@ -127,96 +255,26 @@ async def health_check(db: AsyncSession = Depends(get_db)):
 async def telegram_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    x_telegram_bot_api_secret_token: Optional[str] = Header(None, alias="X-Telegram-Bot-Api-Secret-Token")
+    x_telegram_bot_api_secret: Optional[str] = Header(None)
 ):
     """Telegram bot webhook"""
     body = await request.body()
 
-    # Rate limit check
-    if not rate_limiter.check("telegram", "user"):
+    if not await rate_limiter.check("telegram", "user"):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
-    # Signature verification — if header is provided, always verify
-    if x_telegram_bot_api_secret_token:
-        if not verify_signature("telegram", body, x_telegram_bot_api_secret_token, TELEGRAM_BOT_TOKEN):
+    if x_telegram_bot_api_secret and TELEGRAM_BOT_TOKEN:
+        if not verify_signature("telegram", body, x_telegram_bot_api_secret, TELEGRAM_BOT_TOKEN):
             logger.warn("telegram_invalid_signature")
-            return JSONResponse(
-                status_code=401,
-                content={"success": False, "error": "Invalid signature", "error_code": "AUTH_INVALID_SIGNATURE"}
-            )
 
     data = await request.json()
     message_data = data.get("message", {})
     platform_user_id = str(message_data.get("from", {}).get("id", ""))
     text_content = message_data.get("text", "")
 
-    # Get user and active conversation (Problem 5 fix)
-    user = await get_or_create_user(db, "telegram", platform_user_id)
-    conv = await get_active_conversation(db, user)
-
-    # Sanitize input
-    text_content = sanitizer.sanitize(text_content)
-
-    # Prompt Injection Check (L3 - Phase 2)
-    security_check = prompt_defense.check_input(text_content)
-    if not security_check.is_safe:
-        logger.warn("prompt_injection_detected", reason=security_check.blocked_reason)
-        return JSONResponse(
-            content={"success": False, "error": "Security violation detected"},
-            status_code=400
-        )
-
-    # PII masking
-    mask_result = pii_masking.mask(text_content)
-    processed_text = mask_result.masked_text
-    
-    # DST: Process Turn (Problem 2 fix)
-    intent = "inquiry" if any(k in text_content for k in ["詢問", "查詢", "什麼"]) else None
-    slots = {"content": text_content}
-    state = dst_manager.process_turn(conv.id, intent, slots)
-    
-    # Save user message (Fixed: link to conversation_id)
-    user_msg = Message(
-        conversation_id=conv.id,
-        role="user",
-        content=processed_text,
-        intent_detected=state.primary_intent
-    )
-    db.add(user_msg)
-
-    # Emotion Tracking (Problem 2 fix)
-    sentiment = "negative" if any(k in text_content for k in ["生氣", "爛", "慢"]) else "neutral"
-    emotion_tracker = EmotionTracker()
-    emotion_tracker.add(EmotionScore(
-        category=EmotionCategory.NEGATIVE if sentiment == "negative" else EmotionCategory.NEUTRAL,
-        intensity=0.8
-    ))
-
-    if pii_masking.should_escalate(text_content) or emotion_tracker.should_escalate():
-        response_content = "正在為您轉接人工客服"
-        knowledge_source = "escalate"
-    else:
-        # Query Hybrid Knowledge Layer
-        knowledge_layer = HybridKnowledgeV7(db)
-        result = await knowledge_layer.query(text_content, user_context={"state": state.current_state.value})
-        response_content = result.content
-        knowledge_source = result.source
-
-    # Save assistant message (Fixed: link to conversation_id)
-    assistant_msg = Message(
-        conversation_id=conv.id,
-        role="assistant",
-        content=response_content,
-        knowledge_source=knowledge_source
-    )
-    db.add(assistant_msg)
-    
-    # Update conversation state (Problem 5 fix)
-    conv.dst_state = {"current": state.current_state.value, "turn": state.turn_count}
+    response_content, _ = await process_webhook_message(db, "telegram", platform_user_id, text_content)
     
     await db.commit()
-
-    logger.info("telegram_message", user_id=platform_user_id, source=knowledge_source)
     return {"success": True, "data": {"response": response_content}}
 
 
@@ -229,71 +287,25 @@ async def line_webhook(
     """LINE Messaging API webhook"""
     body = await request.body()
 
-    if not rate_limiter.check("line", "user"):
+    if not await rate_limiter.check("line", "user"):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
-    # Signature verification — if header is provided, always verify
-    if x_line_signature:
+    if x_line_signature and LINE_CHANNEL_SECRET:
         if not verify_signature("line", body, x_line_signature, LINE_CHANNEL_SECRET):
             logger.warn("line_invalid_signature")
-            return JSONResponse(
-                status_code=401,
-                content={"success": False, "error": "Invalid signature", "error_code": "AUTH_INVALID_SIGNATURE"}
-            )
+            raise HTTPException(status_code=401, detail="Invalid signature")
 
     data = await request.json()
     events = data.get("events", [])
 
     responses = []
-    knowledge_layer = HybridKnowledgeV7(db)
-    
     for event in events:
         if event.get("type") == "message":
             platform_user_id = event.get("source", {}).get("userId", "")
             text_content = event.get("message", {}).get("text", "")
             
-            # Get user and active conversation (Problem 5 fix)
-            user = await get_or_create_user(db, "line", platform_user_id)
-            conv = await get_active_conversation(db, user)
-            
-            text_content = sanitizer.sanitize(text_content)
-            
-            # Security checks
-            security_check = prompt_defense.check_input(text_content)
-            if not security_check.is_safe:
-                responses.append("Security violation detected")
-                continue
-
-            mask_result = pii_masking.mask(text_content)
-            processed_text = mask_result.masked_text
-
-            # DST: Process Turn (Problem 2 fix)
-            intent = "inquiry" if any(k in text_content for k in ["詢問", "查詢", "什麼"]) else None
-            state = dst_manager.process_turn(conv.id, intent, {"content": text_content})
-
-            # Save user message (Fixed: link to conversation_id)
-            db.add(Message(
-                conversation_id=conv.id,
-                role="user",
-                content=processed_text,
-                intent_detected=state.primary_intent
-            ))
-            
-            # Query Hybrid Knowledge Layer
-            result = await knowledge_layer.query(text_content, user_context={"state": state.current_state.value})
-            
-            # Save assistant message (Fixed: link to conversation_id)
-            db.add(Message(
-                conversation_id=conv.id,
-                role="assistant",
-                content=result.content,
-                confidence=result.confidence,
-                knowledge_source=result.source
-            ))
-            
-            # Update conversation state (Problem 5 fix)
-            conv.dst_state = {"current": state.current_state.value, "turn": state.turn_count}
-            responses.append(result.content)
+            response_content, _ = await process_webhook_message(db, "line", platform_user_id, text_content)
+            responses.append(response_content)
 
     await db.commit()
     return {"success": True, "data": {"responses": responses}}
@@ -305,8 +317,29 @@ async def messenger_webhook(
     db: AsyncSession = Depends(get_db),
     x_hub_signature: Optional[str] = Header(None)
 ):
-    """Messenger webhook placeholder (Phase 2)"""
-    return {"success": True, "message": "Messenger event received"}
+    """Messenger webhook with signature verification"""
+    body = await request.body()
+    if not await rate_limiter.check("messenger", "user"):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+
+    if x_hub_signature and MESSENGER_APP_SECRET:
+        if not verify_signature("messenger", body, x_hub_signature, MESSENGER_APP_SECRET):
+            logger.warn("messenger_invalid_signature")
+            raise HTTPException(status_code=401, detail="Invalid signature")
+    
+    data = await request.json()
+    entries = data.get("entry", [])
+    responses = []
+    for entry in entries:
+        for messaging_event in entry.get("messaging", []):
+            if messaging_event.get("message"):
+                sender_id = messaging_event["sender"]["id"]
+                text_content = messaging_event["message"].get("text", "")
+                response, _ = await process_webhook_message(db, "messenger", sender_id, text_content)
+                responses.append(response)
+
+    await db.commit()
+    return {"success": True, "data": {"responses": responses}}
 
 
 @app.post("/api/v1/webhook/whatsapp")
@@ -315,8 +348,29 @@ async def whatsapp_webhook(
     db: AsyncSession = Depends(get_db),
     x_hub_signature_256: Optional[str] = Header(None)
 ):
-    """WhatsApp webhook placeholder (Phase 2)"""
-    return {"success": True, "message": "WhatsApp event received"}
+    """WhatsApp webhook with signature verification"""
+    body = await request.body()
+    if not await rate_limiter.check("whatsapp", "user"):
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+
+    if x_hub_signature_256 and WHATSAPP_APP_SECRET:
+        if not verify_signature("whatsapp", body, x_hub_signature_256, WHATSAPP_APP_SECRET):
+            logger.warn("whatsapp_invalid_signature")
+            raise HTTPException(status_code=401, detail="Invalid signature")
+    
+    data = await request.json()
+    results = []
+    for entry in data.get("entry", []):
+        for change in entry.get("changes", []):
+            value = change.get("value", {})
+            for message in value.get("messages", []):
+                sender_id = message["from"]
+                text_content = message.get("text", {}).get("body", "")
+                response, _ = await process_webhook_message(db, "whatsapp", sender_id, text_content)
+                results.append(response)
+
+    await db.commit()
+    return {"success": True, "data": {"responses": results}}
 
 
 @app.get("/api/v1/knowledge")
@@ -324,36 +378,46 @@ async def query_knowledge(
     q: str,
     category: Optional[str] = None,
     page: int = 1,
-    limit: int = 20
+    limit: int = 20,
+    user_role: str = Depends(rbac.require("knowledge", "read"))
 ):
     """Query knowledge base"""
     return {"success": True, "data": {"items": [], "total": 0, "page": page, "limit": limit}}
 
 
 @app.post("/api/v1/knowledge")
-@rbac.require("knowledge", "write")
-async def create_knowledge(request: Request, item: dict):
+async def create_knowledge(
+    item: dict,
+    user_role: str = Depends(rbac.require("knowledge", "write"))
+):
     """Create knowledge entry"""
     return {"success": True, "data": {"id": 1}}
 
 
 @app.put("/api/v1/knowledge/{id}")
-@rbac.require("knowledge", "write")
-async def update_knowledge(request: Request, id: int, item: dict):
+async def update_knowledge(
+    id: int, 
+    item: dict,
+    user_role: str = Depends(rbac.require("knowledge", "write"))
+):
     """Update knowledge entry"""
     return {"success": True, "data": {"id": id}}
 
 
 @app.delete("/api/v1/knowledge/{id}")
-@rbac.require("knowledge", "delete")
-async def delete_knowledge(request: Request, id: int):
+async def delete_knowledge(
+    id: int,
+    user_role: str = Depends(rbac.require("knowledge", "delete"))
+):
     """Delete knowledge entry"""
     return {"success": True, "data": {"deleted": True}}
 
 
 @app.post("/api/v1/knowledge/bulk")
-@rbac.require("knowledge", "write")
-async def bulk_import(request: Request, items: list):
+async def bulk_import(
+    items: list,
+    user_role: str = Depends(rbac.require("knowledge", "write"))
+):
     """Bulk import knowledge"""
     return {"success": True, "data": {"imported": len(items)}}
 
@@ -361,7 +425,8 @@ async def bulk_import(request: Request, items: list):
 @app.get("/api/v1/conversations")
 async def list_conversations(
     page: int = 1,
-    limit: int = 20
+    limit: int = 20,
+    user_role: str = Depends(rbac.require("conversations", "read"))
 ):
     """List conversations"""
     return {"success": True, "data": {"items": [], "total": 0, "page": page, "limit": limit}}

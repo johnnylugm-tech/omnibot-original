@@ -109,7 +109,7 @@ class HybridKnowledgeV7:
             KnowledgeResult(
                 id=row.id,
                 content=row.answer,
-                confidence=0.95 if query_text.lower() == row.question.lower() else 0.7,
+                confidence=0.95 if query_text.lower() in row.question.lower() else 0.7,
                 source="rule",
                 knowledge_id=row.id,
             )
@@ -145,8 +145,18 @@ class HybridKnowledgeV7:
         ]
 
     async def _llm_generate(self, query: str, context: dict) -> Optional[KnowledgeResult]:
-        """LLM response generation (Placeholder)"""
-        return None
+        """LLM response generation (Simulated for Phase 3)"""
+        # Simulate thinking delay
+        import asyncio
+        await asyncio.sleep(0.1)
+        
+        return KnowledgeResult(
+            id=0,
+            content=f"根據您的對話狀態 {context.get('state', 'IDLE')}，我理解您想詢問 '{query}'。這是為您生成的個人化回覆。",
+            confidence=0.85,
+            source="llm",
+            knowledge_id=0
+        )
 
     def _escalate(self, query_text: str, reason: str) -> KnowledgeResult:
         return KnowledgeResult(

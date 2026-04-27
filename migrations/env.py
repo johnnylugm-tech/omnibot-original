@@ -24,14 +24,6 @@ target_metadata = Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-import os
-def get_url():
-    url = os.getenv("DATABASE_URL", "postgresql://omnibot:password@localhost:5433/omnibot")
-    # Alembic/SQLAlchemy sync driver for migrations
-    if url.startswith("postgresql+asyncpg"):
-        url = url.replace("postgresql+asyncpg", "postgresql")
-    return url
-
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -45,7 +37,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = get_url()
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -64,8 +56,11 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    from sqlalchemy import create_engine
-    connectable = create_engine(get_url())
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
 
     with connectable.connect() as connection:
         context.configure(
