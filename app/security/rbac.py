@@ -22,6 +22,7 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, List[str]]] = {
     },
     "agent": {
         "knowledge": ["read"],
+        "conversations": ["read"],
         "escalate": ["write"],
         "audit": [],
         "experiment": [],

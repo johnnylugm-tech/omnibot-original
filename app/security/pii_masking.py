@@ -14,6 +14,9 @@ class PIIMasking:
 
     # Taiwan phone patterns, email, address, and credit card
     PATTERNS = {
+        "credit_card": re.compile(
+            r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b"
+        ),
         "phone": re.compile(
             r"\b(?:\d{4}-\d{3,4}-\d{3,4}|\d{10,11})\b"
         ),
@@ -24,9 +27,6 @@ class PIIMasking:
             r"(?:(?:台|臺)(?:北|中|南|東)?|新北|桃園|高雄|基隆|新竹|嘉義|"
             r"苗栗|彰化|南投|雲林|屏東|宜蘭|花蓮|澎湖|金門|連江)"
             r"(?:市|縣).{2,30}?(?:路|街|巷|弄|號|樓)"
-        ),
-        "credit_card": re.compile(
-            r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b"
         ),
     }
 
