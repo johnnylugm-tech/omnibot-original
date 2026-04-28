@@ -1,31 +1,41 @@
 """Escalation manager with SLA tracking - Phase 2"""
 from datetime import datetime, timedelta
-from app.models import EscalationRequest
-from app.models.database import EscalationQueue
+from typing import List, Union
+from sqlalchemy import select, update, desc, asc
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models import EscalationRequest
+from app.models.database import EscalationQueue
 
 class EscalationManager:
     """Phase 2: Escalation with SLA tracking and DB persistence"""
 
+    # Priority 0: Normal (30m), 1: High (15m), 2: Urgent (5m)
     SLA_MINUTES = {
-        "urgent": 5,
-        "high": 15,
-        "normal": 30
+        0: 30,
+        1: 15,
+        2: 5
     }
 
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create(self, request: EscalationRequest, priority: str = "normal") -> int:
+    async def create(self, request: EscalationRequest, priority: Union[int, str] = 0) -> int:
         """Create escalation ticket with SLA deadline"""
-        minutes = self.SLA_MINUTES.get(priority.lower(), 30)
+        # Support both int and string for backward compatibility/flexibility
+        if isinstance(priority, str):
+            p_map = {"urgent": 2, "high": 1, "normal": 0}
+            p_val = p_map.get(priority.lower(), 0)
+        else:
+            p_val = priority
+
+        minutes = self.SLA_MINUTES.get(p_val, 30)
         deadline = datetime.utcnow() + timedelta(minutes=minutes)
         
         ticket = EscalationQueue(
             conversation_id=request.conversation_id,
             reason=request.reason,
-            priority=1 if priority == "urgent" else 2 if priority == "high" else 3,
+            priority=p_val,
             sla_deadline=deadline
         )
         self.db.add(ticket)
@@ -33,9 +43,25 @@ class EscalationManager:
         await self.db.refresh(ticket)
         return ticket.id
 
+    async def get_sla_breaches(self) -> List[EscalationQueue]:
+        """Get tickets that breached SLA and are not yet resolved"""
+        now = datetime.utcnow()
+        stmt = (
+            select(EscalationQueue)
+            .where(
+                EscalationQueue.sla_deadline < now,
+                EscalationQueue.resolved_at == None
+            )
+            .order_by(
+                desc(EscalationQueue.priority),
+                asc(EscalationQueue.queued_at)
+            )
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+
     async def assign(self, escalation_id: int, agent_id: str) -> None:
         """Assign ticket to an agent"""
-        from sqlalchemy import update
         stmt = (
             update(EscalationQueue)
             .where(EscalationQueue.id == escalation_id)
@@ -46,7 +72,6 @@ class EscalationManager:
 
     async def resolve(self, escalation_id: int) -> None:
         """Mark ticket as resolved"""
-        from sqlalchemy import update
         stmt = (
             update(EscalationQueue)
             .where(EscalationQueue.id == escalation_id)

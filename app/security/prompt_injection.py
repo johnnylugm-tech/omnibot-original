@@ -29,6 +29,10 @@ class PromptInjectionDefense:
         r"new\s+instructions?\s*:",
         r"override\s+(your|the|all)",
         r"disregard\s+(your|the|all|previous)",
+        r"\[(SYSTEM|USER|ASSISTANT)\s+(INSTRUCTION|MESSAGE|REMINDER|CONTEXT)\]",
+        r"DAN\s+mode",
+        r"do\s+anything\s+now",
+        r"developer\s+mode\s+enabled",
     ]
 
     def check_input(self, text: str) -> SecurityCheckResult:
@@ -64,6 +68,13 @@ class PromptInjectionDefense:
 
     def _normalize(self, text: str) -> str:
         """Normalize text for security checking"""
+        # Translation table for common obfuscated characters (e.g. small caps)
+        # ᴀʙᴄᴅᴇғɢʜɪᴊᴋʟᴍɴᴏᴘǫʀsᴛᴜᴠᴡxʏᴢ
+        small_caps = "ᴀʙᴄᴅᴇғɢʜɪᴊᴋʟᴍɴᴏᴘǫʀsᴛᴜᴠᴡxʏᴢ"
+        normal_caps = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        trans_table = str.maketrans(small_caps, normal_caps)
+        
+        text = text.translate(trans_table)
         text = unicodedata.normalize("NFKC", text)
         text = "".join(c for c in text if c.isprintable() or c in "\n\t")
         return text

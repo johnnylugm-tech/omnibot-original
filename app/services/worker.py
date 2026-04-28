@@ -38,12 +38,18 @@ class AsyncMessageProcessor:
         """Add a message to the stream"""
         return await self.redis.xadd(stream_name, payload)
 
-    async def consume(self, consumer_name: str, count: int = 10, block_ms: int = 5000):
-        """Consume messages from the group"""
+    async def consume(
+        self, 
+        consumer_name: str, 
+        count: int = 10, 
+        block_ms: int = 5000,
+        id_mode: str = ">"
+    ):
+        """Consume messages from the group. id_mode='>' for new, id_mode='0' for PEL."""
         streams = await self.redis.xreadgroup(
             self.group,
             consumer_name,
-            {"omnibot:messages": ">"},
+            {"omnibot:messages": id_mode},
             count=count,
             block=block_ms,
         )
@@ -52,6 +58,28 @@ class AsyncMessageProcessor:
     async def ack(self, stream_name: str, message_id: str) -> None:
         """Acknowledge message processing"""
         await self.redis.xack(stream_name, self.group, message_id)
+
+    async def get_pending(self, stream_name: str, count: int = 10) -> List[Any]:
+        """Get pending messages from the group's PEL"""
+        return await self.redis.xpending_range(
+            stream_name, self.group, "-", "+", count
+        )
+
+    async def claim(
+        self, 
+        stream_name: str, 
+        consumer_name: str, 
+        min_idle_time_ms: int, 
+        message_ids: List[str]
+    ) -> List[Any]:
+        """Claim stale messages from another consumer"""
+        return await self.redis.xclaim(
+            stream_name,
+            self.group,
+            consumer_name,
+            min_idle_time_ms,
+            message_ids
+        )
 
     async def close(self) -> None:
         """Close redis connection"""
