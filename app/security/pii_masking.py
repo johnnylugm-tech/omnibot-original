@@ -15,7 +15,7 @@ class PIIMasking:
     # Taiwan phone patterns, email, address, and credit card
     PATTERNS = {
         "credit_card": re.compile(
-            r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b"
+            r"\b(?:\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}|\d{4}[- ]?\d{6}[- ]?\d{5}|\d{13,19})\b"
         ),
         "phone": re.compile(
             r"\b(?:\d{4}-\d{3,4}-\d{3,4}|\d{10,11})\b"

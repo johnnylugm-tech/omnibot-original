@@ -98,9 +98,9 @@ def _make_kpi_stub():
 # Install stubs into sys.modules before any test file tries to import
 sys.modules["app.utils.alerts"] = _make_alerts_stub()
 sys.modules["app.services.backup"] = _make_backup_stub()
-sys.modules["app.services.degradation"] = _make_degradation_stub()
+# sys.modules["app.services.degradation"] = _make_degradation_stub() (Removed as real module exists)
 sys.modules["app.utils.cost_model"] = _make_cost_model_stub()
-sys.modules["app.services.odd_queries"] = _make_odd_queries_stub()
+# sys.modules["app.services.odd_queries"] = _make_odd_queries_stub() (Removed)
 sys.modules["app.services.kpi"] = _make_kpi_stub()
 
 

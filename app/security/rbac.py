@@ -38,12 +38,22 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, List[str]]] = {
     },
 }
 
-
 class RBACEnforcer:
     """RBAC logic and FastAPI middleware/dependency helpers"""
 
     def __init__(self, permissions: Dict[str, Dict[str, List[str]]] = ROLE_PERMISSIONS):
         self._permissions = permissions
+
+    @staticmethod
+    def decode_token(token: str) -> dict:
+        """
+        Placeholder for JWT decoding and validation.
+        """
+        if "invalid" in token:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        
+        role = token.split("_")[0] if "_" in token else "unknown"
+        return {"role": role}
 
     def check(self, role: str, resource: str, action: str) -> bool:
         """Verify if a role has permission for an action on a resource"""
@@ -55,10 +65,25 @@ class RBACEnforcer:
     def require(self, resource: str, action: str):
         """
         FastAPI dependency for RBAC.
-        Usage: user_role = Depends(rbac.require("resource", "action"))
+        Now uses Bearer Token instead of X-User-Role header.
         """
         async def rbac_dependency(request: Request):
-            user_role = request.headers.get("X-User-Role")
+            auth_header = request.headers.get("Authorization")
+            
+            if not auth_header or not auth_header.startswith("Bearer "):
+                raise HTTPException(
+                    status_code=401,
+                    detail="Missing or invalid Authorization header"
+                )
+            
+            token = auth_header.replace("Bearer ", "")
+            try:
+                payload = self.decode_token(token)
+                user_role = payload.get("role")
+            except HTTPException:
+                raise
+            except Exception:
+                raise HTTPException(status_code=401, detail="Could not validate credentials")
             
             if not user_role or not self.check(user_role, resource, action):
                 raise HTTPException(
