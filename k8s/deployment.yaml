@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: omnibot-api
+  labels:
+    app: omnibot
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: omnibot
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: omnibot
+    spec:
+      containers:
+      - name: omnibot-api
+        image: omnibot-api:latest
+        ports:
+        - containerPort: 8000
+        readinessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /api/v1/health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        env:
+        - name: DATABASE_URL
+          value: "postgresql+asyncpg://omnibot:password@postgres:5432/omnibot"
+        - name: REDIS_URL
+          value: "redis://redis:6379/0"

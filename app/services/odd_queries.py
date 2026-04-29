@@ -169,3 +169,15 @@ class ODDQueryManager:
         GROUP BY experiment_id, variant;
         """
         return await self.execute_query(sql)
+
+    async def get_system_availability(self) -> float:
+        """14. System availability percentage (Phase 3 KPI)"""
+        sql = """
+        SELECT ROUND(
+            CAST(COUNT(CASE WHEN status = 'healthy' THEN 1 END) AS NUMERIC) / 
+            NULLIF(COUNT(*), 0) * 100, 2
+        ) as availability
+        FROM health_checks;
+        """
+        res = await self.execute_query(sql)
+        return float(res[0]['availability']) if res and res[0]['availability'] is not None else 0.0

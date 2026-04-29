@@ -1,4 +1,8 @@
 """RBAC (Role-Based Access Control) Enforcement - Phase 3"""
+import hmac
+import hashlib
+import json
+import base64
 from typing import Any, Callable, Dict, List, Optional
 from fastapi import HTTPException, Request
 
@@ -40,20 +44,54 @@ ROLE_PERMISSIONS: Dict[str, Dict[str, List[str]]] = {
 
 class RBACEnforcer:
     """RBAC logic and FastAPI middleware/dependency helpers"""
+    
+    SECRET_KEY = "omnibot_super_secret_key" # In production, use environment variable
 
     def __init__(self, permissions: Dict[str, Dict[str, List[str]]] = ROLE_PERMISSIONS):
         self._permissions = permissions
 
-    @staticmethod
-    def decode_token(token: str) -> dict:
-        """
-        Placeholder for JWT decoding and validation.
-        """
-        if "invalid" in token:
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
+    def create_token(self, role: str) -> str:
+        """Helper for tests and trusted systems to create a signed token"""
+        payload = {"role": role}
+        payload_json = json.dumps(payload).encode()
+        payload_b64 = base64.urlsafe_b64encode(payload_json).decode().rstrip("=")
         
-        role = token.split("_")[0] if "_" in token else "unknown"
-        return {"role": role}
+        signature = hmac.new(
+            self.SECRET_KEY.encode(),
+            payload_b64.encode(),
+            hashlib.sha256
+        ).hexdigest()
+        
+        return f"{payload_b64}.{signature}"
+
+    def decode_token(self, token: str) -> dict:
+        """
+        Securely decode and validate the token signature.
+        """
+        try:
+            parts = token.split(".")
+            if len(parts) != 2:
+                raise ValueError("Invalid token format")
+            
+            payload_b64, signature = parts
+            
+            # Verify signature
+            expected_signature = hmac.new(
+                self.SECRET_KEY.encode(),
+                payload_b64.encode(),
+                hashlib.sha256
+            ).hexdigest()
+            
+            if not hmac.compare_digest(signature, expected_signature):
+                raise ValueError("Invalid signature")
+            
+            # Decode payload
+            padding = "=" * (4 - len(payload_b64) % 4)
+            payload_json = base64.urlsafe_b64decode(payload_b64 + padding).decode()
+            return json.loads(payload_json)
+            
+        except Exception:
+            raise HTTPException(status_code=401, detail="Could not validate credentials: Invalid or expired token")
 
     def check(self, role: str, resource: str, action: str) -> bool:
         """Verify if a role has permission for an action on a resource"""
@@ -65,7 +103,7 @@ class RBACEnforcer:
     def require(self, resource: str, action: str):
         """
         FastAPI dependency for RBAC.
-        Now uses Bearer Token instead of X-User-Role header.
+        Now uses Secure Bearer Token.
         """
         async def rbac_dependency(request: Request):
             auth_header = request.headers.get("Authorization")
@@ -77,13 +115,8 @@ class RBACEnforcer:
                 )
             
             token = auth_header.replace("Bearer ", "")
-            try:
-                payload = self.decode_token(token)
-                user_role = payload.get("role")
-            except HTTPException:
-                raise
-            except Exception:
-                raise HTTPException(status_code=401, detail="Could not validate credentials")
+            payload = self.decode_token(token)
+            user_role = payload.get("role")
             
             if not user_role or not self.check(user_role, resource, action):
                 raise HTTPException(

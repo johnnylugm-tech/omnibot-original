@@ -31,6 +31,7 @@ from app.security import (
     rbac,
 )
 from app.security.encryption import EncryptionService
+from app.services.degradation import DegradationManager
 from app.services.dst import DSTManager
 from app.services.emotion import EmotionCategory, EmotionScore, EmotionTracker
 from app.services.knowledge import HybridKnowledgeV7
@@ -51,6 +52,7 @@ pii_masking = PIIMasking()
 prompt_defense = PromptInjectionDefense()
 rate_limiter = RateLimiter()
 dst_manager = DSTManager()
+degradation_manager = DegradationManager()
 encryption_service = EncryptionService()
 logger = StructuredLogger("omnibot")
 
@@ -194,17 +196,36 @@ async def process_webhook_message(db: AsyncSession, platform: str, platform_user
         tracker.add(EmotionScore(category=category, intensity=0.8))
 
         # 6. Response Logic
+        allowed_layers = degradation_manager.get_allowed_layers()
+        
         if pii_masking.should_escalate(clean_text) or tracker.should_escalate():
             response_content = i18n.translate("escalate", lang)
             knowledge_source = "escalate"
         else:
-            knowledge_layer = HybridKnowledgeV7(db, llm_client=True)
-            result = await knowledge_layer.query(processed_text, user_context={"state": state.current_state.value})
-            response_content = result.content
-            knowledge_source = result.source
+            # Use Degradation Manager to decide if LLM is allowed
+            use_llm = allowed_layers.get("llm", True)
             
-            if knowledge_source == "llm":
-                LLM_TOKEN_USAGE.labels(model="simulated").inc(50)
+            knowledge_layer = HybridKnowledgeV7(db, llm_client=use_llm)
+            
+            try:
+                llm_start = time.time()
+                result = await knowledge_layer.query(processed_text, user_context={"state": state.current_state.value})
+                llm_duration = time.time() - llm_start
+                
+                # Update Degradation Metrics
+                degradation_manager.update_metrics(llm_latency=llm_duration, llm_success=True)
+                
+                response_content = result.content
+                knowledge_source = result.source
+                
+                if knowledge_source == "llm":
+                    LLM_TOKEN_USAGE.labels(model="simulated").inc(50)
+            except Exception as e:
+                logger.error("knowledge_query_failed", error=str(e))
+                degradation_manager.update_metrics(llm_success=False)
+                # Fallback response
+                response_content = i18n.translate("error", lang)
+                knowledge_source = "error"
 
         # 7. Save Messages (with Encryption and Cost Model)
         encrypted_user_content = encryption_service.encrypt(processed_text)
