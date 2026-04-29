@@ -3,7 +3,7 @@ import time
 import os
 import logging
 from dataclasses import dataclass
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 logger = logging.getLogger("omnibot.rate_limiter")
 
@@ -16,7 +16,7 @@ class TokenBucket:
     _tokens: float = 0.0
     _last_refill: float = 0.0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._tokens = float(self.capacity)
         self._last_refill = time.monotonic()
 
@@ -67,13 +67,14 @@ class RateLimiter:
         end
         """
 
-    async def _get_redis(self):
+    async def _get_redis(self) -> Any:
         if self._redis is None and self._redis_url:
             import redis.asyncio as aioredis
             try:
                 self._redis = aioredis.from_url(
                     self._redis_url, decode_responses=True)
-                await self._redis.ping()
+                if self._redis:
+                    await self._redis.ping()
             except Exception as e:
                 logger.error(f"Failed to connect to Redis: {e}")
                 self._redis = None

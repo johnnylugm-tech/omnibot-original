@@ -53,5 +53,6 @@ class ABTestManager:
         if not experiment:
             return None
 
-        variant_name = await self.get_variant(user_id, experiment.id)
+        exp_id = int(experiment.id) if experiment.id is not None else 0
+        variant_name = await self.get_variant(user_id, exp_id)
         return experiment.variants.get(variant_name, {}).get("prompt")

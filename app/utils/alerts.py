@@ -63,13 +63,13 @@ class AlertManager:
                 return True
         return False
 
-    async def _trigger_alert(self, alert_type: str, details: Dict[str, Any]):
+    async def _trigger_alert(self, alert_type: str, details: Dict[str, Any]) -> None:
         """Internal alert triggering logic with logging and webhook."""
         logger.error(f"ALERT_TRIGGERED: {alert_type}", **details)
         if self.webhook_url:
             await self.fire_webhook(alert_type, details)
 
-    async def fire_webhook(self, alert_type: str, details: Dict[str, Any]):
+    async def fire_webhook(self, alert_type: str, details: Dict[str, Any]) -> None:
         """Sends alert notification to external webhook."""
         try:
             async with httpx.AsyncClient() as client:

@@ -81,7 +81,7 @@ class KPIManager:
         """Returns a daily history of key metrics using a group by date."""
         cutoff = datetime.utcnow() - timedelta(days=days)
         # Using text for easier date grouping in Postgres
-        stmt = text(\"\"\"
+        stmt = text("""
             SELECT 
                 DATE(started_at) as date,
                 COUNT(id) as total,
@@ -91,7 +91,7 @@ class KPIManager:
             WHERE started_at >= :cutoff
             GROUP BY DATE(started_at)
             ORDER BY date DESC
-        \"\"\")
+        """)
         result = await self.db.execute(stmt, {"cutoff": cutoff})
         return [
             {"date": str(row[0]), "total": row[1], "avg_time_ms": row[2], "avg_cost": row[3]}

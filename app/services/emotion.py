@@ -3,7 +3,7 @@ import math
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 
 class EmotionCategory(Enum):
@@ -22,7 +22,7 @@ class EmotionScore:
 class EmotionTracker:
     """Emotion tracker with temporal decay (Phase 2)"""
 
-    def __init__(self, history: List[EmotionScore] = None, half_life_hours: float = 24.0):
+    def __init__(self, history: Optional[List[EmotionScore]] = None, half_life_hours: float = 24.0):
         self.history = history or []
         self.half_life_hours = half_life_hours
 

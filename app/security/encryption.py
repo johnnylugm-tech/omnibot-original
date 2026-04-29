@@ -9,15 +9,17 @@ class EncryptionService:
     """Service for encrypting sensitive data at rest"""
 
     def __init__(self, key: Optional[str] = None):
-        self.key = key or os.getenv("ENCRYPTION_KEY")
-        if not self.key:
+        raw_key = key or os.getenv("ENCRYPTION_KEY")
+        if not raw_key:
             # For Phase 3 demo/repair, use a default key if none provided
             # In production, this MUST be a strong key from a KMS
-            self.key = base64.urlsafe_b64encode(
-                b"omnibot-super-secret-key-32-bytes!!")
+            raw_key = base64.urlsafe_b64encode(
+                b"omnibot-super-secret-key-32-bytes!!").decode()
+        
+        self.key: str = str(raw_key)
 
         try:
-            self.fernet = Fernet(self.key)
+            self.fernet: Optional[Fernet] = Fernet(self.key.encode() if isinstance(self.key, str) else self.key)
         except Exception:
             self.fernet = None
 

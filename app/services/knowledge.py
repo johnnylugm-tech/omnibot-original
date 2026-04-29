@@ -5,7 +5,7 @@ Integrates Rule-based, RAG (pgvector), and LLM with real Vector Grounding.
 import os
 import asyncio
 import numpy as np
-from typing import List, Optional
+from typing import List, Optional, Any
 from sqlalchemy import select, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sentence_transformers import SentenceTransformer
@@ -23,13 +23,13 @@ class HybridKnowledgeV7:
     EMBEDDING_MODEL = "paraphrase-multilingual-MiniLM-L12-v2"
     EMBEDDING_DIM = 384
 
-    def __init__(self, db: AsyncSession, llm_client=None):
+    def __init__(self, db: AsyncSession, llm_client: Any = None) -> None:
         self.db = db
         self.llm = llm_client
         self.model = SentenceTransformer(self.EMBEDDING_MODEL)
         self.grounding_checker = GroundingChecker(threshold=0.75)
 
-    async def query(self, query_text: str, user_context: dict = None) -> KnowledgeResult:
+    async def query(self, query_text: str, user_context: Optional[dict] = None) -> KnowledgeResult:
         """Query knowledge with 5-layer verification pipeline."""
         # Layer 1: Rule matching (High confidence short-circuit)
         result = await self._rule_match(query_text)
@@ -97,7 +97,7 @@ class HybridKnowledgeV7:
                     id_to_result[doc_id] = item
                 rrf_scores[doc_id] += 1.0 / (rank + k)
 
-        sorted_ids = sorted(rrf_scores, key=rrf_scores.get, reverse=True)
+        sorted_ids = sorted(rrf_scores, key=lambda x: rrf_scores[x], reverse=True)
 
         return [
             KnowledgeResult(
@@ -131,11 +131,11 @@ class HybridKnowledgeV7:
         rows = result.scalars().all()
         return [
             KnowledgeResult(
-                id=row.id,
-                content=row.answer,
-                confidence=0.95 if query_text.lower() in row.question.lower() else 0.7,
+                id=int(row.id),
+                content=str(row.answer),
+                confidence=0.95 if query_text.lower() in str(row.question).lower() else 0.7,
                 source="rule",
-                knowledge_id=row.id,
+                knowledge_id=int(row.id),
             )
             for row in rows
         ]

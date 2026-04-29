@@ -23,7 +23,7 @@ class RetryStrategy:
         self.max_delay = max_delay
         self.jitter = jitter
 
-    async def execute(self, func: Callable[..., Coroutine[Any, Any, T]], *args, **kwargs) -> T:
+    async def execute(self, func: Callable[..., Coroutine[Any, Any, T]], *args: Any, **kwargs: Any) -> T:
         """Execute a coroutine with retry logic"""
         last_exception = None
 
@@ -48,4 +48,6 @@ class RetryStrategy:
                     f"Attempt {attempt + 1} failed: {e}. Retrying in {delay:.2f}s...")
                 await asyncio.sleep(delay)
 
-        raise last_exception  # Should not reach here
+        if last_exception:
+            raise last_exception
+        raise Exception("Retry failed without specific exception")

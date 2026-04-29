@@ -243,7 +243,7 @@ class PIIAuditLog(Base):
     id = Column(Integer, primary_key=True)
     conversation_id = Column(Integer, ForeignKey('conversations.id'))
     mask_count = Column(Integer, nullable=False)
-    pii_types = Column(ARRAY(Text))
+    pii_types: Any = Column(ARRAY(Text))
     action = Column(String(20), nullable=False)
     performed_by = Column(UUID(as_uuid=True),
                           ForeignKey('users.unified_user_id'))

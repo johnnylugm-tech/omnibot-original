@@ -1,7 +1,8 @@
 """API endpoints - Phase 3 (Ultimate Production Ready)"""
 import os
 import time
-from typing import Optional, List
+from datetime import datetime
+from typing import Optional, List, Any, AsyncGenerator
 
 import redis.asyncio as aioredis
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Body
@@ -69,7 +70,7 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup logic
     global worker
     try:
@@ -88,7 +89,7 @@ app = FastAPI(title="OmniBot API", version="1.1.0", lifespan=lifespan)
 
 
 @app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.error("unhandled_error", error=str(exc))
     return JSONResponse(
         status_code=500,
@@ -142,8 +143,8 @@ async def get_emotion_tracker(db: AsyncSession, conversation_id: int) -> Emotion
     history = [
         EmotionScore(
             category=EmotionCategory(row.category),
-            intensity=row.intensity,
-            timestamp=row.timestamp
+            intensity=float(row.intensity),
+            timestamp=row.timestamp # type: ignore
         )
         for row in reversed(rows)
     ]
@@ -158,7 +159,7 @@ def verify_signature(platform: str, body: bytes, signature: str, secret: str) ->
     return False
 
 
-async def process_webhook_message(db: AsyncSession, platform: str, platform_user_id: str, text_content: str, lang: str = "zh-TW"):
+async def process_webhook_message(db: AsyncSession, platform: str, platform_user_id: str, text_content: str, lang: str = "zh-TW") -> Any:
     """Generic message processing logic with Metrics and Tracing"""
     start_time = time.time()
 
@@ -186,7 +187,7 @@ async def process_webhook_message(db: AsyncSession, platform: str, platform_user
         intent = "inquiry" if any(k in clean_text for k in [
                                   "詢問", "查詢", "什麼", "如何"]) else None
         state = dst_manager.process_turn(
-            conv.id, intent, {"content": clean_text})
+            int(conv.id), intent, {"content": clean_text})
 
         # 5. Emotion Tracking
         sentiment = "negative" if any(k in clean_text for k in [
@@ -203,7 +204,7 @@ async def process_webhook_message(db: AsyncSession, platform: str, platform_user
             intensity=0.8
         ))
 
-        tracker = await get_emotion_tracker(db, conv.id)
+        tracker = await get_emotion_tracker(db, int(conv.id))
         tracker.add(EmotionScore(category=category, intensity=0.8))
 
         # 6. Response Logic
@@ -263,10 +264,10 @@ async def process_webhook_message(db: AsyncSession, platform: str, platform_user
         ))
 
         # Update conversation KPI
-        conv.dst_state = {
+        conv.dst_state = { # type: ignore[assignment]
             "current": state.current_state.value, "turn": state.turn_count}
-        conv.resolution_cost = (conv.resolution_cost or 0.0) + cost
-        conv.response_time_ms = (conv.response_time_ms or 0) + duration_ms
+        conv.resolution_cost = float((conv.resolution_cost or 0.0) + cost) # type: ignore[assignment]
+        conv.response_time_ms = int((conv.response_time_ms or 0) + duration_ms) # type: ignore[assignment]
 
         # 8. Async Work
         if worker:
@@ -284,7 +285,7 @@ async def process_webhook_message(db: AsyncSession, platform: str, platform_user
 
 
 @app.get("/api/v1/health")
-async def health_check(db: AsyncSession = Depends(get_db)):
+async def health_check(db: AsyncSession = Depends(get_db)) -> Any:
     """Health check endpoint with DB and Redis monitoring"""
     postgres_ok = False
     redis_ok = False
@@ -318,7 +319,7 @@ async def telegram_webhook(
     db: AsyncSession = Depends(get_db),
     x_telegram_bot_api_secret_token: Optional[str] = Header(
         None, alias="X-Telegram-Bot-Api-Secret-Token")
-):
+) -> Any:
     """Telegram bot webhook"""
     REQUEST_COUNT.labels(method="POST", endpoint="telegram",
                          platform="telegram").inc()
@@ -352,7 +353,7 @@ async def line_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
     x_line_signature: Optional[str] = Header(None)
-):
+) -> Any:
     """LINE Messaging API webhook"""
     REQUEST_COUNT.labels(method="POST", endpoint="line", platform="line").inc()
     body = await request.body()
@@ -390,7 +391,7 @@ async def messenger_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
     x_hub_signature: Optional[str] = Header(None)
-):
+) -> Any:
     """Messenger webhook with signature verification"""
     REQUEST_COUNT.labels(method="POST", endpoint="messenger",
                          platform="messenger").inc()
@@ -423,7 +424,7 @@ async def whatsapp_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
     x_hub_signature_256: Optional[str] = Header(None)
-):
+) -> Any:
     """WhatsApp webhook with signature verification"""
     REQUEST_COUNT.labels(method="POST", endpoint="whatsapp",
                          platform="whatsapp").inc()
@@ -458,7 +459,7 @@ async def query_knowledge(
     page: int = 1,
     limit: int = 20,
     user_role: str = Depends(rbac.require("knowledge", "read"))
-):
+) -> Any:
     """Query knowledge base"""
     return {"success": True, "data": {"items": [], "total": 0, "page": page, "limit": limit}}
 
@@ -467,7 +468,7 @@ async def query_knowledge(
 async def create_knowledge(
     item: dict,
     user_role: str = Depends(rbac.require("knowledge", "write"))
-):
+) -> Any:
     """Create knowledge entry"""
     return {"success": True, "data": {"id": 1}}
 
@@ -477,7 +478,7 @@ async def update_knowledge(
     id: int,
     item: dict,
     user_role: str = Depends(rbac.require("knowledge", "write"))
-):
+) -> Any:
     """Update knowledge entry"""
     return {"success": True, "data": {"id": id}}
 
@@ -486,7 +487,7 @@ async def update_knowledge(
 async def delete_knowledge(
     id: int,
     user_role: str = Depends(rbac.require("knowledge", "delete"))
-):
+) -> Any:
     """Delete knowledge entry"""
     return {"success": True, "data": {"deleted": True}}
 
@@ -495,7 +496,7 @@ async def delete_knowledge(
 async def bulk_import(
     items: list = Body(..., embed=True),
     user_role: str = Depends(rbac.require("knowledge", "write"))
-):
+) -> Any:
     """Bulk import knowledge"""
     return {"success": True, "data": {"imported": len(items)}}
 
@@ -505,6 +506,6 @@ async def list_conversations(
     page: int = 1,
     limit: int = 20,
     user_role: str = Depends(rbac.require("conversations", "read"))
-):
+) -> Any:
     """List conversations"""
     return {"success": True, "data": {"items": [], "total": 0, "page": page, "limit": limit}}

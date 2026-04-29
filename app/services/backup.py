@@ -52,7 +52,7 @@ class BackupService:
         """Returns the timestamp for the next scheduled backup."""
         return datetime.utcnow() + timedelta(hours=hours)
 
-    async def cleanup_old_backups(self, keep_minimum: int = 3):
+    async def cleanup_old_backups(self, keep_minimum: int = 3) -> None:
         """Removes backups older than retention_days, keeping at least keep_minimum newest files."""
         files = [
             os.path.join(self.backup_dir, f) 

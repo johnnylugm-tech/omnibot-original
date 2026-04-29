@@ -1,7 +1,7 @@
 """Redis Streams Async Worker - Phase 3"""
 import redis.asyncio as aioredis
 from redis.exceptions import ResponseError
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Sequence
 
 
 class AsyncMessageProcessor:
@@ -45,7 +45,7 @@ class AsyncMessageProcessor:
         count: int = 10,
         block_ms: int = 5000,
         id_mode: str = ">"
-    ):
+    ) -> List[Any]:
         """Consume messages from the group. id_mode='>' for new, id_mode='0' for PEL."""
         streams = await self.redis.xreadgroup(
             self.group,
@@ -71,7 +71,7 @@ class AsyncMessageProcessor:
         stream_name: str,
         consumer_name: str,
         min_idle_time_ms: int,
-        message_ids: List[str]
+        message_ids: Sequence[str]
     ) -> List[Any]:
         """Claim stale messages from another consumer"""
         return await self.redis.xclaim(
@@ -79,7 +79,7 @@ class AsyncMessageProcessor:
             self.group,
             consumer_name,
             min_idle_time_ms,
-            message_ids
+            list(message_ids)
         )
 
     async def close(self) -> None:

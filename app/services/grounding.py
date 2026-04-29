@@ -1,10 +1,10 @@
 import numpy as np
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Union, Optional
 from sentence_transformers import SentenceTransformer
 
 class GroundingChecker:
     DEFAULT_MODEL = "paraphrase-multilingual-MiniLM-L12-v2"
-    def __init__(self, threshold: float = 0.75, model_name: str = None):
+    def __init__(self, threshold: float = 0.75, model_name: Optional[str] = None):
         self.threshold = threshold
         self.model = SentenceTransformer(model_name or self.DEFAULT_MODEL)
 
@@ -18,7 +18,7 @@ class GroundingChecker:
         response_emb = self.model.encode(resp_text)
         source_embs = self.model.encode(src_texts)
         
-        def cosine_similarity(a, b):
+        def cosine_similarity(a: Any, b: Any) -> float:
             return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
             
         scores = [cosine_similarity(response_emb, s_emb) for s_emb in source_embs]

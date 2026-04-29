@@ -108,12 +108,12 @@ class RBACEnforcer:
         allowed_actions = role_perms.get(resource.lower(), [])
         return action.lower() in allowed_actions
 
-    def require(self, resource: str, action: str):
+    def require(self, resource: str, action: str) -> Callable:
         """
         FastAPI dependency for RBAC.
         Now uses Secure Bearer Token.
         """
-        async def rbac_dependency(request: Request):
+        async def rbac_dependency(request: Request) -> str:
             auth_header = request.headers.get("Authorization")
 
             if not auth_header or not auth_header.startswith("Bearer "):

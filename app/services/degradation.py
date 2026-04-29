@@ -21,13 +21,13 @@ class DegradationManager:
     Follows Spec ID 36.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.current_level = DegradationLevel.LEVEL_0
         self.llm_failure_count = 0
         self.db_latency_p95 = 0.0
         self.llm_latency_p95 = 0.0
 
-    def update_metrics(self, llm_latency: Optional[float] = None, llm_success: Optional[bool] = None, db_latency: Optional[float] = None):
+    def update_metrics(self, llm_latency: Optional[float] = None, llm_success: Optional[bool] = None, db_latency: Optional[float] = None) -> None:
         """Update system metrics and recalculate degradation level"""
         if llm_latency is not None:
             self.llm_latency_p95 = llm_latency  # Simple tracking for TDD

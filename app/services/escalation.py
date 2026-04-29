@@ -42,7 +42,7 @@ class EscalationManager:
         self.db.add(ticket)
         await self.db.commit()
         await self.db.refresh(ticket)
-        return ticket.id
+        return int(ticket.id) if ticket.id is not None else 0
 
     async def get_sla_breaches(self) -> List[EscalationQueue]:
         """Get tickets that breached SLA and are not yet resolved"""
@@ -59,7 +59,7 @@ class EscalationManager:
             )
         )
         result = await self.db.execute(stmt)
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def assign(self, escalation_id: int, agent_id: str) -> None:
         """Assign ticket to an agent"""

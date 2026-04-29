@@ -54,7 +54,7 @@ class DialogueState:
 class DSTManager:
     """Manages dialogue states and transitions (Phase 2)"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # In production, this would be backed by Redis/DB
         self._states: Dict[int, DialogueState] = {}
 

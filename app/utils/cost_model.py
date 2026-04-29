@@ -25,6 +25,6 @@ class CostModel:
             "usage_percent": (current_spend / limit) * 100 if limit > 0 else 0
         }
 
-    def log_cost(self, model: str, cost: float, source: str):
+    def log_cost(self, model: str, cost: float, source: str) -> None:
         """Placeholder for logging cost to database or metrics system."""
         pass
