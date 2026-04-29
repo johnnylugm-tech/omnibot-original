@@ -13,6 +13,41 @@ from app.models import ApiResponse, PaginatedResponse
 # i18n / Localization Tests (#37)
 # =============================================================================
 
+def test_expansion_roadmap_zh_cn_content_exists_and_non_empty():
+    """zh-CN locale translations exist and are non-empty (not placeholders)"""
+    # zh-CN must exist and not be empty/placeholder
+    assert "zh-CN" in TRANSLATIONS, "zh-CN locale must exist in TRANSLATIONS"
+    zh_cn = TRANSLATIONS["zh-CN"]
+    # All required keys must be non-empty and not placeholder values
+    for key in ["greeting", "error"]:
+        assert key in zh_cn, f"zh-CN must contain key '{key}'"
+        assert zh_cn[key], f"zh-CN['{key}'] must be non-empty"
+        assert zh_cn[key] != key, f"zh-CN['{key}'] must not be default key name"
+        assert "TODO" not in zh_cn[key], f"zh-CN['{key}'] must not be a TODO placeholder"
+
+
+def test_expansion_roadmap_ja_content_exists_and_non_empty():
+    """ja locale translations exist and are non-empty (not placeholders)"""
+    assert "ja" in TRANSLATIONS, "ja locale must exist in TRANSLATIONS"
+    ja = TRANSLATIONS["ja"]
+    for key in ["greeting", "error"]:
+        assert key in ja, f"ja must contain key '{key}'"
+        assert ja[key], f"ja['{key}'] must be non-empty"
+        assert ja[key] != key, f"ja['{key}'] must not be default key name"
+        assert "TODO" not in ja[key], f"ja['{key}'] must not be a TODO placeholder"
+
+
+def test_expansion_roadmap_en_content_exists_and_non_empty():
+    """en locale translations exist and are non-empty"""
+    assert "en" in TRANSLATIONS, "en locale must exist"
+    en = TRANSLATIONS["en"]
+    for key in ["greeting", "error"]:
+        assert key in en, f"en must contain key '{key}'"
+        assert en[key], f"en['{key}'] must be non-empty"
+        assert en[key] != key, f"en['{key}'] must not be default key name"
+        assert "TODO" not in en[key], f"en['{key}'] must not be a TODO placeholder"
+
+
 def test_i18n_loads_zh_tw_messages():
     """zh_TW locale loads without error"""
     assert "greeting" in TRANSLATIONS["zh-TW"]
