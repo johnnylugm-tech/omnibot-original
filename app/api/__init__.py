@@ -41,12 +41,10 @@ from app.utils.metrics import REQUEST_COUNT, REQUEST_LATENCY, MESSAGE_SENTIMENT,
 from app.utils.i18n import i18n
 from app.utils.tracing import tracer, setup_tracing
 
-app = FastAPI(title="OmniBot API", version="1.1.0")
-
 # Setup Tracing
 setup_tracing()
 
-# Dependencies (initialized on startup)
+# Dependencies
 sanitizer = InputSanitizer()
 pii_masking = PIIMasking()
 prompt_defense = PromptInjectionDefense()
@@ -68,21 +66,25 @@ MESSENGER_APP_SECRET = os.getenv("MESSENGER_APP_SECRET", "messenger_secret")
 WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "whatsapp_secret")
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
+from contextlib import asynccontextmanager
 
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
     global worker
     try:
         worker = await AsyncMessageProcessor.create(REDIS_URL)
         logger.info("worker_started", redis_url=REDIS_URL)
     except Exception as e:
         logger.error("worker_start_failed", error=str(e))
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
+    
+    yield
+    
+    # Shutdown logic
     if worker:
         await worker.close()
+
+app = FastAPI(title="OmniBot API", version="1.1.0", lifespan=lifespan)
 
 
 @app.exception_handler(Exception)

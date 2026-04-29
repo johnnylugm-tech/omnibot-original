@@ -1,19 +1,20 @@
 # OmniBot TDD 驗證報告 (2026-04-29 更新)
 
-**Repo:** `johnnylugm-tech/omnibot-original` (master branch, commit `4d01831`+)
+**Repo:** `johnnylugm-tech/omnibot-original` (master branch, commit `d8d837a`)
 **驗證依據:** `omnibot-tdd-verification-checklist.md` (v1.1, ~400 test cases)
 **測試框架:** pytest
 **執行環境:** macOS (Python 3.9, /Users/johnny/omnibot-original)
-**報告產生時間:** 2026-04-29
+**報告產生時間:** 2026-04-29 13:13:06
 
 ---
 
 ## 測試收集結果
 
+
 ```
 400 tests collected
-399 passed | 0 failed | 1 skipped
-執行時間: 112 秒
+388 passed | 11 failed | 1 skipped
+執行時間: 112.7 秒
 ```
 
 ---
