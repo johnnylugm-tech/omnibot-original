@@ -304,7 +304,11 @@ class TestEscalationManagerSLA:
     @pytest.fixture
     def mock_db(self):
         """Create mock database session"""
-        db = AsyncMock()
+        db = MagicMock()
+        db.add = MagicMock()
+        db.execute = AsyncMock()
+        db.commit = AsyncMock()
+        db.refresh = AsyncMock()
         return db
 
     @pytest.mark.asyncio

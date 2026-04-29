@@ -9,7 +9,12 @@ from app.models import EscalationRequest
 
 @pytest.fixture
 def mock_db():
-    return AsyncMock()
+    db = MagicMock()
+    db.add = MagicMock()
+    db.execute = AsyncMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    return db
 
 @pytest.mark.asyncio
 async def test_id_21_01_sla_normal_30_minutes(mock_db):

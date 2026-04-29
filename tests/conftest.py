@@ -116,8 +116,10 @@ def rbac_token():
 
 @pytest.fixture
 def mock_db():
-    """Async mock for database sessions."""
-    db = AsyncMock()
+    """Database session mock with correct sync/async method types."""
+    db = MagicMock()
+    db.add = MagicMock()
+    db.refresh = AsyncMock() # SQLAlchemy refresh is often used with await in async sessions
     db.execute = AsyncMock()
     db.commit = AsyncMock()
     db.rollback = AsyncMock()
