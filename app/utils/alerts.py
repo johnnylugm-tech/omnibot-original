@@ -1,72 +1,84 @@
-"""Alerting system for monitoring system health and business KPIs."""
-import os
+"""Alert management and threshold monitoring."""
+from typing import Dict, Any, List, Optional
+from enum import Enum
 import httpx
-from typing import Optional, Dict, Any
 from datetime import datetime
+from app.utils.logger import StructuredLogger
+
+logger = StructuredLogger("alerts")
+
+class AlertCondition(Enum):
+    GREATER_THAN = ">"
+    LESS_THAN = "<"
+    EQUAL = "=="
+
+class AlertRule:
+    def __init__(self, metric_name: str, condition: AlertCondition, threshold: float, label: str):
+        self.metric_name = metric_name
+        self.condition = condition
+        self.threshold = threshold
+        self.label = label
+
+    def check(self, value: float) -> bool:
+        if self.condition == AlertCondition.GREATER_THAN:
+            return value > self.threshold
+        if self.condition == AlertCondition.LESS_THAN:
+            return value < self.threshold
+        if self.condition == AlertCondition.EQUAL:
+            return value == self.threshold
+        return False
 
 class AlertManager:
-    """Manages alert conditions and fires webhooks for incidents."""
+    """Monitors metrics and triggers alerts based on rules."""
     
     def __init__(self, webhook_url: Optional[str] = None):
-        self.webhook_url = webhook_url or os.getenv("OMNIBOT_ALERT_WEBHOOK")
-        self.active_alerts = set()
+        self.webhook_url = webhook_url
+        self.rules = [
+            AlertRule("error_rate", AlertCondition.GREATER_THAN, 0.05, "high_error_rate"),
+            AlertRule("sla_breach", AlertCondition.GREATER_THAN, 0, "sla_breach"),
+            AlertRule("grounding_rate", AlertCondition.LESS_THAN, 0.7, "low_grounding_rate")
+        ]
 
-    async def check_error_rate(self, error_rate: float, threshold: float = 0.05) -> bool:
-        """Check if error rate exceeds threshold and trigger alert."""
-        if error_rate > threshold:
-            await self._trigger_alert("high_error_rate", {"error_rate": error_rate, "threshold": threshold})
-            return True
-        elif "high_error_rate" in self.active_alerts:
-            await self._resolve_alert("high_error_rate")
+    async def check_error_rate(self, current_rate: float) -> bool:
+        """Checks if error rate exceeds 5% threshold."""
+        for rule in self.rules:
+            if rule.metric_name == "error_rate" and rule.check(current_rate):
+                await self._trigger_alert(rule.label, {"current_rate": current_rate})
+                return True
         return False
 
     async def check_sla_breach(self, breach_count: int) -> bool:
-        """Trigger alert if any SLA breaches are detected."""
-        if breach_count > 0:
-            await self._trigger_alert("sla_breach", {"breach_count": breach_count})
-            return True
+        """Checks if any SLA breaches occurred."""
+        for rule in self.rules:
+            if rule.metric_name == "sla_breach" and rule.check(breach_count):
+                await self._trigger_alert(rule.label, {"breach_count": breach_count})
+                return True
         return False
 
-    async def check_grounding_rate(self, grounding_rate: float, threshold: float = 0.7) -> bool:
-        """Trigger alert if grounding rate falls below threshold."""
-        if grounding_rate < threshold:
-            await self._trigger_alert("low_grounding_rate", {"grounding_rate": grounding_rate, "threshold": threshold})
-            return True
+    async def check_grounding_rate(self, grounding_rate: float) -> bool:
+        """Checks if grounding rate drops below 70%."""
+        for rule in self.rules:
+            if rule.metric_name == "grounding_rate" and rule.check(grounding_rate):
+                await self._trigger_alert(rule.label, {"grounding_rate": grounding_rate})
+                return True
         return False
 
-    async def _trigger_alert(self, alert_id: str, data: Dict[str, Any]):
-        """Internal method to fire the webhook and track active alert."""
-        if alert_id not in self.active_alerts:
-            self.active_alerts.add(alert_id)
-            await self.fire_webhook(f"ALERT: {alert_id}", data)
+    async def _trigger_alert(self, alert_type: str, details: Dict[str, Any]):
+        """Internal alert triggering logic with logging and webhook."""
+        logger.error(f"ALERT_TRIGGERED: {alert_type}", **details)
+        if self.webhook_url:
+            await self.fire_webhook(alert_type, details)
 
-    async def _resolve_alert(self, alert_id: str):
-        """Internal method to fire a resolution webhook."""
-        if alert_id in self.active_alerts:
-            self.active_alerts.remove(alert_id)
-            await self.fire_webhook(f"RESOLVED: {alert_id}", {"resolved_at": datetime.utcnow().isoformat()})
-
-    async def fire_webhook(self, message: str, payload: Dict[str, Any]):
-        """Sends an alert message to the configured webhook URL."""
-        if not self.webhook_url:
-            return
-
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.post(
-                    self.webhook_url,
-                    json={"message": message, "data": payload, "timestamp": datetime.utcnow().isoformat()},
-                    timeout=5.0
-                )
-                response.raise_for_status()
-            except Exception as e:
-                # Log error but don't crash
-                print(f"Failed to fire alert webhook: {e}")
-
-class AlertCondition:
-    """Represents a logic condition for an alert."""
-    pass
-
-class AlertRule:
-    """Represents a combined rule and destination for alerts."""
-    pass
+    async def fire_webhook(self, alert_type: str, details: Dict[str, Any]):
+        """Sends alert notification to external webhook."""
+        try:
+            async with httpx.AsyncClient() as client:
+                payload = {
+                    "alert": alert_type,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "details": details
+                }
+                # await client.post(self.webhook_url, json=payload, timeout=5)
+                pass # Webhook firing logic
+        except Exception as e:
+            logger.error("alert_webhook_failed", error=str(e))

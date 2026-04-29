@@ -167,13 +167,25 @@ class HybridKnowledgeV7:
         ]
 
     async def _llm_generate(self, query: str, context: Optional[dict] = None) -> Optional[KnowledgeResult]:
-        """State-aware LLM response generation."""
-        await asyncio.sleep(0.05)
+        """State-aware LLM response generation with source grounding."""
+        # Simulated LLM processing delay
+        await asyncio.sleep(0.1)
+        
         if len(query) < 2:
             return None
 
+        # Logic to simulate a high-quality LLM response using context and sources
         state_str = context.get('state', 'IDLE') if context else 'IDLE'
-        content = f"根據您的目前狀態 ({state_str})，我針對您查詢的 '{query}' 提供了進階解答。"
+        
+        # If we have RAG sources, we "summarize" them
+        # In a real app, this would be an API call to OpenAI/Anthropic/Gemini
+        sources = await self._rag_search(query)
+        
+        if sources:
+            best_source = sources[0].content
+            content = f"根據目前的對話狀態 ({state_str}) 與知識庫資料，關於 '{query}'：\n\n{best_source[:200]}...\n\n這是一個由大型語言模型生成的整合性回答。"
+        else:
+            content = f"關於您詢問的 '{query}'，雖然目前的知識庫中沒有直接匹配的規則，但根據我的理解：\n\n這是一個針對您問題的通用生成回答，目前的對話階段為 {state_str}。"
 
         return KnowledgeResult(
             id=0,
