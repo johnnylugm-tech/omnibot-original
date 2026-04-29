@@ -53,14 +53,15 @@ class DialogueState:
 
 class DSTManager:
     """Manages dialogue states and transitions (Phase 2)"""
-    
+
     def __init__(self):
         # In production, this would be backed by Redis/DB
         self._states: Dict[int, DialogueState] = {}
 
     def get_state(self, conversation_id: int) -> DialogueState:
         if conversation_id not in self._states:
-            self._states[conversation_id] = DialogueState(conversation_id=conversation_id)
+            self._states[conversation_id] = DialogueState(
+                conversation_id=conversation_id)
         return self._states[conversation_id]
 
     def update_state(self, state: DialogueState) -> None:
@@ -68,12 +69,12 @@ class DSTManager:
 
     def process_turn(self, conversation_id: int, intent: Optional[str], slots: Dict[str, str]) -> DialogueState:
         state = self.get_state(conversation_id)
-        
+
         # Simple transition logic based on Phase 2 spec
         if state.current_state == ConversationState.IDLE and intent:
             state.primary_intent = intent
             state.current_state = ConversationState.INTENT_DETECTED
-            
+
         # Update slots
         for name, value in slots.items():
             if name in state.slots:
@@ -85,11 +86,11 @@ class DSTManager:
                 state.current_state = ConversationState.PROCESSING
             else:
                 state.current_state = ConversationState.SLOT_FILLING
-        
+
         # Escalation logic (more than 3 turns in slot filling)
         if state.current_state == ConversationState.SLOT_FILLING and state.turn_count >= 3:
             state.current_state = ConversationState.ESCALATED
-            
+
         state.turn_count += 1
         state.last_updated = datetime.utcnow()
         self.update_state(state)

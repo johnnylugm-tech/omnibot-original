@@ -4,7 +4,8 @@ import time
 
 # Metrics definitions
 REQUEST_COUNT = Counter(
-    "omnibot_requests_total", "Total request count", ["method", "endpoint", "platform"]
+    "omnibot_requests_total", "Total request count", [
+        "method", "endpoint", "platform"]
 )
 
 REQUEST_LATENCY = Histogram(
@@ -18,6 +19,7 @@ MESSAGE_SENTIMENT = Summary(
 LLM_TOKEN_USAGE = Counter(
     "omnibot_llm_tokens_total", "Total tokens used by LLM", ["model"]
 )
+
 
 def start_metrics_server(port: int = 8000) -> None:
     """Start Prometheus metrics server"""

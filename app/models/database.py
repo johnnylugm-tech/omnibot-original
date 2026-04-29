@@ -19,9 +19,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 # Database setup
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://omnibot:password@localhost:5432/omnibot")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", "postgresql+asyncpg://omnibot:password@localhost:5432/omnibot")
 engine = create_async_engine(DATABASE_URL, pool_pre_ping=True)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency for getting DB session"""
@@ -38,16 +40,19 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
-    unified_user_id = Column(UUID(as_uuid=True), unique=True, nullable=False, default=lambda: __import__('uuid').uuid4())
+    unified_user_id = Column(UUID(as_uuid=True), unique=True,
+                             nullable=False, default=lambda: __import__('uuid').uuid4())
     platform = Column(String(20), nullable=False)
     platform_user_id = Column(String(100), nullable=False)
     profile = Column(JSONB)
     preference_tags: Any = Column(ARRAY(Text))
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow,
+                        onupdate=datetime.utcnow)
 
     __table_args__ = (
-        UniqueConstraint('platform', 'platform_user_id', name='uq_platform_user'),
+        UniqueConstraint('platform', 'platform_user_id',
+                         name='uq_platform_user'),
     )
 
 
@@ -56,7 +61,8 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id = Column(Integer, primary_key=True)
-    unified_user_id = Column(UUID(as_uuid=True), ForeignKey('users.unified_user_id'))
+    unified_user_id = Column(
+        UUID(as_uuid=True), ForeignKey('users.unified_user_id'))
     platform = Column(String(20), nullable=False)
     started_at = Column(DateTime, default=datetime.utcnow)
     ended_at = Column(DateTime)
@@ -101,12 +107,14 @@ class KnowledgeBase(Base):
     answer = Column(Text, nullable=False)
     keywords: Any = Column(ARRAY(Text))  # type: ignore
     embeddings = Column(JSONB)  # vector(384) - Phase 2 with pgvector
-    embedding_model = Column(String(100), default='paraphrase-multilingual-MiniLM-L12-v2')
+    embedding_model = Column(
+        String(100), default='paraphrase-multilingual-MiniLM-L12-v2')
     version = Column(Integer, default=1)
     contains_pii = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow,
+                        onupdate=datetime.utcnow)
 
 
 class PlatformConfig(Base):
@@ -127,10 +135,12 @@ class EscalationQueue(Base):
     __tablename__ = "escalation_queue"
 
     id = Column(Integer, primary_key=True)
-    conversation_id = Column(Integer, ForeignKey('conversations.id'), unique=True)
+    conversation_id = Column(Integer, ForeignKey(
+        'conversations.id'), unique=True)
     reason = Column(String(50), nullable=False)
     priority = Column(Integer, default=0)
-    assigned_agent = Column(UUID(as_uuid=True), ForeignKey('users.unified_user_id'))
+    assigned_agent = Column(
+        UUID(as_uuid=True), ForeignKey('users.unified_user_id'))
     queued_at = Column(DateTime, default=datetime.utcnow)
     picked_at = Column(DateTime)
     resolved_at = Column(DateTime)
@@ -168,7 +178,8 @@ class EmotionHistory(Base):
     __tablename__ = "emotion_history"
 
     id = Column(Integer, primary_key=True)
-    conversation_id = Column(Integer, ForeignKey('conversations.id'), nullable=False)
+    conversation_id = Column(Integer, ForeignKey(
+        'conversations.id'), nullable=False)
     category = Column(String(20), nullable=False)
     intensity = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
@@ -181,7 +192,8 @@ class EdgeCase(Base):
     id = Column(Integer, primary_key=True)
     conversation_id = Column(Integer, ForeignKey('conversations.id'))
     message_id = Column(Integer, ForeignKey('messages.id'))
-    case_type = Column(String(50), nullable=False)  # grounding_fail | unusual_input
+    # grounding_fail | unusual_input
+    case_type = Column(String(50), nullable=False)
     raw_content = Column(Text)
     llm_output = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -216,7 +228,8 @@ class RoleAssignment(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey('users.unified_user_id'))
     role_id = Column(Integer, ForeignKey('roles.id'))
     assigned_at = Column(DateTime, default=datetime.utcnow)
-    assigned_by = Column(UUID(as_uuid=True), ForeignKey('users.unified_user_id'))
+    assigned_by = Column(UUID(as_uuid=True),
+                         ForeignKey('users.unified_user_id'))
 
     __table_args__ = (
         UniqueConstraint('user_id', 'role_id', name='uq_user_role'),
@@ -232,7 +245,8 @@ class PIIAuditLog(Base):
     mask_count = Column(Integer, nullable=False)
     pii_types = Column(ARRAY(Text))
     action = Column(String(20), nullable=False)
-    performed_by = Column(UUID(as_uuid=True), ForeignKey('users.unified_user_id'))
+    performed_by = Column(UUID(as_uuid=True),
+                          ForeignKey('users.unified_user_id'))
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -245,7 +259,8 @@ class Experiment(Base):
     description = Column(Text)
     variants = Column(JSONB, nullable=False)  # Variant config
     traffic_split = Column(JSONB, nullable=False)  # Split percentages
-    status = Column(String(20), default='draft')  # draft | running | completed | aborted
+    # draft | running | completed | aborted
+    status = Column(String(20), default='draft')
     started_at = Column(DateTime)
     ended_at = Column(DateTime)
 

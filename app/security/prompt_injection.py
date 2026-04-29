@@ -73,7 +73,7 @@ class PromptInjectionDefense:
         small_caps = "ᴀʙᴄᴅᴇғɢʜɪᴊᴋʟᴍɴᴏᴘǫʀsᴛᴜᴠᴡxʏᴢ"
         normal_caps = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         trans_table = str.maketrans(small_caps, normal_caps)
-        
+
         text = text.translate(trans_table)
         text = unicodedata.normalize("NFKC", text)
         text = "".join(c for c in text if c.isprintable() or c in "\n\t")

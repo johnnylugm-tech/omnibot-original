@@ -17,8 +17,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
     }
 }
 
+
 class I18nManager:
     """Simple i18n manager for Phase 3"""
+
     def __init__(self, default_lang: str = "zh-TW"):
         self.default_lang = os.getenv("DEFAULT_LANG", default_lang)
 
@@ -26,6 +28,7 @@ class I18nManager:
         """Translate a key to the target language"""
         lang = lang or self.default_lang
         return TRANSLATIONS.get(lang, TRANSLATIONS["zh-TW"]).get(key, key)
+
 
 # Singleton instance
 i18n = I18nManager()

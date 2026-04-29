@@ -48,11 +48,11 @@ class PIIMasking:
             matches = list(pattern.finditer(masked))
             for match in reversed(matches):
                 value = match.group()
-                
+
                 # Luhn check for credit cards
                 if pii_type == "credit_card" and not self._luhn_check(value):
                     continue
-                    
+
                 start, end = match.start(), match.end()
                 masked = masked[:start] + f"[{pii_type}_masked]" + masked[end:]
                 count += 1
@@ -75,7 +75,7 @@ class PIIMasking:
         digits = [int(d) for d in card_number if d.isdigit()]
         if len(digits) < 13 or len(digits) > 19:
             return False
-        
+
         checksum = 0
         for i, d in enumerate(reversed(digits)):
             if i % 2 == 1:

@@ -21,7 +21,7 @@ class EmotionScore:
 
 class EmotionTracker:
     """Emotion tracker with temporal decay (Phase 2)"""
-    
+
     def __init__(self, history: List[EmotionScore] = None, half_life_hours: float = 24.0):
         self.history = history or []
         self.half_life_hours = half_life_hours
@@ -44,7 +44,7 @@ class EmotionTracker:
             raw = score.intensity if score.category == EmotionCategory.POSITIVE else -score.intensity
             if score.category == EmotionCategory.NEUTRAL:
                 raw = 0.0
-                
+
             weighted_sum += raw * decay
             total_weight += decay
 

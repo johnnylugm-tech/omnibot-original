@@ -28,7 +28,8 @@ class StructuredLogger:
             "message": message,
             **kwargs,
         }
-        self.logger.log(self.LOG_LEVELS.get(level, logging.INFO), json.dumps(entry))
+        self.logger.log(self.LOG_LEVELS.get(
+            level, logging.INFO), json.dumps(entry))
 
     def info(self, message: str, **kwargs: Any) -> None:
         self.log("INFO", message, **kwargs)

@@ -1,9 +1,11 @@
+from typing import Optional
 """
 Degradation Manager - Phase 3 Resilience
 Handles automatic service level switching based on performance and failure metrics.
 """
 from enum import IntEnum
 from typing import Dict, Any
+
 
 class DegradationLevel(IntEnum):
     LEVEL_0 = 0  # Full Service (Rule + RAG + LLM)
@@ -12,27 +14,29 @@ class DegradationLevel(IntEnum):
     LEVEL_3 = 3  # Read-only Cache (DB pressure)
     LEVEL_4 = 4  # Maintenance Mode (Total outage)
 
+
 class DegradationManager:
     """
     Manager to monitor metrics and determine the current service level.
     Follows Spec ID 36.
     """
+
     def __init__(self):
         self.current_level = DegradationLevel.LEVEL_0
         self.llm_failure_count = 0
         self.db_latency_p95 = 0.0
         self.llm_latency_p95 = 0.0
 
-    def update_metrics(self, llm_latency: float = None, llm_success: bool = None, db_latency: float = None):
+    def update_metrics(self, llm_latency: Optional[float] = None, llm_success: Optional[bool] = None, db_latency: Optional[float] = None):
         """Update system metrics and recalculate degradation level"""
         if llm_latency is not None:
-            self.llm_latency_p95 = llm_latency # Simple tracking for TDD
-        
+            self.llm_latency_p95 = llm_latency  # Simple tracking for TDD
+
         if llm_success is False:
             self.llm_failure_count += 1
         elif llm_success is True:
-            self.llm_failure_count = 0 # Reset on success
-            
+            self.llm_failure_count = 0  # Reset on success
+
         if db_latency is not None:
             self.db_latency_p95 = db_latency
 

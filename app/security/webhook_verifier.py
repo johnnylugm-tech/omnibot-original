@@ -14,6 +14,7 @@ class WebhookVerifier(ABC):
 
 class LineWebhookVerifier(WebhookVerifier):
     """LINE Webhook signature verifier"""
+
     def __init__(self, channel_secret: str):
         self.channel_secret = channel_secret.encode("utf-8")
 
@@ -27,6 +28,7 @@ class LineWebhookVerifier(WebhookVerifier):
 
 class TelegramWebhookVerifier(WebhookVerifier):
     """Telegram Webhook signature verifier"""
+
     def __init__(self, bot_token: str):
         self.secret_key = hashlib.sha256(bot_token.encode("utf-8")).digest()
 
@@ -39,6 +41,7 @@ class TelegramWebhookVerifier(WebhookVerifier):
 
 class MessengerWebhookVerifier(WebhookVerifier):
     """Facebook Messenger Webhook signature verifier"""
+
     def __init__(self, app_secret: str):
         self.app_secret = app_secret.encode("utf-8")
 
@@ -52,6 +55,7 @@ class MessengerWebhookVerifier(WebhookVerifier):
 
 class WhatsAppWebhookVerifier(WebhookVerifier):
     """WhatsApp Business API signature verifier"""
+
     def __init__(self, app_secret: str):
         self.app_secret = app_secret.encode("utf-8")
 

@@ -6,15 +6,17 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Dict, Any
 
+
 class ODDQueryManager:
     """
     Manager for ODD SQL queries.
     Provides methods to execute 13 core analysis queries.
     """
+
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def execute_query(self, query: str, params: dict = None) -> List[Dict[str, Any]]:
+    async def execute_query(self, query: str, params: Optional[dict] = None) -> List[Dict[str, Any]]:
         result = await self.db.execute(text(query), params or {})
         return [dict(row._mapping) for row in result.fetchall()]
 

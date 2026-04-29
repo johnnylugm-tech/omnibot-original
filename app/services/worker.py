@@ -3,6 +3,7 @@ import redis.asyncio as aioredis
 from redis.exceptions import ResponseError
 from typing import Optional, List, Any
 
+
 class AsyncMessageProcessor:
     """
     Redis Streams Consumer Group implementation for async message handling (Phase 3).
@@ -39,9 +40,9 @@ class AsyncMessageProcessor:
         return await self.redis.xadd(stream_name, payload)
 
     async def consume(
-        self, 
-        consumer_name: str, 
-        count: int = 10, 
+        self,
+        consumer_name: str,
+        count: int = 10,
         block_ms: int = 5000,
         id_mode: str = ">"
     ):
@@ -66,10 +67,10 @@ class AsyncMessageProcessor:
         )
 
     async def claim(
-        self, 
-        stream_name: str, 
-        consumer_name: str, 
-        min_idle_time_ms: int, 
+        self,
+        stream_name: str,
+        consumer_name: str,
+        min_idle_time_ms: int,
         message_ids: List[str]
     ) -> List[Any]:
         """Claim stale messages from another consumer"""

@@ -5,9 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.database import Experiment
 
+
 class ABTestManager:
     """Manages variant assignment and experiment execution (Phase 3)"""
-    
+
     def __init__(self, db: AsyncSession):
         self.db = db
 
@@ -29,18 +30,20 @@ class ABTestManager:
         if not experiment or experiment.status != "running":
             return "control"
 
-        split = experiment.traffic_split # e.g., {"control": 50, "test_v1": 50}
+        # e.g., {"control": 50, "test_v1": 50}
+        split = experiment.traffic_split
         cumulative = 0
         for variant, percentage in split.items():
             cumulative += percentage
             if variant_hash < cumulative:
                 return variant
-        
+
         return "control"
 
     async def get_active_experiment(self, name: str) -> Optional[Experiment]:
         """Fetch active experiment by name"""
-        stmt = select(Experiment).where(Experiment.name == name, Experiment.status == "running")
+        stmt = select(Experiment).where(Experiment.name ==
+                                        name, Experiment.status == "running")
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -49,6 +52,6 @@ class ABTestManager:
         experiment = await self.get_active_experiment(experiment_name)
         if not experiment:
             return None
-            
+
         variant_name = await self.get_variant(user_id, experiment.id)
         return experiment.variants.get(variant_name, {}).get("prompt")

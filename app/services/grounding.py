@@ -6,6 +6,7 @@ import numpy as np
 from typing import List, Dict, Any
 from sentence_transformers import SentenceTransformer
 
+
 class GroundingChecker:
     """
     Grounding Checker (Phase 2) using SentenceTransformer similarity.
@@ -37,11 +38,12 @@ class GroundingChecker:
         # Calculate cosine similarities
         # similarities = dot(response, sources) / (norm(response) * norm(sources))
         # sentence_transformers encode often returns normalized vectors, but let's be safe
-        
+
         def cosine_similarity(a, b):
             return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
-        scores = [cosine_similarity(response_emb, s_emb) for s_emb in source_embs]
+        scores = [cosine_similarity(response_emb, s_emb)
+                  for s_emb in source_embs]
         best_score = max(scores)
         best_index = scores.index(best_score)
 

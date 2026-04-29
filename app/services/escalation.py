@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import EscalationRequest
 from app.models.database import EscalationQueue
 
+
 class EscalationManager:
     """Phase 2: Escalation with SLA tracking and DB persistence"""
 
@@ -31,7 +32,7 @@ class EscalationManager:
 
         minutes = self.SLA_MINUTES.get(p_val, 30)
         deadline = datetime.utcnow() + timedelta(minutes=minutes)
-        
+
         ticket = EscalationQueue(
             conversation_id=request.conversation_id,
             reason=request.reason,

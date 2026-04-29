@@ -1,8 +1,6 @@
 """API endpoints - Phase 3 (Ultimate Production Ready)"""
 import os
 import time
-import json
-import logging
 from typing import Optional, List
 
 import redis.asyncio as aioredis
@@ -16,9 +14,9 @@ from app.models import (
     EscalationRequest,
 )
 from app.models.database import (
-    Conversation, 
-    Message, 
-    User, 
+    Conversation,
+    Message,
+    User,
     EmotionHistory,
     get_db
 )
@@ -94,10 +92,11 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 async def get_or_create_user(db: AsyncSession, platform: str, platform_user_id: str) -> User:
     """Helper to get or create a user across platforms"""
-    stmt = select(User).where(User.platform == platform, User.platform_user_id == platform_user_id)
+    stmt = select(User).where(User.platform == platform,
+                              User.platform_user_id == platform_user_id)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
-    
+
     if not user:
         user = User(platform=platform, platform_user_id=platform_user_id)
         db.add(user)
@@ -114,7 +113,7 @@ async def get_active_conversation(db: AsyncSession, user: User) -> Conversation:
     ).order_by(desc(Conversation.started_at))
     result = await db.execute(stmt)
     conv = result.scalar_one_or_none()
-    
+
     if not conv:
         conv = Conversation(
             unified_user_id=user.unified_user_id,
@@ -129,10 +128,11 @@ async def get_active_conversation(db: AsyncSession, user: User) -> Conversation:
 
 async def get_emotion_tracker(db: AsyncSession, conversation_id: int) -> EmotionTracker:
     """Load emotion history and return a tracker"""
-    stmt = select(EmotionHistory).where(EmotionHistory.conversation_id == conversation_id).order_by(desc(EmotionHistory.timestamp)).limit(10)
+    stmt = select(EmotionHistory).where(EmotionHistory.conversation_id ==
+                                        conversation_id).order_by(desc(EmotionHistory.timestamp)).limit(10)
     result = await db.execute(stmt)
     rows = result.scalars().all()
-    
+
     history = [
         EmotionScore(
             category=EmotionCategory(row.category),
@@ -155,7 +155,7 @@ def verify_signature(platform: str, body: bytes, signature: str, secret: str) ->
 async def process_webhook_message(db: AsyncSession, platform: str, platform_user_id: str, text_content: str, lang: str = "zh-TW"):
     """Generic message processing logic with Metrics and Tracing"""
     start_time = time.time()
-    
+
     with tracer.start_as_current_span(f"process_{platform}_message") as span:
         span.set_attribute("platform", platform)
         span.set_attribute("user_id", platform_user_id)
@@ -168,7 +168,8 @@ async def process_webhook_message(db: AsyncSession, platform: str, platform_user
         clean_text = sanitizer.sanitize(text_content)
         security_check = prompt_defense.check_input(clean_text)
         if not security_check.is_safe:
-            logger.warn("prompt_injection_detected", platform=platform, reason=security_check.blocked_reason)
+            logger.warn("prompt_injection_detected", platform=platform,
+                        reason=security_check.blocked_reason)
             return "Security violation detected", "blocked"
 
         # 3. PII masking
@@ -176,48 +177,53 @@ async def process_webhook_message(db: AsyncSession, platform: str, platform_user
         processed_text = mask_result.masked_text
 
         # 4. DST: Process Turn
-        intent = "inquiry" if any(k in clean_text for k in ["詢問", "查詢", "什麼", "如何"]) else None
-        state = dst_manager.process_turn(conv.id, intent, {"content": clean_text})
-        
+        intent = "inquiry" if any(k in clean_text for k in [
+                                  "詢問", "查詢", "什麼", "如何"]) else None
+        state = dst_manager.process_turn(
+            conv.id, intent, {"content": clean_text})
+
         # 5. Emotion Tracking
-        sentiment = "negative" if any(k in clean_text for k in ["生氣", "爛", "慢", "不爽", "差"]) else "neutral"
+        sentiment = "negative" if any(k in clean_text for k in [
+                                      "生氣", "爛", "慢", "不爽", "差"]) else "neutral"
         category = EmotionCategory.NEGATIVE if sentiment == "negative" else EmotionCategory.NEUTRAL
-        
+
         # Metrics: Sentiment
-        MESSAGE_SENTIMENT.labels(platform=platform).observe(0.1 if sentiment == "negative" else 0.8)
-        
+        MESSAGE_SENTIMENT.labels(platform=platform).observe(
+            0.1 if sentiment == "negative" else 0.8)
+
         db.add(EmotionHistory(
             conversation_id=conv.id,
             category=category.value,
             intensity=0.8
         ))
-        
+
         tracker = await get_emotion_tracker(db, conv.id)
         tracker.add(EmotionScore(category=category, intensity=0.8))
 
         # 6. Response Logic
         allowed_layers = degradation_manager.get_allowed_layers()
-        
+
         if pii_masking.should_escalate(clean_text) or tracker.should_escalate():
             response_content = i18n.translate("escalate", lang)
             knowledge_source = "escalate"
         else:
             # Use Degradation Manager to decide if LLM is allowed
             use_llm = allowed_layers.get("llm", True)
-            
+
             knowledge_layer = HybridKnowledgeV7(db, llm_client=use_llm)
-            
+
             try:
                 llm_start = time.time()
                 result = await knowledge_layer.query(processed_text, user_context={"state": state.current_state.value})
                 llm_duration = time.time() - llm_start
-                
+
                 # Update Degradation Metrics
-                degradation_manager.update_metrics(llm_latency=llm_duration, llm_success=True)
-                
+                degradation_manager.update_metrics(
+                    llm_latency=llm_duration, llm_success=True)
+
                 response_content = result.content
                 knowledge_source = result.source
-                
+
                 if knowledge_source == "llm":
                     LLM_TOKEN_USAGE.labels(model="simulated").inc(50)
             except Exception as e:
@@ -230,11 +236,11 @@ async def process_webhook_message(db: AsyncSession, platform: str, platform_user
         # 7. Save Messages (with Encryption and Cost Model)
         encrypted_user_content = encryption_service.encrypt(processed_text)
         duration_ms = int((time.time() - start_time) * 1000)
-        
+
         # Cost Model: Phase 3 (Simplified: fixed cost per source)
         cost_map = {"rule": 0.001, "rag": 0.005, "llm": 0.02, "escalate": 0.05}
         cost = cost_map.get(knowledge_source, 0.0)
-        
+
         db.add(Message(
             conversation_id=conv.id,
             role="user",
@@ -249,12 +255,13 @@ async def process_webhook_message(db: AsyncSession, platform: str, platform_user
             knowledge_source=knowledge_source,
             confidence=0.9 if knowledge_source != "llm" else 0.85
         ))
-        
+
         # Update conversation KPI
-        conv.dst_state = {"current": state.current_state.value, "turn": state.turn_count}
+        conv.dst_state = {
+            "current": state.current_state.value, "turn": state.turn_count}
         conv.resolution_cost = (conv.resolution_cost or 0.0) + cost
         conv.response_time_ms = (conv.response_time_ms or 0) + duration_ms
-        
+
         # 8. Async Work
         if worker:
             await worker.produce("omnibot:analytics", {
@@ -265,7 +272,8 @@ async def process_webhook_message(db: AsyncSession, platform: str, platform_user
                 "cost": cost
             })
 
-        REQUEST_LATENCY.labels(endpoint=f"webhook_{platform}").observe(time.time() - start_time)
+        REQUEST_LATENCY.labels(endpoint=f"webhook_{platform}").observe(
+            time.time() - start_time)
         return response_content, knowledge_source
 
 
@@ -274,7 +282,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
     """Health check endpoint with DB and Redis monitoring"""
     postgres_ok = False
     redis_ok = False
-    
+
     try:
         await db.execute(text("SELECT 1"))
         postgres_ok = True
@@ -302,14 +310,17 @@ async def health_check(db: AsyncSession = Depends(get_db)):
 async def telegram_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    x_telegram_bot_api_secret_token: Optional[str] = Header(None, alias="X-Telegram-Bot-Api-Secret-Token")
+    x_telegram_bot_api_secret_token: Optional[str] = Header(
+        None, alias="X-Telegram-Bot-Api-Secret-Token")
 ):
     """Telegram bot webhook"""
-    REQUEST_COUNT.labels(method="POST", endpoint="telegram", platform="telegram").inc()
+    REQUEST_COUNT.labels(method="POST", endpoint="telegram",
+                         platform="telegram").inc()
     body = await request.body()
 
     if not await rate_limiter.check("telegram", "user"):
-        raise HTTPException(status_code=429, detail=i18n.translate("rate_limit"))
+        raise HTTPException(
+            status_code=429, detail=i18n.translate("rate_limit"))
 
     if x_telegram_bot_api_secret_token and TELEGRAM_BOT_TOKEN:
         if not verify_signature("telegram", body, x_telegram_bot_api_secret_token, TELEGRAM_BOT_TOKEN):
@@ -325,7 +336,7 @@ async def telegram_webhook(
     text_content = message_data.get("text", "")
 
     response_content, _ = await process_webhook_message(db, "telegram", platform_user_id, text_content)
-    
+
     await db.commit()
     return {"success": True, "data": {"response": response_content}}
 
@@ -341,7 +352,8 @@ async def line_webhook(
     body = await request.body()
 
     if not await rate_limiter.check("line", "user"):
-        raise HTTPException(status_code=429, detail=i18n.translate("rate_limit"))
+        raise HTTPException(
+            status_code=429, detail=i18n.translate("rate_limit"))
 
     if x_line_signature and LINE_CHANNEL_SECRET:
         if not verify_signature("line", body, x_line_signature, LINE_CHANNEL_SECRET):
@@ -359,7 +371,7 @@ async def line_webhook(
         if event.get("type") == "message":
             platform_user_id = event.get("source", {}).get("userId", "")
             text_content = event.get("message", {}).get("text", "")
-            
+
             response_content, _ = await process_webhook_message(db, "line", platform_user_id, text_content)
             responses.append(response_content)
 
@@ -374,7 +386,8 @@ async def messenger_webhook(
     x_hub_signature: Optional[str] = Header(None)
 ):
     """Messenger webhook with signature verification"""
-    REQUEST_COUNT.labels(method="POST", endpoint="messenger", platform="messenger").inc()
+    REQUEST_COUNT.labels(method="POST", endpoint="messenger",
+                         platform="messenger").inc()
     body = await request.body()
     if not await rate_limiter.check("messenger", "user"):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
@@ -383,7 +396,7 @@ async def messenger_webhook(
         if not verify_signature("messenger", body, x_hub_signature, MESSENGER_APP_SECRET):
             logger.warn("messenger_invalid_signature")
             raise HTTPException(status_code=401, detail="Invalid signature")
-    
+
     data = await request.json()
     entries = data.get("entry", [])
     responses = []
@@ -406,7 +419,8 @@ async def whatsapp_webhook(
     x_hub_signature_256: Optional[str] = Header(None)
 ):
     """WhatsApp webhook with signature verification"""
-    REQUEST_COUNT.labels(method="POST", endpoint="whatsapp", platform="whatsapp").inc()
+    REQUEST_COUNT.labels(method="POST", endpoint="whatsapp",
+                         platform="whatsapp").inc()
     body = await request.body()
     if not await rate_limiter.check("whatsapp", "user"):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
@@ -415,7 +429,7 @@ async def whatsapp_webhook(
         if not verify_signature("whatsapp", body, x_hub_signature_256, WHATSAPP_APP_SECRET):
             logger.warn("whatsapp_invalid_signature")
             raise HTTPException(status_code=401, detail="Invalid signature")
-    
+
     data = await request.json()
     results = []
     for entry in data.get("entry", []):
@@ -454,7 +468,7 @@ async def create_knowledge(
 
 @app.put("/api/v1/knowledge/{id}")
 async def update_knowledge(
-    id: int, 
+    id: int,
     item: dict,
     user_role: str = Depends(rbac.require("knowledge", "write"))
 ):
