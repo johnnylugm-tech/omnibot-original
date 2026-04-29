@@ -178,7 +178,8 @@
 - [ ] `test_hybrid_layer_rrf_respects_k_parameter`: k=60 時 `1/(rank+60)` 計算分數
 - [ ] `test_hybrid_layer_rag_search_uses_embedding_model_filter`: RAG 查詢時過濾 `embedding_model` 欄位
 - [ ] `test_hybrid_layer_rag_search_orders_by_cosine_similarity`: 向量搜尋以 `embeddings <=> query_embedding` 排序
-- [ ] `test_hybrid_layer_llm_generate_called_when_rule_and_rag_fail`: 前兩層 confidence <= 0.7 時呼叫 Layer 3
+- [ ] `test_hybrid_layer_llm_generate_returns_result_when_overridden`: HybridKnowledgeLayer 子類 override `_llm_generate()` 並回傳 `KnowledgeResult` 時，hybrid 結果採用該 layer 的回覆（`source="llm"`）
+- [ ] `test_hybrid_layer_llm_generate_returns_none_falls_through_to_layer4`: 子類 `_llm_generate()` 回傳 `None` 時，hybrid 繼續往 Layer 4（escalate）遞進，不阻斷流程
 - [ ] `test_hybrid_layer_escalate_when_all_layers_fail`: 三層都無結果時回傳 `source="escalate"`, `id=-1`
 - [ ] `test_hybrid_layer_returns_knowledge_result_with_correct_source`: 各層回傳的 `source` 符合預期（rule/rag/wiki/escalate）
 
@@ -374,7 +375,10 @@
 ### 38. i18n 擴充
 
 - [ ] `test_current_scope_zh_tw_pii_patterns`: Phase 1-3 PII patterns 僅針對台灣格式
-- [ ] `test_expansion_roadmap_defined`: i18n 擴充 roadmap 文件存在（zh-CN、en、ja）
+- [ ] `test_expansion_roadmap_defined`: i18n 擴充 roadmap 文件存在於 `i18n/` 目錄（zh-CN、en、ja 三個 locale）
+- [ ] `test_expansion_roadmap_zh_cn_content_exists_and_non_empty`: `i18n/zh-CN/` 目錄下存在非空白內容（驗證檔案存在且非 placeholder）
+- [ ] `test_expansion_roadmap_en_content_exists_and_non_empty`: `i18n/en/` 目錄下存在非空白內容
+- [ ] `test_expansion_roadmap_ja_content_exists_and_non_empty`: `i18n/ja/` 目錄下存在非空白內容
 
 ### 39. 成本模型
 
