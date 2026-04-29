@@ -463,4 +463,4 @@ class TestPIIMaskingEdgeCases:
         result = self.masker.mask("Amex: 378282246310005")
         # Amex 15-digit cards don't match the regex pattern for 16-digit cards
         # This is a known limitation of the Phase 2 implementation
-        assert "378282246310005" in result.masked_text  # Not masked due to 15-digit limitation
+        assert "[credit_card_masked]" in result.masked_text  # Not masked due to 15-digit limitation

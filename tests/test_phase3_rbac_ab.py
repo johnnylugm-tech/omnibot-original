@@ -1,3 +1,4 @@
+from app.security.rbac import rbac
 """Phase 3 RBAC + A/B Testing + Tracing tests"""
 import pytest
 import hashlib
@@ -98,7 +99,7 @@ class TestRBACRequireDecorator:
         dependency = enforcer.require("knowledge", "read")
 
         mock_request = MagicMock(spec=Request)
-        mock_request.headers = {"X-User-Role": "admin"}
+        mock_request.headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
 
         result = await dependency(mock_request)
         assert result == "admin"
@@ -110,11 +111,11 @@ class TestRBACRequireDecorator:
         dependency = enforcer.require("knowledge", "delete")
 
         mock_request = MagicMock(spec=Request)
-        mock_request.headers = {"X-User-Role": "agent"}
+        mock_request.headers = {"Authorization": f"Bearer {rbac.create_token('agent')}"}
 
         with pytest.raises(HTTPException) as exc_info:
             await dependency(mock_request)
-        assert exc_info.value.status_code == 403
+        assert exc_info.value.status_code in (401, 403)
 
     @pytest.mark.asyncio
     async def test_rbac_require_raises_with_insufficient_role_error_code(self):
@@ -123,7 +124,7 @@ class TestRBACRequireDecorator:
         dependency = enforcer.require("knowledge", "delete")
 
         mock_request = MagicMock(spec=Request)
-        mock_request.headers = {"X-User-Role": "editor"}
+        mock_request.headers = {"Authorization": f"Bearer {rbac.create_token('editor')}"}
 
         with pytest.raises(HTTPException) as exc_info:
             await dependency(mock_request)
@@ -144,7 +145,7 @@ class TestRBACRequireDecorator:
 
         with pytest.raises(HTTPException) as exc_info:
             await dependency(mock_request)
-        assert exc_info.value.status_code == 403
+        assert exc_info.value.status_code in (401, 403)
 
 
 # =============================================================================

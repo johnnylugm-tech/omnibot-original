@@ -1,3 +1,4 @@
+from app.security.rbac import rbac
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 from fastapi.testclient import TestClient
@@ -79,7 +80,7 @@ def test_telegram_webhook_normal(mock_get_conv, mock_get_user, mock_process, cli
 
 def test_knowledge_crud_rbac(client):
     # admin can do everything
-    headers = {"X-User-Role": "admin"}
+    headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     
     # Create
     response = client.post("/api/v1/knowledge", json={"q": "new", "a": "ans"}, headers=headers)
@@ -99,7 +100,7 @@ def test_knowledge_crud_rbac(client):
 
 def test_knowledge_crud_forbidden(client):
     # agent can only read knowledge
-    headers = {"X-User-Role": "agent"}
+    headers = {"Authorization": f"Bearer {rbac.create_token('agent')}"}
     
     response = client.post("/api/v1/knowledge", json={}, headers=headers)
     assert response.status_code == 403
@@ -108,11 +109,11 @@ def test_knowledge_crud_forbidden(client):
     assert response.status_code == 403
 
 def test_conversations_list_rbac(client):
-    response = client.get("/api/v1/conversations", headers={"X-User-Role": "admin"})
+    response = client.get("/api/v1/conversations", headers={"Authorization": "Bearer eyJyb2xlIjogImFkbWluIn0.78f2e30e15e2d24f56e94b18a4b8fb611313993b48a78d4bca5895c6764f1f5a"})
     assert response.status_code == 200
     
-    response = client.get("/api/v1/conversations", headers={"X-User-Role": "agent"})
+    response = client.get("/api/v1/conversations", headers={"Authorization": "Bearer eyJyb2xlIjogImFnZW50In0.c7885d0c7f0dfc6b944c9633ebd12c237c609258bd643938e9366204c6c95dc6"})
     assert response.status_code == 200 # Agents can read conversations
     
-    response = client.get("/api/v1/conversations", headers={"X-User-Role": "unknown"})
+    response = client.get("/api/v1/conversations", headers={"Authorization": "Bearer eyJyb2xlIjogInVua25vd24ifQ.ee34e1fe9156751d5f00c5fd77bf11ff4e48a4e6e1d5d017b230d82f820cd0c4"})
     assert response.status_code == 403

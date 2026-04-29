@@ -1,3 +1,4 @@
+from app.security.rbac import rbac
 """Phase 1 API + DB Schema Tests for OmniBot"""
 import pytest
 import uuid
@@ -122,7 +123,7 @@ def test_health_endpoint_status_degraded_when_one_down(client, mock_db):
 
 def test_knowledge_create_returns_api_response(client, mock_db):
     """POST /api/v1/knowledge returns ApiResponse"""
-    headers = {"X-User-Role": "admin"}
+    headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     response = client.post("/api/v1/knowledge", json={"q": "test", "a": "answer"}, headers=headers)
     assert response.status_code == 200
     data = response.json()
@@ -133,7 +134,7 @@ def test_knowledge_create_returns_api_response(client, mock_db):
 
 def test_knowledge_get_with_pagination(client, mock_db):
     """GET /api/v1/knowledge?q=xx&page=1&limit=20 works"""
-    headers = {"X-User-Role": "admin"}
+    headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     response = client.get("/api/v1/knowledge?q=xx&page=1&limit=20", headers=headers)
     assert response.status_code == 200
     data = response.json()
@@ -143,7 +144,7 @@ def test_knowledge_get_with_pagination(client, mock_db):
 
 def test_knowledge_get_limit_max_100(client, mock_db):
     """limit=200 → API accepts the value (actual clamping depends on implementation)"""
-    headers = {"X-User-Role": "admin"}
+    headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     response = client.get("/api/v1/knowledge?q=test&limit=200", headers=headers)
     assert response.status_code == 200
     data = response.json()
@@ -153,7 +154,7 @@ def test_knowledge_get_limit_max_100(client, mock_db):
 
 def test_knowledge_get_returns_paginated_response(client, mock_db):
     """response has total, page, and items"""
-    headers = {"X-User-Role": "admin"}
+    headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     response = client.get("/api/v1/knowledge?q=test&page=1&limit=20", headers=headers)
     assert response.status_code == 200
     data = response.json()
@@ -164,7 +165,7 @@ def test_knowledge_get_returns_paginated_response(client, mock_db):
 
 def test_knowledge_update(client, mock_db):
     """PUT /api/v1/knowledge/{id} works"""
-    headers = {"X-User-Role": "admin"}
+    headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     response = client.put("/api/v1/knowledge/1", json={"a": "updated"}, headers=headers)
     assert response.status_code == 200
     data = response.json()
@@ -174,7 +175,7 @@ def test_knowledge_update(client, mock_db):
 
 def test_knowledge_delete(client, mock_db):
     """DELETE /api/v1/knowledge/{id} soft-deletes (is_active=FALSE)"""
-    headers = {"X-User-Role": "admin"}
+    headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     response = client.delete("/api/v1/knowledge/1", headers=headers)
     assert response.status_code == 200
     data = response.json()
@@ -184,7 +185,7 @@ def test_knowledge_delete(client, mock_db):
 
 def test_knowledge_bulk_import(client, mock_db):
     """POST /api/v1/knowledge/bulk works"""
-    headers = {"X-User-Role": "admin"}
+    headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     payload = {"items": [{"q": "q1", "a": "a1"}, {"q": "q2", "a": "a2"}]}
     response = client.post("/api/v1/knowledge/bulk", json=payload, headers=headers)
     assert response.status_code == 200
@@ -195,7 +196,7 @@ def test_knowledge_bulk_import(client, mock_db):
 
 def test_knowledge_not_found_returns_404(client, mock_db):
     """GET non-existent id → 404"""
-    headers = {"X-User-Role": "admin"}
+    headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     # This endpoint doesn't exist - the API uses query params, not path params for GET
     # So we test with an invalid request that triggers an error
     response = client.get("/api/v1/knowledge?q=nonexistent", headers=headers)
@@ -206,7 +207,7 @@ def test_knowledge_not_found_returns_404(client, mock_db):
 
 def test_validation_error_returns_422(client, mock_db):
     """invalid params → 422 if validation is implemented"""
-    headers = {"X-User-Role": "admin"}
+    headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     # page=0 may or may not return 422 depending on implementation
     response = client.get("/api/v1/knowledge?q=test&page=0", headers=headers)
     # Current API returns 200, but validation could be added later
@@ -219,7 +220,7 @@ def test_validation_error_returns_422(client, mock_db):
 
 def test_conversations_list_returns_api_response(client, mock_db):
     """GET /api/v1/conversations returns list"""
-    headers = {"X-User-Role": "admin"}
+    headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     response = client.get("/api/v1/conversations", headers=headers)
     assert response.status_code == 200
     data = response.json()
@@ -307,7 +308,7 @@ def test_user_feedback_check_constraint():
 
 def test_api_knowledge_get_pagination_page_0_edge_case(client, mock_db):
     """page=0 → returns 200 (validation not yet implemented)"""
-    headers = {"X-User-Role": "admin"}
+    headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     response = client.get("/api/v1/knowledge?q=test&page=0", headers=headers)
     # Currently returns 200, validation could be added later
     assert response.status_code in (200, 422)
@@ -315,7 +316,7 @@ def test_api_knowledge_get_pagination_page_0_edge_case(client, mock_db):
 
 def test_api_knowledge_get_limit_101_clamped_to_100(client, mock_db):
     """limit=101 → API returns the value (clamping depends on implementation)"""
-    headers = {"X-User-Role": "admin"}
+    headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     response = client.get("/api/v1/knowledge?q=test&limit=101", headers=headers)
     assert response.status_code == 200
     data = response.json()
@@ -325,7 +326,7 @@ def test_api_knowledge_get_limit_101_clamped_to_100(client, mock_db):
 
 def test_api_conversations_list_pagination(client, mock_db):
     """pagination params work"""
-    headers = {"X-User-Role": "admin"}
+    headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     response = client.get("/api/v1/conversations?page=2&limit=10", headers=headers)
     assert response.status_code == 200
     data = response.json()
@@ -335,7 +336,7 @@ def test_api_conversations_list_pagination(client, mock_db):
 
 def test_api_conversations_list_filter_by_platform(client, mock_db):
     """filter by platform works"""
-    headers = {"X-User-Role": "admin"}
+    headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     response = client.get("/api/v1/conversations?platform=telegram", headers=headers)
     assert response.status_code == 200
     data = response.json()

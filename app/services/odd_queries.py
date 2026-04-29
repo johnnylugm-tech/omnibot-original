@@ -4,7 +4,7 @@ Contains 13 core analysis SQL queries for KPI and system monitoring.
 """
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 
 class ODDQueryManager:

@@ -1,3 +1,5 @@
+import os
+os.environ['SIMULATE_LLM'] = 'false'
 """Phase 1 Unit Tests for OmniBot - Comprehensive Coverage"""
 import pytest
 import time

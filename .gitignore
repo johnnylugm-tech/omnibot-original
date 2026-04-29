@@ -20,3 +20,4 @@ issue_registry.json
 # OS files
 .DS_Store
 Thumbs.db
+backups/

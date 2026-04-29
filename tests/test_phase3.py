@@ -1,3 +1,4 @@
+from app.security.rbac import rbac
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from fastapi import Request, HTTPException
@@ -26,12 +27,12 @@ async def test_rbac_dependency():
 
     # Mock success request
     mock_request_ok = MagicMock(spec=Request)
-    mock_request_ok.headers = {"X-User-Role": "admin"}
+    mock_request_ok.headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     assert await dependency(mock_request_ok) == "admin"
 
     # Mock fail request
     mock_request_fail = MagicMock(spec=Request)
-    mock_request_fail.headers = {"X-User-Role": "user"}
+    mock_request_fail.headers = {"Authorization": f"Bearer {rbac.create_token('user')}"}
     with pytest.raises(HTTPException) as exc:
         await dependency(mock_request_fail)
     assert exc.value.status_code == 403

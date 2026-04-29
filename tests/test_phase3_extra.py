@@ -23,7 +23,7 @@ def test_tracing_initialization():
         pass
 
 def test_backup_script_exists():
-    script_path = "/Users/johnny/Documents/omnibot/scripts/backup.sh"
+    script_path = "./scripts/backup.sh"
     assert os.path.exists(script_path)
     # Check if executable (optional, but good for verification)
     assert os.access(script_path, os.X_OK)

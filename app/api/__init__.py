@@ -34,6 +34,8 @@ from app.services.dst import DSTManager
 from app.services.emotion import EmotionCategory, EmotionScore, EmotionTracker
 from app.services.knowledge import HybridKnowledgeV7
 from app.services.worker import AsyncMessageProcessor
+from app.services.backup import BackupService
+from app.utils.alerts import AlertManager
 from app.utils.logger import StructuredLogger
 from app.utils.metrics import REQUEST_COUNT, REQUEST_LATENCY, MESSAGE_SENTIMENT, LLM_TOKEN_USAGE
 from app.utils.i18n import i18n
@@ -52,6 +54,8 @@ rate_limiter = RateLimiter()
 dst_manager = DSTManager()
 degradation_manager = DegradationManager()
 encryption_service = EncryptionService()
+alert_manager = AlertManager()
+backup_service = BackupService()
 logger = StructuredLogger("omnibot")
 
 # Global worker
