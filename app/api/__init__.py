@@ -7,7 +7,7 @@ from typing import Optional, List, Any, AsyncGenerator
 import redis.asyncio as aioredis
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Body
 from fastapi.responses import JSONResponse
-from sqlalchemy import text, select, desc
+from sqlalchemy import text, select, desc, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
@@ -19,6 +19,7 @@ from app.models.database import (
     Message,
     User,
     EmotionHistory,
+    KnowledgeBase,
     get_db
 )
 from app.security import (
@@ -452,60 +453,186 @@ async def whatsapp_webhook(
     return {"success": True, "data": {"responses": results}}
 
 
+@app.get("/api/v1/kpi/dashboard")
+async def get_kpi_dashboard(
+    db: AsyncSession = Depends(get_db),
+    user_role: str = Depends(rbac.require("admin", "read"))
+) -> Any:
+    """Enterprise KPI Dashboard - Phase 3 Real Implementation"""
+    kpi = KPIManager(db)
+    total_convs = await kpi.get_total_conversations()
+    avg_res_time = await kpi.get_avg_resolution_time()
+    esc_rate = await kpi.get_escalation_rate()
+    hit_rate = await kpi.get_knowledge_hit_rate()
+    sla_rate = await kpi.get_sla_compliance_rate()
+    revenue = await kpi.get_revenue_per_conversation()
+    daily = await kpi.get_daily_breakdown(days=7)
+
+    return {
+        "success": True,
+        "data": {
+            "summary": {
+                "total_conversations": total_convs,
+                "avg_resolution_time_sec": round(avg_res_time, 2),
+                "escalation_rate": round(esc_rate * 100, 2),
+                "knowledge_hit_rate": round(hit_rate * 100, 2),
+                "sla_compliance_rate": round(sla_rate * 100, 2),
+                "estimated_revenue_per_conv": round(revenue, 2)
+            },
+            "daily_trends": daily
+        }
+    }
+
+
 @app.get("/api/v1/knowledge")
 async def query_knowledge(
-    q: str,
+    q: Optional[str] = None,
     category: Optional[str] = None,
     page: int = 1,
     limit: int = 20,
+    db: AsyncSession = Depends(get_db),
     user_role: str = Depends(rbac.require("knowledge", "read"))
 ) -> Any:
-    """Query knowledge base"""
-    return {"success": True, "data": {"items": [], "total": 0, "page": page, "limit": limit}}
+    """Query knowledge base with real database filtering"""
+    offset = (page - 1) * limit
+    stmt = select(KnowledgeBase).where(KnowledgeBase.is_active == True)
+    
+    if q:
+        stmt = stmt.where(or_(
+            KnowledgeBase.question.ilike(f"%{q}%"),
+            KnowledgeBase.answer.ilike(f"%{q}%")
+        ))
+    if category:
+        stmt = stmt.where(KnowledgeBase.category == category)
+        
+    stmt = stmt.order_by(KnowledgeBase.id.desc()).offset(offset).limit(limit)
+    result = await db.execute(stmt)
+    items = result.scalars().all()
+    
+    return {
+        "success": True, 
+        "data": {
+            "items": [
+                {"id": k.id, "question": k.question, "category": k.category, "answer": k.answer}
+                for k in items
+            ],
+            "page": page,
+            "limit": limit
+        }
+    }
 
 
 @app.post("/api/v1/knowledge")
 async def create_knowledge(
-    item: dict,
+    item: dict = Body(...),
+    db: AsyncSession = Depends(get_db),
     user_role: str = Depends(rbac.require("knowledge", "write"))
 ) -> Any:
-    """Create knowledge entry"""
-    return {"success": True, "data": {"id": 1}}
-
-
-@app.put("/api/v1/knowledge/{id}")
-async def update_knowledge(
-    id: int,
-    item: dict,
-    user_role: str = Depends(rbac.require("knowledge", "write"))
-) -> Any:
-    """Update knowledge entry"""
-    return {"success": True, "data": {"id": id}}
-
-
-@app.delete("/api/v1/knowledge/{id}")
-async def delete_knowledge(
-    id: int,
-    user_role: str = Depends(rbac.require("knowledge", "delete"))
-) -> Any:
-    """Delete knowledge entry"""
-    return {"success": True, "data": {"deleted": True}}
-
-
-@app.post("/api/v1/knowledge/bulk")
-async def bulk_import(
-    items: list = Body(..., embed=True),
-    user_role: str = Depends(rbac.require("knowledge", "write"))
-) -> Any:
-    """Bulk import knowledge"""
-    return {"success": True, "data": {"imported": len(items)}}
+    """Create knowledge entry in DB"""
+    new_k = KnowledgeBase(
+        category=item.get("category", "General"),
+        question=item.get("question", ""),
+        answer=item.get("answer", ""),
+        keywords=item.get("keywords", []),
+        is_active=True,
+        version=1
+    )
+    db.add(new_k)
+    await db.commit()
+    await db.refresh(new_k)
+    return {"success": True, "data": {"id": new_k.id}}
 
 
 @app.get("/api/v1/conversations")
 async def list_conversations(
     page: int = 1,
     limit: int = 20,
+    db: AsyncSession = Depends(get_db),
     user_role: str = Depends(rbac.require("conversations", "read"))
 ) -> Any:
-    """List conversations"""
-    return {"success": True, "data": {"items": [], "total": 0, "page": page, "limit": limit}}
+    """List conversations from real DB with pagination"""
+    offset = (page - 1) * limit
+    stmt = select(Conversation).order_by(Conversation.started_at.desc()).offset(offset).limit(limit)
+    result = await db.execute(stmt)
+    items = result.scalars().all()
+    
+    return {
+        "success": True,
+        "data": {
+            "items": [
+                {
+                    "id": c.id, 
+                    "platform": c.platform, 
+                    "status": c.status, 
+                    "started_at": c.started_at.isoformat() if c.started_at else None
+                }
+                for c in items
+            ],
+            "page": page,
+            "limit": limit
+        }
+    }
+
+
+@app.put("/api/v1/knowledge/{id}")
+async def update_knowledge(
+    id: int,
+    item: dict = Body(...),
+    db: AsyncSession = Depends(get_db),
+    user_role: str = Depends(rbac.require("knowledge", "write"))
+) -> Any:
+    """Update knowledge entry in DB"""
+    stmt = select(KnowledgeBase).where(KnowledgeBase.id == id)
+    result = await db.execute(stmt)
+    k = result.scalar_one_or_none()
+    
+    if not k:
+        raise HTTPException(status_code=404, detail="Knowledge entry not found")
+        
+    for key, value in item.items():
+        if hasattr(k, key):
+            setattr(k, key, value)
+            
+    k.version += 1
+    await db.commit()
+    return {"success": True, "data": {"id": id}}
+
+
+@app.delete("/api/v1/knowledge/{id}")
+async def delete_knowledge(
+    id: int,
+    db: AsyncSession = Depends(get_db),
+    user_role: str = Depends(rbac.require("knowledge", "delete"))
+) -> Any:
+    """Soft delete knowledge entry"""
+    stmt = select(KnowledgeBase).where(KnowledgeBase.id == id)
+    result = await db.execute(stmt)
+    k = result.scalar_one_or_none()
+    
+    if not k:
+        raise HTTPException(status_code=404, detail="Knowledge entry not found")
+        
+    k.is_active = False
+    await db.commit()
+    return {"success": True, "data": {"deleted": True}}
+
+
+@app.post("/api/v1/knowledge/bulk")
+async def bulk_import(
+    items: List[dict] = Body(..., embed=True),
+    db: AsyncSession = Depends(get_db),
+    user_role: str = Depends(rbac.require("knowledge", "write"))
+) -> Any:
+    """Bulk import knowledge entries"""
+    for item in items:
+        new_k = KnowledgeBase(
+            category=item.get("category", "General"),
+            question=item.get("question", ""),
+            answer=item.get("answer", ""),
+            keywords=item.get("keywords", []),
+            is_active=True,
+            version=1
+        )
+        db.add(new_k)
+    await db.commit()
+    return {"success": True, "data": {"imported": len(items)}}

@@ -14,7 +14,17 @@ def mock_db():
     mock_result.scalars.return_value.all.return_value = []
     mock_result.scalar_one_or_none.return_value = None
     db.execute.return_value = mock_result
-    db.add = MagicMock()
+    
+    def side_effect_add(obj):
+        if hasattr(obj, 'id') and obj.id is None:
+            obj.id = 1
+            
+    db.add = MagicMock(side_effect=side_effect_add)
+    # Mock scalar_one_or_none to return the object for the update/delete tests
+    def set_scalar_return(obj):
+        db.execute.return_value.scalar_one_or_none.return_value = obj
+        
+    db.set_scalar_return = set_scalar_return
     return db
 
 @pytest.fixture
@@ -78,24 +88,32 @@ def test_telegram_webhook_normal(mock_get_conv, mock_get_user, mock_process, cli
     assert response.status_code == 200
     assert "這是為您生成的個人化回覆" in response.json()["data"]["response"]
 
-def test_knowledge_crud_rbac(client):
+def test_knowledge_crud_rbac(client, mock_db):
     # admin can do everything
     headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     
     # Create
-    response = client.post("/api/v1/knowledge", json={"q": "new", "a": "ans"}, headers=headers)
+    response = client.post("/api/v1/knowledge", json={"question": "new", "answer": "ans"}, headers=headers)
     assert response.status_code == 200
+    kid = response.json()["data"]["id"]
+    
+    # Mock for Update/Delete
+    from app.models.database import KnowledgeBase
+    mock_k = KnowledgeBase(id=kid, question="new", answer="ans", is_active=True, version=1)
+    mock_db.execute.return_value.scalar_one_or_none.return_value = mock_k
     
     # Update
-    response = client.put("/api/v1/knowledge/1", json={"a": "updated"}, headers=headers)
+    response = client.put(f"/api/v1/knowledge/{kid}", json={"answer": "updated"}, headers=headers)
+    if response.status_code == 422:
+        print(response.json())
     assert response.status_code == 200
     
     # Delete
-    response = client.delete("/api/v1/knowledge/1", headers=headers)
+    response = client.delete(f"/api/v1/knowledge/{kid}", headers=headers)
     assert response.status_code == 200
     
     # Bulk
-    response = client.post("/api/v1/knowledge/bulk", json={"items": [{"q": "1"}]}, headers=headers)
+    response = client.post("/api/v1/knowledge/bulk", json={"items": [{"question": "1", "answer": "1"}]}, headers=headers)
     assert response.status_code == 200
 
 def test_knowledge_crud_forbidden(client):
