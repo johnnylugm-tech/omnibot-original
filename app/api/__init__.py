@@ -296,7 +296,7 @@ async def process_webhook_message(db: AsyncSession, platform: str, platform_user
         daily_spend_result = await db.execute(daily_spend_stmt)
         current_daily_spend = float(daily_spend_result.scalar() or 0.0)
         
-        cost = cost_model.apply_daily_cap(current_daily_spend, raw_cost, DAILY_COST_CAP)
+        cost = cost_model.apply_daily_cap(current_daily_spend, raw_cost, cap=DAILY_COST_CAP)
         
         if cost < raw_cost:
             logger.warn("daily_cost_cap_exceeded", raw_cost=raw_cost, allowed_cost=cost)

@@ -18,7 +18,7 @@ async def test_redis_pending_entries_list_no_duplicate_message_ids():
     # Duplicate IDs in request
     message_ids = ["msg-001", "msg-002", "msg-001"]
     
-    await processor.claim(
+    await processor.claim_stale_message(
         stream_name="test_stream",
         consumer_name="new_consumer",
         min_idle_time_ms=30000,

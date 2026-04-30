@@ -66,7 +66,7 @@ class AsyncMessageProcessor:
             stream_name, self.group, "-", "+", count
         )
 
-    async def claim(
+    async def claim_stale_message(
         self,
         stream_name: str,
         consumer_name: str,
@@ -74,7 +74,7 @@ class AsyncMessageProcessor:
         message_ids: Sequence[str]
     ) -> List[Any]:
         """Claim stale messages from another consumer with ID deduplication"""
-        unique_ids = list(dict.fromkeys(message_ids))  # Preserves order while deduping
+        unique_ids = list(set(message_ids))  # Deduplicate using set() as requested
         return await self.redis.xclaim(
             stream_name,
             self.group,
@@ -82,6 +82,9 @@ class AsyncMessageProcessor:
             min_idle_time_ms,
             unique_ids
         )
+
+    # Alias for backward compatibility
+    claim = claim_stale_message
 
     async def close(self) -> None:
         """Close redis connection"""
