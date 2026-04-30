@@ -431,6 +431,51 @@ class HybridKnowledgeV7:
     ) -> Optional[KnowledgeResult]:
         """
         LLM 生成回覆（Layer 3）。
+
+        ## Layer 3 LLM Judgment Decision Flow
+
+        子類實作必須遵循以下決策邏輯：
+
+        ```
+        Layer 3 入口：query + user_context
+        │
+        ├── 1. PromptInjectionDefense.check_input()
+        │     │
+        │     ├── is_safe=False → 回傳 BlockedResult
+        │     │     (Sandwich Defense 已阻擋，不進 LLM)
+        │     │
+        │     └── is_safe=True → 繼續
+        │
+        ├── 2. Grounding Check (L5)
+        │     │
+        │     ├── is_grounded=True → 組建含 context 的 prompt
+        │     └── is_grounded=False → 回傳「知識庫無相關資訊」
+        │         → 轉 Layer 4（人工轉接）
+        │
+        ├── 3. 建構 Sandwich Prompt
+        │     build_sandwich_prompt(system_instruction, query, context)
+        │
+        ├── 4. 呼叫 LLM（帶 timeout + retry）
+        │     │
+        │     ├── success + valid response → 回傳 KnowledgeResult
+        │     │
+        │     ├── LLM_TIMEOUT / rate limit → fallthrough Layer 4
+        │     │
+        │     └── LLM 返回空內容 → fallthrough Layer 4
+        │
+        └── 5. 所有失敗 → 回傳 None，觸發 Layer 4 轉接
+        ```
+
+        ### Fallback 行為定義
+
+        | 情境 | 行為 |
+        |------|------|
+        | LLM Timeout（504） | 回傳 None，Layer 4 接手 |
+        | LLM 無法生成內容 | 回傳 None，Layer 4 接手 |
+        | Prompt Injection 偵測到 | 回傳 BlockedResult，不進 LLM |
+        | Grounding check 失敗 | 回傳「無相關知識」，Layer 4 接手 |
+        | context 為空 | 仍呼叫 LLM，LLM 根據自身知識回覆 |
+
         子類必須覆寫此方法。基類回傳 None 以 graceful fallthrough 至 Layer 4。
         """
         return None
@@ -928,6 +973,12 @@ ORDER BY date DESC;
 | 黃金數據集 | >= 500 筆 | 數量檢查 |
 
 ---
+
+## 備註：AsyncMessageProcessor 起源于 Phase 3
+
+`AsyncMessageProcessor`（Redis Streams 消費者群組）**起源於 Phase 3**，`Phase 2 spec 不包含此類別`**。Phase 2 的非同步訊息處理由 `app/services/worker.py` 中的同步或簡單佇列機制處理，不使用 Redis Streams。
+
+Phase 3 才會引入 `AsyncMessageProcessor` class 和 Redis Streams consumer group 模式。
 
 *Phase: 2*
 *文件版本: v7.0*

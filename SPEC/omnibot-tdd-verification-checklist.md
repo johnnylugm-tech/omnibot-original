@@ -14,7 +14,7 @@
 - [ ] `test_webhook_telegram_signature_valid`: Telegram bot token 正確時 `verify()` 回傳 True
 - [ ] `test_webhook_telegram_signature_invalid`: Telegram signature 錯誤時回傳 False
 - [ ] `test_webhook_verifier_registry_resolves_correct_type`: `VERIFIERS["line"]` 解析為 `LineWebhookVerifier`，`VERIFIERS["telegram"]` 解析為 `TelegramWebhookVerifier`
-- [ ] `test_webhook_400_on_invalid_signature`: POST `/api/v1/webhook/line` 帶錯誤簽名時回傳 401 + `AUTH_INVALID_SIGNATURE`
+- [ ] `test_webhook_401_on_invalid_signature`: POST `/api/v1/webhook/line` 帶錯誤簽名時回傳 401 + `AUTH_INVALID_SIGNATURE`
 - [ ] `test_webhook_429_on_rate_limit_exceeded`: 超過 Rate Limit 時回傳 429 + `RATE_LIMIT_EXCEEDED`
 
 ### 2. 統一消息格式

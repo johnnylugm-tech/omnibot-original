@@ -23,7 +23,9 @@
 | **系統可用性** | 99.9% | - | 多副本 + 自動故障轉移 |
 | **p95 回應延遲** | < 1.0s | < 1.5s | Redis 快取 + 異步處理 |
 | **災備復原時間** | < 5 分鐘 | - | 自動化復原 |
-| **月成本** | < $500 | - | 成本模型追蹤 |
+| **月成本** | < $500（實際估算 ~$210/月） | - | 成本模型追蹤 |
+
+> **成本說明**：`~$210/月` 為 LLM API 基礎估算（假設 10 萬對話，Layer 2 RAG 40% 覆蓋率）。`< $500/月` 為含 GPU 推理、Embedding 計算、備用硬體的實際部署成本上限。兩者假設不同，均為合理估算。
 
 ### CSAT 量化指標（最終版）
 
@@ -457,6 +459,34 @@ class AsyncMessageProcessor:
 
     async def ack(self, message_id: str) -> None:
         await self.redis.xack("omnibot:messages", self.group, message_id)
+
+
+## Redis Stream 訊息格式（Message Schema）
+
+```
+Stream Key: omnibot:messages
+Consumer Group: omnibot
+```
+
+### 訊息 Payload 欄位定義
+
+| 欄位名 | 型別 | 必填 | 說明 |
+|--------|------|------|------|
+| `message_id` | string (UUID) | 是 | 全域唯一訊息 ID |
+| `conversation_id` | integer | 是 | 對話 ID（參照 `conversations.id`）|
+| `platform` | string | 是 | 平台來源：`telegram` / `line` / `messenger` / `whatsapp` |
+| `unified_user_id` | string (UUID) | 是 | 跨平台統一用戶 ID |
+| `direction` | string | 是 | `inbound` / `outbound` |
+| `content` | string | 是 | 訊息內容文本 |
+| `timestamp` | string (ISO 8601) | 是 | 訊息時間戳 |
+| `metadata` | JSON string | 否 | 附帶資料（attachment URLs、quick replies 等）|
+
+### 消費者對未知欄位的處理原則
+
+- 消費者必須對未知欄位**寬容處理**（forward compatibility）
+- `xreadgroup` 返回的 field-value pairs，未定義的欄位應被忽略，不影響處理流程
+- 未知的 `platform` 值應記錄 warn log 後拋棄訊息
+- `metadata` 解析失敗時應有 fallback，不阻斷主流程
 ```
 
 ---
@@ -1138,7 +1168,7 @@ ORDER BY e.name, er.variant;
 | Phase | 查詢數 | 內容 |
 |-------|--------|------|
 | Phase 1 | 3 | FCR、延遲、知識命中 |
-| Phase 2 | 5 | CSAT、命中分布%、回饋、SLA、情緒、安全阻擋 |
+| Phase 2 | 6 | CSAT、命中分布%、回饋、SLA、情緒、安全阻擋 |
 | Phase 3 | 5 | 成本效益、月度成本、PII 稽核、RBAC 審計、A/B 效果 |
 | **合計** | **13** | - |
 
