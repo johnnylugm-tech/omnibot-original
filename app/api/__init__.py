@@ -2,12 +2,13 @@
 import os
 import time
 from datetime import datetime
+from contextlib import asynccontextmanager
 from typing import Optional, List, Any, AsyncGenerator
 
 import redis.asyncio as aioredis
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Body
 from fastapi.responses import JSONResponse
-from sqlalchemy import text, select, desc, or_
+from sqlalchemy import text, select, desc, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
@@ -38,10 +39,12 @@ from app.services.knowledge import HybridKnowledgeV7
 from app.services.worker import AsyncMessageProcessor
 from app.services.backup import BackupService
 from app.utils.alerts import AlertManager
+from app.utils.cost_model import CostModel
 from app.utils.logger import StructuredLogger
 from app.utils.metrics import REQUEST_COUNT, REQUEST_LATENCY, MESSAGE_SENTIMENT, LLM_TOKEN_USAGE
 from app.utils.i18n import i18n
 from app.utils.tracing import tracer, setup_tracing
+from app.services.kpi import KPIManager
 
 # Setup Tracing
 setup_tracing()
@@ -55,6 +58,7 @@ dst_manager = DSTManager()
 degradation_manager = DegradationManager()
 encryption_service = EncryptionService()
 alert_manager = AlertManager()
+cost_model = CostModel()
 backup_service = BackupService()
 logger = StructuredLogger("omnibot")
 
@@ -68,7 +72,32 @@ MESSENGER_APP_SECRET = os.getenv("MESSENGER_APP_SECRET", "messenger_secret")
 WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "whatsapp_secret")
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
-from contextlib import asynccontextmanager
+# Constants
+DAILY_COST_CAP = float(os.getenv("DAILY_COST_CAP", "50.0"))
+
+import asyncio
+
+async def automated_monitoring_loop():
+    """Background task for automated SLA and error monitoring"""
+    while True:
+        try:
+            async with AsyncSessionLocal() as db:
+                kpi = KPIManager(db)
+                # 1. Check SLA breaches
+                breach_count = len(await kpi.db.execute(select(Conversation).where(Conversation.status == "escalated"))) # Simple proxy
+                # Wait, use real SLA logic from EscalationManager
+                from app.services.escalation import EscalationManager
+                esc_manager = EscalationManager(db)
+                breaches = await esc_manager.get_sla_breaches()
+                if breaches:
+                    await alert_manager.check_sla_breach(len(breaches))
+            
+            # 2. Check general system health (simulated error rate check)
+            # In a real app, we'd query metrics/logs
+            await asyncio.sleep(60) # Run every minute
+        except Exception as e:
+            logger.error("monitoring_loop_error", error=str(e))
+            await asyncio.sleep(10)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -80,13 +109,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as e:
         logger.error("worker_start_failed", error=str(e))
     
+    # Start background monitoring
+    monitor_task = asyncio.create_task(automated_monitoring_loop())
+    
     yield
     
     # Shutdown logic
+    monitor_task.cancel()
     if worker:
         await worker.close()
 
 app = FastAPI(title="OmniBot API", version="1.1.0", lifespan=lifespan)
+
+
+@app.exception_handler(TimeoutError)
+async def timeout_exception_handler(request: Request, exc: TimeoutError) -> JSONResponse:
+    return JSONResponse(
+        status_code=504,
+        content={"detail": "LLM_TIMEOUT"}
+    )
 
 
 @app.exception_handler(Exception)
@@ -247,7 +288,18 @@ async def process_webhook_message(db: AsyncSession, platform: str, platform_user
 
         # Cost Model: Phase 3 (Simplified: fixed cost per source)
         cost_map = {"rule": 0.001, "rag": 0.005, "llm": 0.02, "escalate": 0.05}
-        cost = cost_map.get(knowledge_source, 0.0)
+        raw_cost = cost_map.get(knowledge_source, 0.0)
+        
+        # Apply Daily Cap
+        today = datetime.utcnow().date()
+        daily_spend_stmt = select(func.sum(Conversation.resolution_cost)).where(text("DATE(started_at) = :today")).params(today=today)
+        daily_spend_result = await db.execute(daily_spend_stmt)
+        current_daily_spend = float(daily_spend_result.scalar() or 0.0)
+        
+        cost = cost_model.apply_daily_cap(current_daily_spend, raw_cost, DAILY_COST_CAP)
+        
+        if cost < raw_cost:
+            logger.warn("daily_cost_cap_exceeded", raw_cost=raw_cost, allowed_cost=cost)
 
         db.add(Message(
             conversation_id=conv.id,

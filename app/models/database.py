@@ -5,6 +5,7 @@ from typing import Any, AsyncGenerator
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Column,
     DateTime,
     Float,
@@ -157,6 +158,11 @@ class UserFeedback(Base):
     feedback = Column(String(20), nullable=False)
     comment = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        CheckConstraint("feedback IN ('thumbs_up', 'thumbs_down')",
+                        name="check_feedback_values"),
+    )
 
 
 class SecurityLog(Base):
@@ -396,7 +402,8 @@ CREATE TABLE IF NOT EXISTS user_feedback (
     id SERIAL PRIMARY KEY,
     conversation_id INTEGER REFERENCES conversations(id),
     message_id INTEGER REFERENCES messages(id),
-    feedback VARCHAR(20) NOT NULL,
+    feedback VARCHAR(20) NOT NULL
+        CHECK (feedback IN ('thumbs_up','thumbs_down')),
     comment TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );

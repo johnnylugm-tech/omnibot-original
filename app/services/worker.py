@@ -73,13 +73,14 @@ class AsyncMessageProcessor:
         min_idle_time_ms: int,
         message_ids: Sequence[str]
     ) -> List[Any]:
-        """Claim stale messages from another consumer"""
+        """Claim stale messages from another consumer with ID deduplication"""
+        unique_ids = list(dict.fromkeys(message_ids))  # Preserves order while deduping
         return await self.redis.xclaim(
             stream_name,
             self.group,
             consumer_name,
             min_idle_time_ms,
-            list(message_ids)
+            unique_ids
         )
 
     async def close(self) -> None:

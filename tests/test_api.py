@@ -88,6 +88,16 @@ def test_telegram_webhook_normal(mock_get_conv, mock_get_user, mock_process, cli
     assert response.status_code == 200
     assert "這是為您生成的個人化回覆" in response.json()["data"]["response"]
 
+def test_llm_timeout_504(client):
+    with patch("app.api.process_webhook_message", new_callable=AsyncMock) as mock_process:
+        mock_process.side_effect = TimeoutError("LLM request timed out")
+        
+        payload = {"message": {"from": {"id": 1}, "text": "hi"}}
+        response = client.post("/api/v1/webhook/telegram", json=payload)
+        
+        assert response.status_code == 504
+        assert response.json()["detail"] == "LLM_TIMEOUT"
+
 def test_knowledge_crud_rbac(client, mock_db):
     # admin can do everything
     headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}

@@ -28,3 +28,14 @@ class CostModel:
     def log_cost(self, model: str, cost: float, source: str) -> None:
         """Placeholder for logging cost to database or metrics system."""
         pass
+
+    def apply_daily_cap(self, current_total: float, next_cost: float, daily_cap: float) -> float:
+        """
+        Applies a daily spending cap.
+        Returns the amount of next_cost that can be allowed without exceeding the cap.
+        """
+        if current_total >= daily_cap:
+            return 0.0
+        
+        remaining = daily_cap - current_total
+        return min(next_cost, remaining)

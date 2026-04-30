@@ -14,6 +14,18 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "escalate": "Transferring to a human agent, please wait...",
         "error": "Sorry, a system error occurred. Please try again later.",
         "rate_limit": "Rate limit exceeded. Please try again later."
+    },
+    "zh-CN": {
+        "greeting": "您好！请问有什么可以幫您的？",
+        "escalate": "正在为您转接人工客服，请稍候...",
+        "error": "抱歉，系统发生错误，请稍后再试。",
+        "rate_limit": "请求频率过高，请稍后再试。"
+    },
+    "ja": {
+        "greeting": "こんにちは！何かお手伝いできることはありますか？",
+        "escalate": "オペレーターにお繋ぎします。少々お待ちください...",
+        "error": "申し訳ありません。システムエラーが発生しました。後でもう一度お試しください。",
+        "rate_limit": "リクエストが多すぎます。後でもう一度お試しください。"
     }
 }
 

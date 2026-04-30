@@ -17,8 +17,8 @@ def mock_db():
     return db
 
 @pytest.mark.asyncio
-async def test_id_21_01_sla_normal_30_minutes(mock_db):
-    """priority=0 (normal) → 30min SLA"""
+async def test_id_21_01_sla_p0_15_minutes(mock_db):
+    """priority=0 (P0) → 15min SLA"""
     manager = EscalationManager(mock_db)
     req = EscalationRequest(conversation_id="c1", reason="test")
     
@@ -26,32 +26,32 @@ async def test_id_21_01_sla_normal_30_minutes(mock_db):
     await manager.create(req, priority=0)
     
     added_obj = mock_db.add.call_args[0][0]
-    expected_deadline = datetime.utcnow() + timedelta(minutes=30)
+    expected_deadline = datetime.utcnow() + timedelta(minutes=15)
     # Check within 5 seconds tolerance
     assert abs((added_obj.sla_deadline - expected_deadline).total_seconds()) < 5
     assert added_obj.priority == 0
 
 @pytest.mark.asyncio
-async def test_id_21_02_sla_high_15_minutes(mock_db):
-    """priority=1 (high) → 15min SLA"""
+async def test_id_21_02_sla_p1_30_minutes(mock_db):
+    """priority=1 (P1) → 30min SLA"""
     manager = EscalationManager(mock_db)
     req = EscalationRequest(conversation_id="c1", reason="test")
     await manager.create(req, priority=1)
     
     added_obj = mock_db.add.call_args[0][0]
     assert added_obj.priority == 1
-    assert abs((added_obj.sla_deadline - (datetime.utcnow() + timedelta(minutes=15))).total_seconds()) < 5
+    assert abs((added_obj.sla_deadline - (datetime.utcnow() + timedelta(minutes=30))).total_seconds()) < 5
 
 @pytest.mark.asyncio
-async def test_id_21_03_sla_urgent_5_minutes(mock_db):
-    """priority=2 (urgent) → 5min SLA"""
+async def test_id_21_03_sla_p2_120_minutes(mock_db):
+    """priority=2 (P2) → 120min SLA"""
     manager = EscalationManager(mock_db)
     req = EscalationRequest(conversation_id="c1", reason="test")
     await manager.create(req, priority=2)
     
     added_obj = mock_db.add.call_args[0][0]
     assert added_obj.priority == 2
-    assert abs((added_obj.sla_deadline - (datetime.utcnow() + timedelta(minutes=5))).total_seconds()) < 5
+    assert abs((added_obj.sla_deadline - (datetime.utcnow() + timedelta(minutes=120))).total_seconds()) < 5
 
 @pytest.mark.asyncio
 async def test_id_21_04_get_sla_breaches(mock_db):

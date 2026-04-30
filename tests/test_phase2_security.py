@@ -312,8 +312,8 @@ class TestEscalationManagerSLA:
         return db
 
     @pytest.mark.asyncio
-    async def test_escalation_manager_sla_normal_30_minutes(self, mock_db):
-        """priority='normal' -> deadline=now+30min"""
+    async def test_escalation_manager_sla_normal_120_minutes(self, mock_db):
+        """priority='normal' -> deadline=now+120min"""
         manager = EscalationManager(mock_db)
         request = EscalationRequest(conversation_id=1, reason="test")
 
@@ -327,13 +327,13 @@ class TestEscalationManagerSLA:
 
         # Check SLA deadline was set correctly
         added_ticket = mock_db.add.call_args[0][0]
-        expected_min = now_before + timedelta(minutes=30)
-        expected_max = now_after + timedelta(minutes=30)
+        expected_min = now_before + timedelta(minutes=120)
+        expected_max = now_after + timedelta(minutes=120)
         assert expected_min <= added_ticket.sla_deadline <= expected_max
 
     @pytest.mark.asyncio
-    async def test_escalation_manager_sla_high_15_minutes(self, mock_db):
-        """priority='high' -> deadline=now+15min"""
+    async def test_escalation_manager_sla_high_30_minutes(self, mock_db):
+        """priority='high' -> deadline=now+30min"""
         manager = EscalationManager(mock_db)
         request = EscalationRequest(conversation_id=1, reason="test")
 
@@ -342,13 +342,13 @@ class TestEscalationManagerSLA:
         now_after = datetime.utcnow()
 
         added_ticket = mock_db.add.call_args[0][0]
-        expected_min = now_before + timedelta(minutes=15)
-        expected_max = now_after + timedelta(minutes=15)
+        expected_min = now_before + timedelta(minutes=30)
+        expected_max = now_after + timedelta(minutes=30)
         assert expected_min <= added_ticket.sla_deadline <= expected_max
 
     @pytest.mark.asyncio
-    async def test_escalation_manager_sla_urgent_5_minutes(self, mock_db):
-        """priority='urgent' -> deadline=now+5min"""
+    async def test_escalation_manager_sla_urgent_15_minutes(self, mock_db):
+        """priority='urgent' -> deadline=now+15min"""
         manager = EscalationManager(mock_db)
         request = EscalationRequest(conversation_id=1, reason="test")
 
@@ -357,8 +357,8 @@ class TestEscalationManagerSLA:
         now_after = datetime.utcnow()
 
         added_ticket = mock_db.add.call_args[0][0]
-        expected_min = now_before + timedelta(minutes=5)
-        expected_max = now_after + timedelta(minutes=5)
+        expected_min = now_before + timedelta(minutes=15)
+        expected_max = now_after + timedelta(minutes=15)
         assert expected_min <= added_ticket.sla_deadline <= expected_max
 
     @pytest.mark.asyncio

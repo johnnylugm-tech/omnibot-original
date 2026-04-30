@@ -283,6 +283,26 @@ class TestABTestExperimentExecution:
 
         assert prompt == expected_prompt, f"Expected prompt '{expected_prompt}' for variant '{user_variant}'"
 
+    @pytest.mark.asyncio
+    async def test_experiment_abort_returns_control_traffic(self):
+        """abort experiment → all traffic returns to control"""
+        mock_db = AsyncMock()
+        mock_result = MagicMock()
+        mock_exp = MagicMock()
+        mock_exp.id = 1
+        mock_exp.status = "aborted"
+        mock_exp.traffic_split = {"control": 10, "test_v1": 90}  # Even with high test split
+
+        mock_db.execute.return_value = mock_result
+        mock_result.scalar_one_or_none.return_value = mock_exp
+
+        manager = ABTestManager(mock_db)
+
+        # Multiple users should all get "control" regardless of hash
+        for user_id in ["user1", "user2", "user3", "user_99"]:
+            variant = await manager.get_variant(user_id, 1)
+            assert variant == "control", f"User {user_id} should get control variant for aborted experiment"
+
 
 class TestABTestAnalyzeResults:
     """Test analyze_results and auto_promote"""

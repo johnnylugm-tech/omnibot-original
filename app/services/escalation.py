@@ -11,11 +11,11 @@ from app.models.database import EscalationQueue
 class EscalationManager:
     """Phase 2: Escalation with SLA tracking and DB persistence"""
 
-    # Priority 0: Normal (30m), 1: High (15m), 2: Urgent (5m)
+    # Priority 0: P0 (15m), 1: P1 (30m), 2: P2 (120m)
     SLA_MINUTES = {
-        0: 30,
-        1: 15,
-        2: 5
+        0: 15,
+        1: 30,
+        2: 120
     }
 
     def __init__(self, db: AsyncSession):
@@ -25,8 +25,8 @@ class EscalationManager:
         """Create escalation ticket with SLA deadline"""
         # Support both int and string for backward compatibility/flexibility
         if isinstance(priority, str):
-            p_map = {"urgent": 2, "high": 1, "normal": 0}
-            p_val = p_map.get(priority.lower(), 0)
+            p_map = {"urgent": 0, "high": 1, "normal": 2}
+            p_val = p_map.get(priority.lower(), 2)
         else:
             p_val = priority
 

@@ -125,6 +125,15 @@ class TestUnifiedResponse:
         assert response.knowledge_id == 1
         assert response.emotion_adjustment == "neutral"
 
+    def test_unified_response_emotion_adjustment_is_optional(self):
+        """emotion_adjustment should be optional and default to None"""
+        response = UnifiedResponse(
+            content="測試回覆",
+            source="rule",
+            confidence=0.95
+        )
+        assert response.emotion_adjustment is None
+
 
 # =============================================================================
 # 3. Input Sanitizer L2 Tests

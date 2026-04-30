@@ -34,6 +34,12 @@ class UnifiedMessage:
     received_at: datetime = field(default_factory=datetime.utcnow)
     reply_token: Optional[str] = None  # LINE specific
 
+    def __post_init__(self):
+        """Perform platform-specific cleanup"""
+        if self.platform == Platform.TELEGRAM:
+            # Force reply_token to None for Telegram
+            object.__setattr__(self, 'reply_token', None)
+
 
 @dataclass(frozen=True)
 class UnifiedResponse:
