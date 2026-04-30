@@ -341,7 +341,7 @@ class HybridKnowledgeV7:
                 id=0,
                 content=result.content,
                 confidence=result.confidence,
-                source="wiki",
+                source="llm",
             )
 
         # Layer 4: 轉接人工 (10%)
