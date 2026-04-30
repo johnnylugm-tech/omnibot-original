@@ -36,17 +36,34 @@ def client(mock_db):
 def test_health_check_healthy(client, mock_db):
     # Setup mock for successful DB check
     mock_db.execute.return_value = MagicMock()
-    
+
     with patch("redis.asyncio.from_url") as mock_redis_from_url:
         mock_redis = AsyncMock()
         mock_redis_from_url.return_value = mock_redis
-        
+
         response = client.get("/api/v1/health")
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
         assert data["postgres"] is True
         assert data["redis"] is True
+
+def test_health_check_status_unhealthy_when_service_down(client, mock_db):
+    """When both Postgres and Redis are down, health returns status=degraded (not healthy)."""
+    # Both DB and Redis are unavailable (use a message that won't re-raise)
+    mock_db.execute.side_effect = Exception("Connection refused")
+    
+    with patch("redis.asyncio.from_url") as mock_redis_from_url:
+        mock_redis = AsyncMock()
+        mock_redis.ping.side_effect = Exception("Redis connection refused")
+        mock_redis_from_url.return_value = mock_redis
+        
+        response = client.get("/api/v1/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "degraded"
+        assert data["postgres"] is False
+        assert data["redis"] is False
 
 def test_health_check_degraded(client, mock_db):
     # Mock DB failure

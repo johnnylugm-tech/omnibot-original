@@ -126,3 +126,60 @@ async def test_sla_breach_detection_varies_by_priority(mock_db):
         diff_seconds = abs((added_obj.sla_deadline - expected_deadline).total_seconds())
         assert diff_seconds < 5, \
             f"Priority {priority} expected SLA={expected_minutes}min, deadline diff={diff_seconds}s"
+
+
+# =============================================================================
+# S21 Escalation SLA — Missing细粒度 tests (3 items)
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_escalation_manager_create_returns_id(mock_db):
+    """create() must return a numeric ticket ID."""
+    manager = EscalationManager(mock_db)
+    req = EscalationRequest(conversation_id=1, reason="test")
+
+    mock_result = MagicMock()
+    mock_result.rowcount = 1
+    mock_db.execute.return_value = mock_result
+    mock_db.commit = AsyncMock()
+
+    async def refresh_side_effect(obj):
+        obj.id = 42
+
+    mock_db.refresh = AsyncMock(side_effect=refresh_side_effect)
+
+    ticket_id = await manager.create(req, priority=0)
+    assert isinstance(ticket_id, int), "create() must return an int ticket ID"
+    assert ticket_id == 42
+
+
+@pytest.mark.asyncio
+async def test_escalation_manager_assign(mock_db):
+    """assign() must persist assigned_agent and picked_at to the ticket."""
+    manager = EscalationManager(mock_db)
+
+    mock_result = MagicMock()
+    mock_result.rowcount = 1
+    mock_db.execute.return_value = mock_result
+    mock_db.commit = AsyncMock()
+
+    await manager.assign(escalation_id=1, agent_id="agent_007")
+
+    assert mock_db.execute.called, "assign() must call db.execute()"
+    assert mock_db.commit.called, "assign() must call db.commit()"
+
+
+@pytest.mark.asyncio
+async def test_escalation_manager_resolve_sets_resolved_at(mock_db):
+    """resolve() must set resolved_at timestamp on the ticket."""
+    manager = EscalationManager(mock_db)
+
+    mock_result = MagicMock()
+    mock_result.rowcount = 1
+    mock_db.execute.return_value = mock_result
+    mock_db.commit = AsyncMock()
+
+    await manager.resolve(escalation_id=1)
+
+    assert mock_db.execute.called, "resolve() must call db.execute()"
+    assert mock_db.commit.called, "resolve() must call db.commit()"

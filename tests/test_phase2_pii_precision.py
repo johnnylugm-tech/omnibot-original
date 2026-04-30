@@ -49,6 +49,40 @@ def test_id_16_04_overlapping_pii_types(masker):
     assert "[credit_card_masked]" not in result.masked_text
 
 
+def test_id_16_05_luhn_check_known_valid_number(masker):
+    """Luhn check: known valid Visa test card 4111111111111111 passes."""
+    text = "Card: 4111111111111111"
+    result = masker.mask(text)
+    assert "[credit_card_masked]" in result.masked_text
+    assert "4111111111111111" not in result.masked_text
+
+
+def test_id_16_06_luhn_check_known_invalid_number(masker):
+    """Luhn check: 1234567890123456 fails Luhn -> NOT masked."""
+    text = "Card: 1234567890123456"
+    result = masker.mask(text)
+    assert "1234567890123456" in result.masked_text
+    assert "[credit_card_masked]" not in result.masked_text
+
+
+def test_id_16_07_mask_combined_with_phase1_types(masker):
+    """Multiple PII types (email + credit_card) in one text are all masked."""
+    text = "Email me at john@example.com and pay with card 4532015112830366"
+    result = masker.mask(text)
+    assert "[email_masked]" in result.masked_text
+    assert "[credit_card_masked]" in result.masked_text
+    assert "john@example.com" not in result.masked_text
+    assert "4532015112830366" not in result.masked_text
+
+
+def test_id_16_08_mask_result_pii_types_contains_credit_card(masker):
+    """PIIMaskResult.pii_types must include 'credit_card' when a card is detected."""
+    text = "卡號是 4532015112830366"
+    result = masker.mask(text)
+    assert "credit_card" in result.pii_types
+    assert result.mask_count >= 1
+
+
 # =============================================================================
 # Section 44 G-08: PII Audit Log action field enum validation
 # =============================================================================
