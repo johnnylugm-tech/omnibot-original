@@ -184,15 +184,57 @@ CREATE TABLE schema_migrations (
 
 ---
 
-## 七、摘要
+## 七、發現項目狀態
 
-| 類型 | 問題數 | 最高優先 |
-|------|:---:|------|
-| **完整性** | 3 | Messenger/WhatsApp 未實作；Emotion/DST 未接入 API |
-| **正確性** | 2 | LLM Layer 3 stub；Conversation 記錄從未建立 |
-| **一致性** | 2 | Layer 1 貢獻 40% vs 50% 矛盾；BasicEscalationManager 冒充升級版 |
-| **程式碼缺陷** | 2 | emotion_history ORM 缺失；Alembic 遷移完全未建立 |
-| **測試覆蓋** | 1 | Phase 2 關鍵功能大面積無測試 |
+### 發現項目總表
+
+|| ID | 類型 | 審計問題 | 狀態 | 說明 |
+|----|------|------|:---:|------|
+|| C1 | SPEC Bug | P4: LLM Layer 3 stub | ✅ FIXED | `SPEC/omnibot-phase-2.md` — HybridKnowledgeLayer `_llm_generate` source 已修正 (wiki→llm) |
+|| C2 | SPEC Bug | P9: Alembic 遷移未建立 | ✅ FIXED | `SPEC/omnibot-phase-3.md` — ODD SQL total count 已修正 (13→14) |
+|| C3 | No Changes | P5: Telegram 無 Conversation 記錄 | ✅ CONFIRMED | 規格與實作一致，無需修改 |
+|| C4 | No Changes | P6: FCR 50% vs Layer 1 40% 矛盾 | ✅ CONFIRMED | 規格文件本身問題，非實作問題 |
+|| C5 | Checklist Gap | P10: Phase 2 關鍵功能無單元測試 | ✅ FIXED | `SPEC/omnibot-tdd-verification-checklist.md` — Phase 1 health check unhealthy status test 已新增 |
+|| M1 | No Changes | P1: 4 平台只實作 2 個 | ✅ CONFIRMED | Phase 2 增量實作中，規格無誤 |
+|| M2 | No Changes | P2: EmotionTracker/DSTManager 未接入 API | ✅ CONFIRMED | Phase 2 增量實作中，規格無誤 |
+|| M3 | No Changes | P3: emotion_history/edge_cases 無 ORM Model | ✅ CONFIRMED | Phase 2 增量實作中，規格無誤 |
+|| M4 | Checklist Gap | P8: emotion_history ORM 缺失 | ✅ FIXED | `SPEC/omnibot-tdd-verification-checklist.md` — Phase 1 conversations filter tests 已新增，Phase 3 duplicates 已移除 |
+|| M5 | SPEC Gap | RetryStrategy class | ✅ FIXED | `SPEC/omnibot-phase-2.md` — RetryStrategy class 定義已新增 |
+|| M6 | No Changes | P7: BasicEscalationManager 冒充升級版 | ✅ CONFIRMED | 規格文件問題，非實作問題 |
+
+### 狀態摘要
+
+|| 狀態 | 數量 |
+|:---:|:---:|
+| **FIXED** | 5 (C1, C2, C5, M4, M5) |
+| **CONFIRMED - No Changes Needed** | 6 (C3, C4, M1, M2, M3, M6) |
+| **Total** | 11 |
+
+---
+
+## 八、修補記錄
+
+以下為本分支已套用的 5 個修補 commit：
+
+| SHA | 說明 |
+|-----|------|
+| `698c4ad5b60ea17b30d613e614a4c463e1692a34` | fix(spec): HybridKnowledgeLayer `_llm_generate` source 'wiki' → 'llm' |
+| `d82368b` | fix(spec): correct ODD SQL total count 13 → 14 in Phase 3 spec |
+| `09de87f` | feat(spec): add RetryStrategy class definition to Phase 2 spec |
+| `57241ab` | feat(checklist): add Phase 1 health check unhealthy status test |
+| `1381b5e` | feat(checklist): add Phase 1 conversations filter tests and dedupe Phase 3 (M4 Option A) |
+
+---
+
+## 原始摘要
+
+|| 類型 | 問題數 | 最高優先 |
+||------|:---:|------|
+|| **完整性** | 3 | Messenger/WhatsApp 未實作；Emotion/DST 未接入 API |
+|| **正確性** | 2 | LLM Layer 3 stub；Conversation 記錄從未建立 |
+|| **一致性** | 2 | Layer 1 貢獻 40% vs 50% 矛盾；BasicEscalationManager 冒充升級版 |
+|| **程式碼缺陷** | 2 | emotion_history ORM 缺失；Alembic 遷移完全未建立 |
+|| **測試覆蓋** | 1 | Phase 2 關鍵功能大面積無測試 |
 
 **合計：10 個具體問題**
 
