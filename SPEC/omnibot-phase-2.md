@@ -929,6 +929,61 @@ ORDER BY date DESC;
 
 ---
 
+## 指數退避重試（Phase 3 前置定義）
+
+class RetryStrategy:
+    """指數退避重試策略。
+
+    用於 Phase 3 Redis Streams 訊息處理中的 API 呼叫重試。
+    Phase 2 預先定義此 class，Phase 3 再與 AsyncMessageProcessor 整合。
+
+    Attributes:
+        max_retries: 最大重試次數
+        base_delay: 初始延遲秒數（預設 1.0s）
+        max_delay: 最大延遲秒數上限（預設 30.0s）
+        jitter: 是否加入隨機 jitter（預設 True，防止 thundering herd）
+    """
+
+    def __init__(
+        self,
+        max_retries: int = 3,
+        base_delay: float = 1.0,
+        max_delay: float = 30.0,
+        jitter: bool = True,
+    ):
+        self.max_retries = max_retries
+        self.base_delay = base_delay
+        self.max_delay = max_delay
+        self.jitter = jitter
+
+    def exponential_backoff(self, attempt: int) -> float:
+        """計算第 attempt 次重試的延遲秒數。
+
+        Args:
+            attempt: 由 0 開始的重試次數（0 = 第一次重試）
+
+        Returns:
+            等待秒數，符合指數退避曲線
+        """
+        import random
+
+        delay = self.base_delay * (2**attempt)
+        delay = min(delay, self.max_delay)
+        if self.jitter:
+            delay *= random.uniform(0.5, 1.5)
+        return delay
+
+    def should_retry(self, attempt: int) -> bool:
+        """判斷是否應該繼續重試。
+
+        Args:
+            attempt: 目前已嘗試次數（不含原始呼叫）
+
+        Returns:
+            True if 仍有重試次數，False if 已達上限
+        """
+        return attempt < self.max_retries
+
 *Phase: 2*
 *文件版本: v7.0*
 *最後更新: 2026-04-15*
