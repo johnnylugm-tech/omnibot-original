@@ -54,8 +54,8 @@ def test_telegram_verifier():
     token = "bot_token"
     verifier = TelegramWebhookVerifier(token)
     body = b'{"message":{}}'
-    secret_key = hashlib.sha256(token.encode()).digest()
-    signature = hmac.new(secret_key, body, hashlib.sha256).hexdigest()
+    # Telegram sends the token as-is in X-Telegram-Bot-Api-Secret-Token
+    signature = token
     assert verifier.verify(body, signature) is True
     assert verifier.verify(body, "wrong") is False
 

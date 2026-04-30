@@ -255,6 +255,10 @@ class PIIAuditLog(Base):
                           ForeignKey('users.unified_user_id'))
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    __table_args__ = (
+        CheckConstraint(action.in_(['mask', 'unmask', 'restore']), name='ck_pii_action'),
+    )
+
 
 class Experiment(Base):
     """A/B Testing experiments"""

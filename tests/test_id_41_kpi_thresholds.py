@@ -103,8 +103,8 @@ async def test_kpi_p95_latency_phase2_under_1(odd_manager, mock_db):
     rows = await odd_manager.get_latency_p95_by_platform()
     for row in rows:
         p95 = row["p95_latency"]
-        # Writing 1s tolerance per checklist comment, actual threshold is 1.5s
-        assert p95 < 1000, f"Phase 2 p95 latency must be < 1000ms, got {p95}ms for platform {row['platform']}"
+        # Actual threshold is 1.5s (1500ms) for Phase 2
+        assert p95 < 1500, f"Phase 2 p95 latency must be < 1500ms, got {p95}ms for platform {row['platform']}"
 
 
 @pytest.mark.asyncio

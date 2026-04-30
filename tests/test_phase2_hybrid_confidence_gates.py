@@ -11,6 +11,7 @@ import os
 os.environ['SIMULATE_LLM'] = 'false'
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
+from app.services.knowledge import HybridKnowledgeV7
 
 # Only SKIP the import if the module truly doesn't exist.
 # We patch at the class level so the tests can still run with proper mocking.

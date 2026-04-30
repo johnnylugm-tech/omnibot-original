@@ -70,12 +70,12 @@ def test_pii_audit_action_enum_mask_unmask_restore():
     assert action_col is not None, "action column must exist on PIIAuditLog"
     
     # Check for a CheckConstraint on the action column
-    table_args = PIIAuditLog.__table__.args
+    constraints = PIIAuditLog.__table__.constraints
     
     has_enum_constraint = False
-    for constraint in table_args:
+    for constraint in constraints:
         if isinstance(constraint, CheckConstraint):
-            constraint_str = str(constraint)
+            constraint_str = str(constraint.sqltext).lower()
             if 'mask' in constraint_str and 'unmask' in constraint_str and 'restore' in constraint_str:
                 has_enum_constraint = True
                 break

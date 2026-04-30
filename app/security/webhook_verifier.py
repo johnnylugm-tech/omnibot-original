@@ -27,16 +27,15 @@ class LineWebhookVerifier(WebhookVerifier):
 
 
 class TelegramWebhookVerifier(WebhookVerifier):
-    """Telegram Webhook signature verifier"""
+    """Telegram Webhook secret token verifier (plain string comparison)"""
 
     def __init__(self, bot_token: str):
-        self.secret_key = hashlib.sha256(bot_token.encode("utf-8")).digest()
+        self.bot_token = bot_token
 
     def verify(self, body: bytes, signature: str) -> bool:
-        expected = hmac.new(
-            self.secret_key, body, hashlib.sha256
-        ).hexdigest()
-        return hmac.compare_digest(expected, signature)
+        # Telegram sends the secret token as-is in the X-Telegram-Bot-Api-Secret-Token header.
+        # It's not a signature of the body, just a shared secret.
+        return hmac.compare_digest(self.bot_token, signature)
 
 
 class MessengerWebhookVerifier(WebhookVerifier):

@@ -240,11 +240,7 @@ class TestKnowledgeBaseEmbeddingsVector:
         # SQLAlchemy + asyncpg may not be installed in test environment
         # Use importorskip so the test SKIP-s rather than hard-crash
         sqlalchemy = pytest.importorskip("sqlalchemy")
-        import unittest.mock
-        # Patch asyncpg which database.py tries to import at module load
-        import sys
-        if "asyncpg" not in sys.modules:
-            sys.modules["asyncpg"] = unittest.mock.MagicMock()
+        
         from app.models.database import KnowledgeBase
 
         kb_table = KnowledgeBase.__table__
@@ -282,8 +278,6 @@ class TestUserFeedbackCheckConstraint:
         """
         # SQLAlchemy doesn't expose CHECK constraint details in ORM metadata easily.
         # Use SCHEMA_SQL raw text check as the source of truth.
-        import sys, unittest.mock
-        sys.modules["asyncpg"] = unittest.mock.MagicMock()
         from app.models.database import SCHEMA_SQL
 
         # The SCHEMA_SQL defines the schema - scan for the CHECK constraint on user_feedback

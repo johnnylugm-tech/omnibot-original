@@ -36,7 +36,9 @@ class AlertManager:
         self.rules = [
             AlertRule("error_rate", AlertCondition.GREATER_THAN, 0.05, "high_error_rate"),
             AlertRule("sla_breach", AlertCondition.GREATER_THAN, 0, "sla_breach"),
-            AlertRule("grounding_rate", AlertCondition.LESS_THAN, 0.7, "low_grounding_rate")
+            AlertRule("grounding_rate", AlertCondition.LESS_THAN, 0.7, "low_grounding_rate"),
+            AlertRule("p95_latency", AlertCondition.GREATER_THAN, 1.0, "high_latency"),
+            AlertRule("escalation_queue", AlertCondition.GREATER_THAN, 50, "escalation_backlog")
         ]
 
     async def check_error_rate(self, current_rate: float) -> bool:
@@ -60,6 +62,22 @@ class AlertManager:
         for rule in self.rules:
             if rule.metric_name == "grounding_rate" and rule.check(grounding_rate):
                 await self._trigger_alert(rule.label, {"grounding_rate": grounding_rate})
+                return True
+        return False
+
+    async def check_p95_latency(self, latency: float) -> bool:
+        """Checks if p95 latency exceeds 1s."""
+        for rule in self.rules:
+            if rule.metric_name == "p95_latency" and rule.check(latency):
+                await self._trigger_alert(rule.label, {"p95_latency": latency})
+                return True
+        return False
+
+    async def check_escalation_queue(self, count: int) -> bool:
+        """Checks if escalation queue exceeds 50."""
+        for rule in self.rules:
+            if rule.metric_name == "escalation_queue" and rule.check(count):
+                await self._trigger_alert(rule.label, {"queue_count": count})
                 return True
         return False
 

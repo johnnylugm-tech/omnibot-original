@@ -577,9 +577,13 @@ async def query_knowledge(
     if category:
         stmt = stmt.where(KnowledgeBase.category == category)
         
-    stmt = stmt.order_by(KnowledgeBase.id.desc()).offset(offset).limit(limit)
+    stmt = stmt.order_by(KnowledgeBase.id.desc()).offset(offset).limit(limit + 1)
     result = await db.execute(stmt)
     items = result.scalars().all()
+    
+    has_next = len(items) > limit
+    if has_next:
+        items = items[:limit]
     
     return {
         "success": True, 
@@ -589,7 +593,8 @@ async def query_knowledge(
                 for k in items
             ],
             "page": page,
-            "limit": limit
+            "limit": limit,
+            "has_next": has_next
         }
     }
 
@@ -624,9 +629,13 @@ async def list_conversations(
 ) -> Any:
     """List conversations from real DB with pagination"""
     offset = (page - 1) * limit
-    stmt = select(Conversation).order_by(Conversation.started_at.desc()).offset(offset).limit(limit)
+    stmt = select(Conversation).order_by(Conversation.started_at.desc()).offset(offset).limit(limit + 1)
     result = await db.execute(stmt)
     items = result.scalars().all()
+    
+    has_next = len(items) > limit
+    if has_next:
+        items = items[:limit]
     
     return {
         "success": True,
@@ -641,7 +650,8 @@ async def list_conversations(
                 for c in items
             ],
             "page": page,
-            "limit": limit
+            "limit": limit,
+            "has_next": has_next
         }
     }
 

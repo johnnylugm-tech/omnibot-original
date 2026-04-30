@@ -516,18 +516,16 @@ async def test_odd_pii_audit_query_sums_by_date():
     """ODD PII audit query sums masking events grouped by date"""
     mock_db = AsyncMock()
     mock_result = MagicMock()
+    # Mocking single result with 'masking_rate' as expected by implementation
     mock_result.fetchall.return_value = [
-        MagicMock(_mapping={"date": "2024-01-15", "pii_events": 25, "masked_count": 42}),
-        MagicMock(_mapping={"date": "2024-01-14", "pii_events": 18, "masked_count": 31}),
+        MagicMock(_mapping={"masking_rate": 15.5}),
     ]
     mock_db.execute.return_value = mock_result
 
     manager = ODDQueryManager(mock_db)
-    # get_pii_masking_rate doesn't group by date, so we verify the concept
-    # by checking that queries aggregate by date column
     rate = await manager.get_pii_masking_rate()
 
-    assert rate is not None
+    assert rate == 15.5
 
     # Verify the query groups by date
     args, _ = mock_db.execute.call_args

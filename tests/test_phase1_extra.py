@@ -544,8 +544,6 @@ def test_webhook_telegram_valid_signature_returns_200():
     try:
         token = "valid_bot_token"
         body_bytes = b'{"message":{"from":{"id":123},"text":"test"}}'
-        secret_key = hashlib.sha256(token.encode()).digest()
-        correct_sig = hmac.new(secret_key, body_bytes, hashlib.sha256).hexdigest()
 
         with patch("app.api.process_webhook_message", new_callable=AsyncMock) as mock_proc:
             mock_proc.return_value = ("ok", "rule")
@@ -554,7 +552,7 @@ def test_webhook_telegram_valid_signature_returns_200():
                 content=body_bytes,
                 headers={
                     "Content-Type": "application/json",
-                    "X-Telegram-Bot-Api-Secret-Token": correct_sig
+                    "X-Telegram-Bot-Api-Secret-Token": token
                 }
             )
             assert response.status_code == 200, \

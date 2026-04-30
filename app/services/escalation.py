@@ -1,6 +1,6 @@
 """Escalation manager with SLA tracking - Phase 2"""
 from datetime import datetime, timedelta
-from typing import List, Union
+from typing import List, Union, Optional
 from sqlalchemy import select, update, desc, asc
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,7 +25,7 @@ class FeedbackManager:
         self,
         conversation_id: int,
         rating: str,
-        comment: str | None
+        comment: Optional[str]
     ) -> UserFeedback:
         """Submit user feedback for a conversation.
 
@@ -59,11 +59,11 @@ class FeedbackManager:
 class EscalationManager:
     """Phase 2: Escalation with SLA tracking and DB persistence"""
 
-    # Priority 0: URGENT (5m), 1: HIGH (15m), 2: NORMAL (30m)
+    # Priority 0: URGENT (15m), 1: HIGH (30m), 2: NORMAL (120m)
     SLA_MINUTES = {
-        0: 5,
-        1: 15,
-        2: 30
+        0: 15,
+        1: 30,
+        2: 120
     }
 
     def __init__(self, db: AsyncSession):

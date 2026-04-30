@@ -211,7 +211,7 @@ class TestDataConsistency:
 
     def test_consistency_platform_enum_4_platforms_phase2(self):
         """Phase 2 platform enum must have exactly 4 values"""
-        from app.models.database import Platform
+        from app.models import Platform
         # Check if it's an enum or literal set
         try:
             assert len(Platform) >= 2 # Minimal check

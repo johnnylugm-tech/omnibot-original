@@ -12,13 +12,13 @@ class PIIMasking:
     Phase 2: Credit card Luhn validation.
     """
 
-    # Taiwan phone patterns, email, address, and credit card
+    # Taiwan phone patterns (including 886), email, address, and credit card
     PATTERNS = {
         "credit_card": re.compile(
             r"\b(?:\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}|\d{4}[- ]?\d{6}[- ]?\d{5}|\d{13,19})\b"
         ),
         "phone": re.compile(
-            r"\b(?:\d{4}-\d{3,4}-\d{3,4}|\d{10,11})\b"
+            r"\b(?:\+886[- ]?|0)\d{1,4}[- ]?\d{3,4}[- ]?\d{3,4}\b"
         ),
         "email": re.compile(
             r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b"

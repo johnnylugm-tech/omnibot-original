@@ -53,11 +53,11 @@ class DegradationManager:
     def get_allowed_layers(self) -> Dict[str, bool]:
         """Returns which layers are currently active"""
         if self.current_level == DegradationLevel.LEVEL_0:
-            return {"rule": True, "rag": True, "llm": True}
+            return {"rule": True, "rag": True, "llm": True, "cache_only": False}
         if self.current_level == DegradationLevel.LEVEL_1:
-            return {"rule": True, "rag": True, "llm": False}
+            return {"rule": True, "rag": True, "llm": False, "cache_only": False}
         if self.current_level == DegradationLevel.LEVEL_2:
-            return {"rule": True, "rag": False, "llm": False}
+            return {"rule": True, "rag": False, "llm": False, "cache_only": False}
         if self.current_level == DegradationLevel.LEVEL_3:
-            return {"rule": True, "rag": False, "llm": False, "cache_only": True}
-        return {"maintenance": True}
+            return {"rule": False, "rag": False, "llm": False, "cache_only": True}
+        return {"maintenance": True, "rule": False, "rag": False, "llm": False, "cache_only": False}

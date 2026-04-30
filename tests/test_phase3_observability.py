@@ -614,7 +614,7 @@ class TestEnvironmentMatrix:
 
     def test_env_staging_data_is_anonymized_prod_subset(self):
         """Staging data must be anonymized subset of production data"""
-        from app.services.pii_masking import PIIMasking
+        from app.security.pii_masking import PIIMasking
         import os
         
         # Sample production-like data
@@ -773,12 +773,16 @@ class TestExpansionRoadmap:
 
     def test_version_consistency_schema_tables_p3(self):
         """Phase 3 schema must have correct number of tables"""
-        from app.models.database import Base
+        from app.models.database import Base, Conversation, Message, KnowledgeBase, PIIAuditLog, EscalationQueue
         from sqlalchemy import inspect as sqla_inspect
-        
+
         # Get all tables defined in Phase 3 models
-        from app.models import conversation, message, knowledge, audit, escalation
-        
+        # Verifying presence of required tables
+        assert hasattr(Conversation, "__table__")
+        assert hasattr(Message, "__table__")
+        assert hasattr(KnowledgeBase, "__table__")
+        assert hasattr(PIIAuditLog, "__table__")
+        assert hasattr(EscalationQueue, "__table__")
         # Count tables from Phase 3 models
         phase3_tables = [
             "conversations",

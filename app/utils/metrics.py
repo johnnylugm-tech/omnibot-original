@@ -17,7 +17,23 @@ MESSAGE_SENTIMENT = Summary(
 )
 
 LLM_TOKEN_USAGE = Counter(
-    "omnibot_llm_tokens_total", "Total tokens used by LLM", ["model"]
+    "omnibot_llm_tokens_total", "Total tokens used by LLM", ["model", "token_type"]
+)
+
+FCR_TOTAL = Counter(
+    "omnibot_fcr_total", "Total First Contact Resolution count", ["platform", "tier", "channel"]
+)
+
+KNOWLEDGE_HIT_TOTAL = Counter(
+    "omnibot_knowledge_hit_total", "Total knowledge base hits", ["source", "category"]
+)
+
+PII_MASKED_TOTAL = Counter(
+    "omnibot_pii_masked_total", "Total PII masking actions", ["pii_type", "action"]
+)
+
+EMOTION_ESCALATION_TOTAL = Counter(
+    "omnibot_emotion_escalation_total", "Total escalations triggered by emotion", ["emotion_type"]
 )
 
 
