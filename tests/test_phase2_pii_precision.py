@@ -95,3 +95,50 @@ def test_pii_audit_action_enum_mask_unmask_restore():
     assert has_action_validation, \
         "PIIAuditLog.action must have validation for 'mask'/'unmask'/'restore' values only. " \
         f"Found constraints: {[c for c in table_args if isinstance(c, CheckConstraint)]}"
+
+
+# =============================================================================
+# Section 44 G-09/10/11: Address & Credit Card Masking
+# =============================================================================
+
+def test_pii_mask_address_台北市(masker):
+    """Address masking: 台北市 addresses must be masked. RED-phase test.
+    
+    Spec: Taiwan address patterns (e.g., 台北市, 高雄市, 新北市) should be
+    detected and masked to [address_masked].
+    """
+    text = "我的地址是台北市大安區忠孝東路四段100號"
+    result = masker.mask(text)
+    assert "[address_masked]" in result.masked_text or "台北市" not in result.masked_text, \
+        "Taipei address should be masked"
+    # Verify the original address is not visible
+    assert "忠孝東路" not in result.masked_text, "Detailed address should not be visible after masking"
+
+
+def test_pii_mask_address_高雄市(masker):
+    """Address masking: 高雄市 addresses must be masked. RED-phase test.
+    
+    Spec: Kaohsiung city addresses should be detected and masked.
+    """
+    text = "高雄市前鎮區一心一路243號"
+    result = masker.mask(text)
+    assert "[address_masked]" in result.masked_text or "高雄市" not in result.masked_text, \
+        "Kaohsiung address should be masked"
+    # Verify detailed address is not visible
+    assert "一心一路" not in result.masked_text, "Detailed address should not be visible after masking"
+
+
+def test_pii_mask_credit_card_valid_16digits(masker):
+    """16-digit valid credit card must be masked. RED-phase test.
+    
+    Spec: A valid 16-digit credit card number (passing Luhn check) must be
+    masked to [credit_card_masked].
+    """
+    # Valid Visa test card: 4111111111111111 (passes Luhn)
+    text = "請刷卡 我的卡號是 4111111111111111"
+    result = masker.mask(text)
+    assert "[credit_card_masked]" in result.masked_text, \
+        "Valid 16-digit credit card number must be masked"
+    # Verify original card number is not visible
+    assert "4111111111111111" not in result.masked_text, \
+        "Full credit card number should not appear in masked text"

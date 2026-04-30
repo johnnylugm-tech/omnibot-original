@@ -248,3 +248,87 @@ def test_degradation_l4_logs_requests_to_local_file():
     # Level 4 should return maintenance mode indicator
     # The actual file logging would be in the request handler
     assert "maintenance" in get_allowed_layers_source.lower() or "level_4" in get_allowed_layers_source.lower()
+
+
+# =============================================================================
+# Section 44 G-12/13/14/15: Degradation Level Mapping Tests
+# =============================================================================
+
+def test_degradation_level_1_rag_only():
+    """Level 1 = RAG only (LLM disabled). RED-phase test.
+    
+    Spec: When Level 1 degradation is triggered, LLM calls are disabled,
+    RAG remains enabled, and rule-based responses are used.
+    """
+    manager = DegradationManager()
+    
+    # Activate Level 1 via LLM latency threshold
+    manager.update_metrics(llm_latency=3.5)
+    assert manager.current_level == DegradationLevel.LEVEL_1
+    
+    layers = manager.get_allowed_layers()
+    assert layers.get("llm") is False, "Level 1 must disable LLM"
+    assert layers.get("rag") is True, "Level 1 must keep RAG enabled"
+    assert layers.get("rule") is True, "Level 1 must keep rule-based enabled"
+    assert layers.get("cache_only") is False, "Level 1 should not be cache-only"
+
+
+def test_degradation_level_2_rule_only():
+    """Level 2 = Rule only (RAG disabled). RED-phase test.
+    
+    Spec: When Level 2 degradation is triggered (consecutive LLM failures > 3),
+    both LLM and RAG are disabled, only rule-based responses are used.
+    Unmatched queries should auto-escalate.
+    """
+    manager = DegradationManager()
+    
+    # Trigger Level 2 via consecutive LLM failures
+    for _ in range(4):
+        manager.update_metrics(llm_success=False)
+    
+    assert manager.current_level == DegradationLevel.LEVEL_2
+    
+    layers = manager.get_allowed_layers()
+    assert layers.get("rule") is True, "Level 2 must keep rule-based enabled"
+    assert layers.get("rag") is False, "Level 2 must disable RAG"
+    assert layers.get("llm") is False, "Level 2 must disable LLM"
+    assert layers.get("cache_only") is False, "Level 2 should not be cache-only"
+
+
+def test_degradation_level_3_readonly_cache():
+    """Level 3 = Read-only cache (all writes paused). RED-phase test.
+    
+    Spec: When Level 3 is triggered (DB latency p95 > 2s), system enters
+    read-only mode using cached data. Non-critical writes are paused.
+    """
+    manager = DegradationManager()
+    
+    # Trigger Level 3 via DB latency
+    manager.update_metrics(db_latency=2.5)
+    assert manager.current_level == DegradationLevel.LEVEL_3
+    
+    layers = manager.get_allowed_layers()
+    assert layers.get("cache_only") is True, "Level 3 must enable cache-only mode"
+    assert layers.get("llm") is False, "Level 3 should disable LLM"
+    assert layers.get("rag") is False, "Level 3 should disable RAG"
+    assert layers.get("rule") is False, "Level 3 should disable rule-based"
+
+
+def test_degradation_level_4_maintenance_message():
+    """Level 4 = Maintenance message (system unavailable). RED-phase test.
+    
+    Spec: When Level 4 is triggered (full outage), system returns a static
+    maintenance message. All requests are logged to local file for replay.
+    """
+    manager = DegradationManager()
+    
+    # Simulate full outage (manual trigger or automatic detection)
+    manager.current_level = DegradationLevel.LEVEL_4
+    assert manager.current_level == DegradationLevel.LEVEL_4
+    
+    layers = manager.get_allowed_layers()
+    assert layers.get("maintenance") is True, "Level 4 must enable maintenance mode"
+    # All layers should be disabled
+    assert layers.get("llm") is False or layers.get("llm") is None
+    assert layers.get("rag") is False or layers.get("rag") is None
+    assert layers.get("rule") is False or layers.get("rule") is None

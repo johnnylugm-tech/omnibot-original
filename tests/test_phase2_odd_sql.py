@@ -103,3 +103,94 @@ async def test_id_40_13_ab_test_performance(mock_db):
     
     assert len(performance) == 2
     assert performance[1]["avg_metric"] == 0.08
+
+
+# =============================================================================
+# Cost/Finance Tests - Layer-based cost estimation
+# =============================================================================
+
+def test_cost_estimation_layer1_zero():
+    """Layer 1 (Rule-based) cost = 0 (no LLM call required)."""
+    from app.utils.cost_model import CostModel
+
+    model = CostModel()
+
+    # Layer 1: rule-based lookup - no tokens consumed, no cost
+    # In production: layer1_inference() calls rule_engine without LLM
+    # Therefore, calculate_cost with 0 tokens must return 0
+    cost = model.calculate_cost("gpt-4", prompt_tokens=0, completion_tokens=0)
+    assert cost == 0.0, f"Layer 1 with 0 tokens should cost $0, got {cost}"
+
+    # Even with minimal tokens (edge case), layer 1 should be ~0
+    cost_small = model.calculate_cost("gpt-4", prompt_tokens=1, completion_tokens=1)
+    assert cost_small < 0.0001, f"Layer 1 minimal cost should be near 0, got {cost_small}"
+
+
+def test_cost_estimation_layer2_per_query():
+    """Layer 2 (Hybrid/RAG) cost per query: prompt token cost only for retrieval."""
+    from app.utils.cost_model import CostModel
+
+    model = CostModel()
+
+    # Layer 2: hybrid RAG - uses embedding lookup + small prompt
+    # Typical Layer 2: ~500 prompt tokens (query embedding), ~100 completion tokens
+    cost = model.calculate_cost("gpt-3.5-turbo", prompt_tokens=500, completion_tokens=100)
+
+    # gpt-3.5-turbo: prompt=$0.0015/1K, completion=$0.002/1K
+    expected = (500 / 1000) * 0.0015 + (100 / 1000) * 0.002
+    assert abs(cost - expected) < 0.0001, f"Layer 2 cost mismatch: expected ~{expected}, got {cost}"
+    assert cost > 0, "Layer 2 must have non-zero cost (LLM used)"
+
+
+def test_cost_estimation_layer3_per_query():
+    """Layer 3 (Full LLM) cost per query: both prompt and completion tokens."""
+    from app.utils.cost_model import CostModel
+
+    model = CostModel()
+
+    # Layer 3: full LLM with rich context
+    # Typical: 2000 prompt tokens + 500 completion tokens with gpt-4
+    cost = model.calculate_cost("gpt-4", prompt_tokens=2000, completion_tokens=500)
+
+    # gpt-4: prompt=$0.03/1K, completion=$0.06/1K
+    expected = (2000 / 1000) * 0.03 + (500 / 1000) * 0.06
+    assert abs(cost - expected) < 0.0001, f"Layer 3 cost mismatch: expected ~{expected}, got {cost}"
+    assert cost > 0.05, f"Layer 3 full LLM cost should be > $0.05, got {cost}"
+
+
+def test_monthly_cost_under_500_at_100k_conversations():
+    """10万 conversations/month cost must stay under $500 (avg $0.005/conversation)."""
+    from app.utils.cost_model import CostModel
+
+    model = CostModel()
+
+    # Realistic distribution:
+    # - 60% Layer 1 (rule): $0 per conversation
+    # - 30% Layer 2 (RAG): ~$0.001 per conversation (gpt-3.5-turbo, 500+100 tokens)
+    # - 10% Layer 3 (full LLM): ~$0.065 per conversation (gpt-4, 2000+500 tokens)
+    conversations = 100_000
+
+    layer1_count = int(conversations * 0.60)  # 60,000
+    layer2_count = int(conversations * 0.30)  # 30,000
+    layer3_count = int(conversations * 0.10)  # 10,000
+
+    # Layer 1 cost: $0 each
+    layer1_cost = 0.0
+
+    # Layer 2 cost: ~$0.00095 per conversation (gpt-3.5-turbo: 500 prompt + 100 completion)
+    layer2_cost_per = model.calculate_cost("gpt-3.5-turbo", 500, 100)
+    layer2_total = layer2_cost_per * layer2_count
+
+    # Layer 3 cost: ~$0.065 per conversation (gpt-4: 2000 prompt + 500 completion)
+    layer3_cost_per = model.calculate_cost("gpt-4", 2000, 500)
+    layer3_total = layer3_cost_per * layer3_count
+
+    monthly_total = layer1_cost + layer2_total + layer3_total
+
+    assert monthly_total < 500.0, \
+        f"Monthly cost at 100k conversations must be < $500, got ${monthly_total:.2f}"
+
+    # Sanity check: avg per conversation
+    avg_per_conv = monthly_total / conversations
+    assert avg_per_conv < 0.005, \
+        f"Average cost per conversation must be < $0.005, got ${avg_per_conv:.4f}"
