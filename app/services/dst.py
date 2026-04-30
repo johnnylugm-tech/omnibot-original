@@ -70,6 +70,17 @@ class DSTManager:
     def process_turn(self, conversation_id: int, intent: Optional[str], slots: Dict[str, str]) -> DialogueState:
         state = self.get_state(conversation_id)
 
+        # Handle AWAITING_CONFIRMATION with confirm/deny intent
+        if state.current_state == ConversationState.AWAITING_CONFIRMATION:
+            if intent == "confirm":
+                state.current_state = ConversationState.PROCESSING
+            elif intent == "deny":
+                state.current_state = ConversationState.SLOT_FILLING
+            state.turn_count += 1
+            state.last_updated = datetime.utcnow()
+            self.update_state(state)
+            return state
+
         # Simple transition logic based on Phase 2 spec
         if state.current_state == ConversationState.IDLE and intent:
             state.primary_intent = intent

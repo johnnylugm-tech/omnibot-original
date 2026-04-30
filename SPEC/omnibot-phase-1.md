@@ -178,6 +178,47 @@ paths:
   /api/v1/conversations:
     get:
       summary: 查詢對話記錄
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, maximum: 100 }
+        - name: platform
+          in: query
+          schema: { type: string, enum: [telegram, line, messenger, whatsapp] }
+        - name: started_after
+          in: query
+          schema: { type: string, format: date-time }
+        - name: started_before
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        unified_user_id: { type: string, format: uuid }
+                        platform: { type: string }
+                        started_at: { type: string, format: date-time }
+                        ended_at: { type: string, format: date-time, nullable: true }
+                        status: { type: string }
+                  total: { type: integer }
+                  page: { type: integer }
+                  limit: { type: integer }
+                  has_next: { type: boolean }
+        '401': { description: Unauthorized }
+        '422': { description: Validation error }
 
   /api/v1/health:
     get:
@@ -228,7 +269,7 @@ class PaginatedResponse(ApiResponse[List[T]], Generic[T]):
 | `VALIDATION_ERROR` | 422 | 請求參數驗證失敗 |
 | `INTERNAL_ERROR` | 500 | 內部伺服器錯誤 |
 
-> **Phase 2 新增**：`LLM_TIMEOUT (504)`。**Phase 3 新增**：`AUTH_TOKEN_EXPIRED (401)`、`AUTHZ_INSUFFICIENT_ROLE (403)`。
+> **Phase 2 新增**：`LLM_TIMEOUT (504)`。**Phase 3 新增**：`AUTH_TOKEN_EXPIRED (401)`、`AUTHZ_INSUFFICIENT_ROLE (403)`（此碼已預先定義於 Phase 1 規格表中，但 Phase 1 實作期間不會被觸發，Phase 3 RBAC 上線後才會出現）。
 
 ---
 

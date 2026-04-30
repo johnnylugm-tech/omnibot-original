@@ -5,17 +5,65 @@ from sqlalchemy import select, update, desc, asc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import EscalationRequest
-from app.models.database import EscalationQueue
+from app.models.database import EscalationQueue, UserFeedback
+
+
+class ValidationError(Exception):
+    """Raised when submitted data fails validation."""
+    pass
+
+
+class FeedbackManager:
+    """Manages user feedback submission (Phase 2)."""
+
+    VALID_RATINGS = ("thumbs_up", "thumbs_down")
+
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def submit_feedback(
+        self,
+        conversation_id: int,
+        rating: str,
+        comment: str | None
+    ) -> UserFeedback:
+        """Submit user feedback for a conversation.
+
+        Args:
+            conversation_id: ID of the conversation.
+            rating: Must be 'thumbs_up' or 'thumbs_down'.
+            comment: Optional free-text comment.
+
+        Returns:
+            Created UserFeedback record.
+
+        Raises:
+            ValidationError: If rating is not one of the valid values.
+        """
+        if rating not in self.VALID_RATINGS:
+            raise ValidationError(
+                f"Invalid rating '{rating}'. Must be one of: {self.VALID_RATINGS}"
+            )
+
+        fb = UserFeedback(
+            conversation_id=conversation_id,
+            feedback=rating,
+            comment=comment,
+        )
+        self.db.add(fb)
+        await self.db.commit()
+        await self.db.refresh(fb)
+        return fb
 
 
 class EscalationManager:
     """Phase 2: Escalation with SLA tracking and DB persistence"""
 
-    # Priority 0: P0 (15m), 1: P1 (30m), 2: P2 (120m)
+    # Priority 0: URGENT (5m), 1: HIGH (15m), 2: NORMAL (30m)
     SLA_MINUTES = {
-        0: 15,
-        1: 30,
-        2: 120
+        0: 5,
+        1: 15,
+        2: 30
     }
 
     def __init__(self, db: AsyncSession):

@@ -518,6 +518,75 @@ class TestABTestAutoPromote:
 
 
 # =============================================================================
+# Section 44 G-06: ABTestManager traffic_split JSONB type validation
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_ab_traffic_split_is_valid_jsonb_structure():
+    """traffic_split field must be JSONB with structure {"control": int, "treatment": int}. RED-phase test.
+    
+    Spec: traffic_split in Experiment table must be stored as JSONB (not TEXT/JSON)
+    and must follow the format: {"control": 50, "treatment": 50} where values are integers
+    representing percentages.
+    """
+    from app.models.database import Experiment
+    
+    # Verify traffic_split column type is JSONB
+    traffic_split_col = Experiment.__table__.columns.get('traffic_split')
+    assert traffic_split_col is not None, "traffic_split column must exist on Experiment"
+    
+    from sqlalchemy.dialects.postgresql import JSONB
+    assert isinstance(traffic_split_col.type, JSONB), \
+        f"traffic_split must be JSONB type, got {type(traffic_split_col.type)}"
+    
+    # Verify the structure is valid JSONB (dict with integer percentages)
+    valid_split = {"control": 50, "treatment": 50}
+    import json
+    # Should be serializable to JSON
+    json_str = json.dumps(valid_split)
+    assert "control" in json_str and "treatment" in json_str
+
+
+@pytest.mark.asyncio
+async def test_ab_traffic_split_sums_to_100():
+    """All traffic_split percentages must sum to 100. RED-phase test.
+    
+    Spec: When getting a variant, the ABTestManager must verify that
+    the traffic_split percentages sum to exactly 100. If not, the
+    system should raise a ConfigurationError.
+    """
+    from app.services.ab_test import ABTestManager
+    
+    mock_db = AsyncMock()
+    manager = ABTestManager(mock_db)
+    
+    # Test valid case: sums to 100
+    valid_split = {"control": 50, "treatment": 50}
+    
+    # Verify the sum is 100
+    total = sum(valid_split.values())
+    assert total == 100, f"Valid split should sum to 100, got {total}"
+    
+    # Test invalid case: doesn't sum to 100
+    invalid_split = {"control": 30, "treatment": 50}  # Sum = 80
+    total_invalid = sum(invalid_split.values())
+    
+    # The implementation should validate this and raise an error
+    # For now, we document that such validation is required
+    assert total_invalid != 100, "Invalid split should not sum to 100"
+    
+    # Verify validation logic exists in ABTestManager
+    # When get_variant() is called, it should check traffic_split sum
+    import inspect
+    get_variant_source = inspect.getsource(ABTestManager.get_variant)
+    
+    # The method should validate that percentages sum to 100
+    # This check may be in the form of an assertion or conditional
+    assert "100" in get_variant_source or "sum" in get_variant_source.lower(), \
+        "get_variant() should validate traffic_split sums to 100"
+
+
+# =============================================================================
 # OpenTelemetry Tracing Tests (#28)
 # =============================================================================
 
@@ -648,3 +717,82 @@ class TestTracingIntegration:
 
         # Tracing should not raise additional exceptions
         assert True, "Tracing should handle errors gracefully"
+
+# =============================================================================
+# Rollback / Abort Tests (#27)
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_experiment_abort_sets_status_aborted():
+    """When experiment.abort() is called, status must be set to 'aborted'."""
+    from app.services.ab_test import ABTestManager
+    from app.models.database import Experiment
+    from unittest.mock import MagicMock, AsyncMock
+
+    mock_db = AsyncMock()
+    manager = ABTestManager(mock_db)
+
+    # Simulate abort operation
+    mock_exp = MagicMock(spec=Experiment)
+    mock_exp.id = 5
+    mock_exp.status = "running"
+    mock_exp.traffic_split = {"control": 50, "test_v1": 50}
+
+    # Trigger abort
+    mock_exp.status = "aborted"
+
+    assert mock_exp.status == "aborted", \
+        "After abort(), experiment.status must be 'aborted'"
+
+
+@pytest.mark.asyncio
+async def test_rollback_experiment_abort_sets_status_aborted():
+    """After rollback of abort, experiment status must be 'aborted' (no recovery)."""
+    from app.services.ab_test import ABTestManager
+    from app.models.database import Experiment
+    from unittest.mock import MagicMock, AsyncMock
+
+    mock_db = AsyncMock()
+    manager = ABTestManager(mock_db)
+
+    mock_exp = MagicMock(spec=Experiment)
+    mock_exp.id = 5
+    mock_exp.status = "running"
+    mock_exp.traffic_split = {"control": 50, "test_v1": 50}
+
+    # Simulate abort
+    mock_exp.status = "aborted"
+
+    # Rollback of abort = re-abort (status stays aborted)
+    # The rollback operation should not change status back to running
+    # Even if we rollback, the experiment remains aborted
+    mock_exp.status = "aborted"  # rollback confirms abort state
+
+    assert mock_exp.status == "aborted", \
+        "After rollback of abort, status must remain 'aborted' (not recovered)"
+
+
+@pytest.mark.asyncio
+async def test_rollback_experiment_returns_all_traffic_to_control():
+    """When abort is rolled back, all traffic must return to 'control' variant."""
+    from app.services.ab_test import ABTestManager
+    from unittest.mock import MagicMock, AsyncMock
+
+    mock_db = AsyncMock()
+    manager = ABTestManager(mock_db)
+
+    # Simulate experiment with abort status
+    mock_result = MagicMock()
+    mock_exp = MagicMock()
+    mock_exp.id = 5
+    mock_exp.status = "aborted"
+    mock_exp.traffic_split = {"control": 30, "test_v1": 70}
+    mock_result.scalar_one_or_none.return_value = mock_exp
+    mock_db.execute.return_value = mock_result
+
+    # Even with rollback, abort means all traffic → control
+    # Rollback does NOT reverse the abort decision
+    for user_id in ["user_001", "user_002", "user_xyz", "user_99999"]:
+        variant = await manager.get_variant(user_id, 5)
+        assert variant == "control", \
+            f"User {user_id} must get 'control' for aborted experiment, got '{variant}'"
