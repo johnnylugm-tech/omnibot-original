@@ -12,13 +12,13 @@ class PIIMasking:
     Phase 2: Credit card Luhn validation.
     """
 
-    # Taiwan phone patterns (including 886), email, address, and credit card
+    # Taiwan phone patterns (including 886), email, address, credit card, and national ID
     PATTERNS = {
         "credit_card": re.compile(
             r"\b(?:\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}|\d{4}[- ]?\d{6}[- ]?\d{5}|\d{13,19})\b"
         ),
         "phone": re.compile(
-            r"\b(?:\+886[- ]?|0)\d{1,4}[- ]?\d{3,4}[- ]?\d{3,4}\b"
+            r"\b(?:+886[- ]?|0)\d{1,4}[- ]?\d{3,4}[- ]?\d{3,4}\b"
         ),
         "email": re.compile(
             r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b"
@@ -28,6 +28,7 @@ class PIIMasking:
             r"苗栗|彰化|南投|雲林|屏東|宜蘭|花蓮|澎湖|金門|連江)"
             r"(?:市|縣).{2,30}?(?:路|街|巷|弄|號|樓)"
         ),
+        "national_id": re.compile(r"\b[A-Z][12]\d{8}\b"),
     }
 
     # Sensitive keywords that trigger escalation
