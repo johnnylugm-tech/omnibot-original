@@ -1140,7 +1140,7 @@ ORDER BY e.name, er.variant;
 | Phase 1 | 3 | FCR、延遲、知識命中 |
 | Phase 2 | 5 | CSAT、命中分布%、回饋、SLA、情緒、安全阻擋 |
 | Phase 3 | 5 | 成本效益、月度成本、PII 稽核、RBAC 審計、A/B 效果 |
-| **合計** | **13** | - |
+| **合計** | **14** | - |
 
 ---
 
