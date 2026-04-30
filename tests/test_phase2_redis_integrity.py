@@ -149,4 +149,81 @@ async def test_redis_pending_entries_list_no_duplicate_message_ids(mock_redis):
     # Verify no duplicates using set comparison
     unique_ids = set(message_ids)
     assert len(unique_ids) == len(message_ids), \
-        f"PEL contains duplicate message_ids: {message_ids}" 
+        f"PEL contains duplicate message_ids: {message_ids}"
+
+
+# =============================================================================
+# Section 44 G-05: Redis Streams message format schema
+# =============================================================================
+
+def test_redis_streams_message_schema_defined():
+    """Redis streams message schema must be defined. RED-phase test.
+    
+    Spec: Every message published to Redis streams must follow a defined
+    schema with required fields. This test verifies that the message schema
+    is documented and enforced.
+    
+    Required fields for omnibot:messages stream:
+    - conversation_id: string identifier
+    - platform: string (telegram|line|messenger|whatsapp)
+    - user_id: string platform-specific user ID
+    - message_id: string unique message identifier
+    - timestamp: ISO8601 datetime string
+    """
+    # Verify the message schema is defined in the produce() method
+    # or a schema definition somewhere
+    
+    from app.services.worker import AsyncMessageProcessor
+    import inspect
+    
+    # Get the produce method source to verify schema documentation
+    produce_source = inspect.getsource(AsyncMessageProcessor.produce)
+    
+    # Verify that the schema is documented
+    # The method should document or enforce required fields
+    assert "conversation_id" in produce_source or "required" in produce_source.lower(), \
+        "produce() method should document/validate required message schema fields"
+
+
+@pytest.mark.asyncio
+async def test_redis_streams_consumer_handles_unknown_fields_gracefully(mock_redis):
+    """Consumer must handle unknown fields in stream messages gracefully. RED-phase test.
+    
+    Spec: When a stream message contains fields that are not defined in the
+    expected schema, the consumer must not crash. Unknown fields should be
+    ignored or logged but not cause processing failures.
+    """
+    from app.services.worker import AsyncMessageProcessor
+    
+    processor = AsyncMessageProcessor(mock_redis, group="test_group")
+    
+    # Simulate a message with extra unknown fields
+    message_with_unknown = {
+        "conversation_id": "conv-123",
+        "platform": "telegram",
+        "user_id": "user-456",
+        "message_id": "msg-789",
+        "timestamp": "2024-01-01T12:00:00Z",
+        # Unknown field - should not crash consumer
+        "unknown_field": "should_be_ignored",
+        "another_unknown": 12345,
+    }
+    
+    # Mock xreadgroup to return message with unknown fields
+    stream_data = [["omnibot:messages", [["msg-id-1", message_with_unknown]]]]
+    mock_redis.xreadgroup = AsyncMock(return_value=stream_data)
+    
+    # consume() should process this without raising
+    result = await processor.consume("test_consumer", count=10, block_ms=100)
+    
+    # Verify the consumer processed it successfully
+    # Even with unknown fields, the message should be returned
+    assert result is not None, \
+        "Consumer should handle messages with unknown fields gracefully"
+    
+    # Verify the known fields are still accessible
+    if result and len(result) > 0:
+        stream_name, messages = result[0]
+        if messages and len(messages) > 0:
+            msg_id, msg_data = messages[0]
+            assert "conversation_id" in msg_data, "Known fields should be preserved" 

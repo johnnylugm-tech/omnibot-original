@@ -88,3 +88,51 @@ async def test_hybrid_layer_rule_match_confidence_below_0_9_triggers_rrf():
             # Result should come from rule or rag after RRF fusion
             assert result.source in ("rag", "rule"), \
                 f"RRF result should come from rule or rag, got source='{result.source}'"
+
+
+# =============================================================================
+# Section 44 G-03: LLM Layer 3 base prompt template in config
+# =============================================================================
+
+def test_llm_layer3_base_prompt_is_reproducible():
+    """Base prompt template for LLM Layer 3 must exist in config. RED-phase test.
+    
+    Spec: The LLM Layer 3 (LLM generation) must use a base prompt template
+    that is loaded from a configuration source (e.g., config file, environment
+    variable, or database). This ensures reproducibility and allows changing
+    the prompt without code changes.
+    
+    Current state: No such config exists. This test verifies the requirement
+    that LLM Layer 3 loads its base prompt from a configuration source.
+    """
+    import os
+    
+    # Check if LLM Layer 3 base prompt config exists
+    # It could be in various forms:
+    # 1. Environment variable LLM_LAYER3_BASE_PROMPT
+    # 2. A config file referenced by LLM_LAYER3_PROMPT_CONFIG path
+    # 3. A database record
+    
+    base_prompt_config = os.getenv("LLM_LAYER3_BASE_PROMPT")
+    prompt_config_path = os.getenv("LLM_LAYER3_PROMPT_CONFIG")
+    
+    has_config = base_prompt_config is not None or prompt_config_path is not None
+    
+    assert has_config, \
+        "LLM Layer 3 base prompt template must be configurable via " \
+        "LLM_LAYER3_BASE_PROMPT env var or LLM_LAYER3_PROMPT_CONFIG path. " \
+        f"Got LLM_LAYER3_BASE_PROMPT={base_prompt_config}, " \
+        f"LLM_LAYER3_PROMPT_CONFIG={prompt_config_path}"
+    
+    # If using a config file path, verify the file exists
+    if prompt_config_path:
+        assert os.path.isfile(prompt_config_path), \
+            f"LLM_LAYER3_PROMPT_CONFIG points to non-existent file: {prompt_config_path}"
+        
+        # Verify it's a valid template (should contain placeholders)
+        with open(prompt_config_path, 'r') as f:
+            content = f.read()
+        assert len(content) > 0, f"Prompt config file {prompt_config_path} is empty"
+        # A proper template should have at least one placeholder like {query} or {context}
+        assert '{' in content, \
+            f"Prompt template should contain placeholders like {{query}}, got: {content[:100]}"

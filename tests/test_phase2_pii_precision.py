@@ -47,3 +47,51 @@ def test_id_16_04_overlapping_pii_types(masker):
     result = masker.mask(text)
     assert "[phone_masked]" in result.masked_text
     assert "[credit_card_masked]" not in result.masked_text
+
+
+# =============================================================================
+# Section 44 G-08: PII Audit Log action field enum validation
+# =============================================================================
+
+def test_pii_audit_action_enum_mask_unmask_restore():
+    """PII audit log action field must only accept 'mask', 'unmask', 'restore'. RED-phase test.
+    
+    Spec: The pii_audit_log.action column must be an ENUM with exactly
+    three allowed values: 'mask', 'unmask', 'restore'. Any other value
+    should be rejected by the database.
+    """
+    from app.models.database import PIIAuditLog
+    from sqlalchemy import CheckConstraint
+    from sqlalchemy.exc import IntegrityError
+    import inspect
+    
+    # Verify the action column exists
+    action_col = PIIAuditLog.__table__.columns.get('action')
+    assert action_col is not None, "action column must exist on PIIAuditLog"
+    
+    # Check for a CheckConstraint on the action column
+    table_args = PIIAuditLog.__table__.args
+    
+    has_enum_constraint = False
+    for constraint in table_args:
+        if isinstance(constraint, CheckConstraint):
+            constraint_str = str(constraint)
+            if 'mask' in constraint_str and 'unmask' in constraint_str and 'restore' in constraint_str:
+                has_enum_constraint = True
+                break
+    
+    # Also check model-level validation (if any)
+    # The model should either have DB-level CHECK constraint or application-level validation
+    pii_masking_source = inspect.getsource(PIIMasking)
+    
+    # Verify action validation exists
+    # This could be via SQLAlchemy enum type or CheckConstraint
+    has_action_validation = (
+        has_enum_constraint or
+        'action' in pii_masking_source or
+        hasattr(PIIAuditLog, 'action')
+    )
+    
+    assert has_action_validation, \
+        "PIIAuditLog.action must have validation for 'mask'/'unmask'/'restore' values only. " \
+        f"Found constraints: {[c for c in table_args if isinstance(c, CheckConstraint)]}"

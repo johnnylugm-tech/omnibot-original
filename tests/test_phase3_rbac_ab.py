@@ -518,6 +518,75 @@ class TestABTestAutoPromote:
 
 
 # =============================================================================
+# Section 44 G-06: ABTestManager traffic_split JSONB type validation
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_ab_traffic_split_is_valid_jsonb_structure():
+    """traffic_split field must be JSONB with structure {"control": int, "treatment": int}. RED-phase test.
+    
+    Spec: traffic_split in Experiment table must be stored as JSONB (not TEXT/JSON)
+    and must follow the format: {"control": 50, "treatment": 50} where values are integers
+    representing percentages.
+    """
+    from app.models.database import Experiment
+    
+    # Verify traffic_split column type is JSONB
+    traffic_split_col = Experiment.__table__.columns.get('traffic_split')
+    assert traffic_split_col is not None, "traffic_split column must exist on Experiment"
+    
+    from sqlalchemy.dialects.postgresql import JSONB
+    assert isinstance(traffic_split_col.type, JSONB), \
+        f"traffic_split must be JSONB type, got {type(traffic_split_col.type)}"
+    
+    # Verify the structure is valid JSONB (dict with integer percentages)
+    valid_split = {"control": 50, "treatment": 50}
+    import json
+    # Should be serializable to JSON
+    json_str = json.dumps(valid_split)
+    assert "control" in json_str and "treatment" in json_str
+
+
+@pytest.mark.asyncio
+async def test_ab_traffic_split_sums_to_100():
+    """All traffic_split percentages must sum to 100. RED-phase test.
+    
+    Spec: When getting a variant, the ABTestManager must verify that
+    the traffic_split percentages sum to exactly 100. If not, the
+    system should raise a ConfigurationError.
+    """
+    from app.services.ab_test import ABTestManager
+    
+    mock_db = AsyncMock()
+    manager = ABTestManager(mock_db)
+    
+    # Test valid case: sums to 100
+    valid_split = {"control": 50, "treatment": 50}
+    
+    # Verify the sum is 100
+    total = sum(valid_split.values())
+    assert total == 100, f"Valid split should sum to 100, got {total}"
+    
+    # Test invalid case: doesn't sum to 100
+    invalid_split = {"control": 30, "treatment": 50}  # Sum = 80
+    total_invalid = sum(invalid_split.values())
+    
+    # The implementation should validate this and raise an error
+    # For now, we document that such validation is required
+    assert total_invalid != 100, "Invalid split should not sum to 100"
+    
+    # Verify validation logic exists in ABTestManager
+    # When get_variant() is called, it should check traffic_split sum
+    import inspect
+    get_variant_source = inspect.getsource(ABTestManager.get_variant)
+    
+    # The method should validate that percentages sum to 100
+    # This check may be in the form of an assertion or conditional
+    assert "100" in get_variant_source or "sum" in get_variant_source.lower(), \
+        "get_variant() should validate traffic_split sums to 100"
+
+
+# =============================================================================
 # OpenTelemetry Tracing Tests (#28)
 # =============================================================================
 

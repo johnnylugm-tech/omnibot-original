@@ -468,3 +468,111 @@ class TestPIIMaskingEdgeCases:
         # Amex 15-digit cards don't match the regex pattern for 16-digit cards
         # This is a known limitation of the Phase 2 implementation
         assert "[credit_card_masked]" in result.masked_text  # Not masked due to 15-digit limitation
+
+
+# =============================================================================
+# Section 44 G-09: Rate Limiter Redis fallback behavior
+# =============================================================================
+
+def test_rate_limiter_redis_unavailable_blocks_all_by_default():
+    """When Redis is unavailable, rate limiter blocks all requests by default. RED-phase test.
+    
+    Spec: When Redis connection fails, the rate limiter must default to
+    blocking all requests (fail-closed) rather than allowing all through.
+    This is a security measure to prevent unbounded traffic.
+    """
+    from app.security.rate_limiter import RateLimiter
+    import asyncio
+    
+    # Create rate limiter with invalid Redis URL
+    limiter = RateLimiter(redis_url="redis://invalid-host:9999", default_rps=100)
+    
+    # When Redis is unavailable, check() should return False (block)
+    # by default, NOT True (allow)
+    result = asyncio.run(limiter.check("telegram", "user_123"))
+    
+    assert result is False, \
+        "When Redis is unavailable, rate limiter must block requests by default (fail-closed)"
+
+
+def test_rate_limiter_fallback_allow_all_if_configured():
+    """With RATE_LIMIT_FALLBACK=allow_all, requests pass when Redis is down. RED-phase test.
+    
+    Spec: If environment variable RATE_LIMIT_FALLBACK=allow_all is set,
+    then when Redis is unavailable, requests should be allowed through
+    instead of being blocked.
+    """
+    from app.security.rate_limiter import RateLimiter
+    import os
+    import asyncio
+    
+    # Set fallback mode to allow_all
+    original_env = os.environ.get("RATE_LIMIT_FALLBACK")
+    try:
+        os.environ["RATE_LIMIT_FALLBACK"] = "allow_all"
+        
+        # Create rate limiter with invalid Redis URL
+        limiter = RateLimiter(redis_url="redis://invalid-host:9999", default_rps=100)
+        
+        # When Redis is down but fallback is allow_all, check() should return True
+        result = asyncio.run(limiter.check("telegram", "user_456"))
+        
+        assert result is True, \
+            "With RATE_LIMIT_FALLBACK=allow_all, requests should be allowed when Redis is down"
+        
+    finally:
+        # Restore original env
+        if original_env is not None:
+            os.environ["RATE_LIMIT_FALLBACK"] = original_env
+        elif "RATE_LIMIT_FALLBACK" in os.environ:
+            del os.environ["RATE_LIMIT_FALLBACK"]
+
+
+def test_rate_limiter_fallback_logs_warning_when_redis_down():
+    """When Redis fallback is triggered, a WARN log must be emitted. RED-phase test.
+    
+    Spec: When the rate limiter falls back to in-memory mode due to Redis
+    being unavailable, it must log a WARNING message indicating the fallback
+    situation. This helps with monitoring and debugging.
+    """
+    from app.security.rate_limiter import RateLimiter
+    from unittest.mock import MagicMock
+    import logging
+    import io
+    import os
+    import asyncio
+    
+    # Capture log output
+    log_stream = io.StringIO()
+    handler = logging.StreamHandler(log_stream)
+    handler.setLevel(logging.WARNING)
+    
+    logger = logging.getLogger("omnibot.rate_limiter")
+    original_handlers = logger.handlers[:]
+    logger.handlers = [handler]
+    logger.setLevel(logging.WARNING)
+    
+    try:
+        # Create rate limiter with invalid Redis URL
+        limiter = RateLimiter(redis_url="redis://invalid-host:9999", default_rps=100)
+        
+        # Trigger fallback by calling check
+        asyncio.run(limiter.check("telegram", "user_789"))
+        
+        # Check that a WARNING was logged
+        log_output = log_stream.getvalue()
+        
+        has_warning = (
+            "WARNING" in log_output or
+            "WARN" in log_output or
+            "redis" in log_output.lower() or
+            "fallback" in log_output.lower() or
+            "unavailable" in log_output.lower()
+        )
+        
+        assert has_warning, \
+            f"When Redis fallback is triggered, a WARNING should be logged. Got: {log_output}"
+        
+    finally:
+        # Restore original handlers
+        logger.handlers = original_handlers

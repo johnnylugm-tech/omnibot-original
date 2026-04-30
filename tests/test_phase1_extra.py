@@ -2,9 +2,45 @@ import pytest
 from datetime import datetime
 from app.models import UnifiedMessage, Platform, MessageType
 from app.utils.logger import StructuredLogger
+from app.security.input_sanitizer import InputSanitizer
 import json
 import logging
 from io import StringIO
+
+
+# =============================================================================
+# Section 44 G-01: InputSanitizer empty string handling
+# =============================================================================
+
+def test_sanitizer_empty_string_returns_empty_string():
+    """sanitize("") returns "" not None. RED-phase test.
+    
+    Spec: sanitize() must return empty string "" when input is "",
+    not None. The sanitizer currently strips whitespace but does not
+    handle the case where the result of strip() is empty.
+    """
+    sanitizer = InputSanitizer()
+    result = sanitizer.sanitize("")
+    assert result == "", "sanitize('') must return '' not None"
+
+
+def test_sanitizer_whitespace_only_returns_empty_string():
+    """sanitize("   ") returns "" not None. RED-phase test.
+    
+    Spec: When input contains only whitespace (spaces, tabs, newlines),
+    sanitize() must return "" not None.
+    """
+    sanitizer = InputSanitizer()
+    result = sanitizer.sanitize("   ")
+    assert result == "", "sanitize('   ') must return '' not None"
+    
+    result2 = sanitizer.sanitize("\t\n  \t")
+    assert result2 == "", "sanitize with only whitespace chars must return ''"
+
+
+# =============================================================================
+# UnifiedMessage immutability tests
+# =============================================================================
 
 def test_unified_message_immutability():
     msg = UnifiedMessage(
