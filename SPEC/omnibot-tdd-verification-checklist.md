@@ -103,6 +103,17 @@
 - [ ] `test_health_endpoint_includes_uptime_seconds`: 回應包含 `uptime_seconds: float`
 - [ ] `test_health_endpoint_status_healthy_when_all_healthy`: 所有元件 healthy 時 `status = "healthy"`
 - [ ] `test_health_endpoint_status_degraded_when_one_down`: 任一元件失敗時 `status = "degraded"`
+- [ ] `test_health_check_status_unhealthy_when_service_down`
+
+test_health_check_status_unhealthy_when_service_down:
+
+**描述：** Mock 三個依賴服務（Redis、PostgreSQL、LLM API）全部無法連接時，health endpoint 回傳 `status: "unhealthy"`
+
+**預期行為：**
+- HTTP 200（server still running）
+- `status: "unhealthy"`
+- `healthy_components: []`
+- `degraded_components: []`
 
 ### 11. 知識庫管理 API
 
