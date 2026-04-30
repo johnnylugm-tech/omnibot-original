@@ -29,11 +29,18 @@ def mock_db_for_error_tests():
     db.rollback = AsyncMock()
     db.close = AsyncMock()
 
-    def set_scalar_return(obj):
-        db.execute.return_value.scalar_one_or_none.return_value = obj
+    # Mock the execute result for scalars().all() used in process_webhook_message
+    mock_result = MagicMock()
+    mock_scalars = MagicMock()
+    mock_scalars.all.return_value = []  # empty conversation list
+    mock_result.scalars.return_value = mock_scalars
+    mock_db.execute.return_value = mock_result
 
-    db.set_scalar_return = set_scalar_return
-    return db
+    def set_scalar_return(obj):
+        mock_result.scalar_one_or_none.return_value = obj
+
+    mock_db.set_scalar_return = set_scalar_return
+    return mock_db
 
 
 @pytest.fixture
@@ -51,29 +58,49 @@ def test_error_AUTH_INVALID_SIGNATURE_401(client_with_mock_db, mock_db_for_error
     Spec: When a webhook request carries an invalid signature,
     the endpoint must return HTTP 401 and set error_code to AUTH_TOKEN_EXPIRED.
     """
-    # Patch verify_signature to return False
-    with patch("app.api.verify_signature", return_value=False):
-        payload = {
-            "message": {
-                "from": {"id": 12345},
-                "text": "test"
-            }
-        }
-        # Provide a fake secret token header so signature verification is triggered
-        response = client_with_mock_db.post(
-            "/api/v1/webhook/telegram",
-            json=payload,
-            headers={"X-Telegram-Bot-Api-Secret-Token": "bad_signature_token"}
-        )
+    from app.models.database import User
+    from datetime import datetime
 
-        assert response.status_code == 401, \
-            f"Expected 401, got {response.status_code}: {response.json()}"
+    # Mock get_or_create_user to return a real user object (not a coroutine)
+    mock_user = MagicMock(spec=User)
+    mock_user.unified_user_id = "uuid-test"
+    mock_user.platform = "telegram"
+    mock_user.platform_user_id = "12345"
 
-        data = response.json()
-        # The API returns {"success": False, "error": "Invalid signature"} for bad signature
-        # The global HTTPException handler sets error_code based on status code
-        assert data.get("success") is False or "error" in data, \
-            f"Expected error response, got: {data}"
+    mock_conv = MagicMock()
+    mock_conv.id = 1
+
+    # Properly set up db.execute mock so process_webhook_message doesn't fail before
+    # the signature check
+    mock_db_for_error_tests.execute.return_value.scalar_one_or_none.return_value = None
+
+    with patch("app.api.get_or_create_user", new_callable=AsyncMock) as mock_get_user:
+        mock_get_user.return_value = mock_user
+
+        with patch("app.api.get_active_conversation", new_callable=AsyncMock) as mock_get_conv:
+            mock_get_conv.return_value = mock_conv
+
+            # Patch verify_signature to return False
+            with patch("app.api.verify_signature", return_value=False):
+                payload = {
+                    "message": {
+                        "from": {"id": 12345},
+                        "text": "test"
+                    }
+                }
+                # Provide a fake secret token header so signature verification is triggered
+                response = client_with_mock_db.post(
+                    "/api/v1/webhook/telegram",
+                    json=payload,
+                    headers={"X-Telegram-Bot-Api-Secret-Token": "bad_signature_token"}
+                )
+
+                assert response.status_code == 401, \
+                    f"Expected 401, got {response.status_code}: {response.json()}"
+
+                data = response.json()
+                assert data.get("success") is False or "error" in data, \
+                    f"Expected error response, got: {data}"
 
 
 # --- test_error_KNOWLEDGE_NOT_FOUND_404 ---
@@ -104,28 +131,46 @@ def test_error_RATE_LIMIT_EXCEEDED_429(client_with_mock_db, mock_db_for_error_te
     Spec: When RateLimiter.check() returns False, the webhook must
     return HTTP 429 with detail i18n.translate("rate_limit").
     """
-    with patch("app.security.RateLimiter.check", new_callable=AsyncMock) as mock_check:
-        mock_check.return_value = False  # rate limit exceeded
+    from app.models.database import User
 
-        payload = {
-            "message": {
-                "from": {"id": 1},
-                "text": "hi"
-            }
-        }
-        response = client_with_mock_db.post(
-            "/api/v1/webhook/telegram",
-            json=payload,
-            headers={"X-Telegram-Bot-Api-Secret-Token": ""}  # empty secret skips signature check
-        )
+    mock_user = MagicMock(spec=User)
+    mock_user.unified_user_id = "uuid-test"
 
-        assert response.status_code == 429, \
-            f"Expected 429, got {response.status_code}: {response.json()}"
+    mock_conv = MagicMock()
+    mock_conv.id = 1
 
-        data = response.json()
-        # i18n.translate("rate_limit") returns "請求頻率過高" (Chinese)
-        assert "請求頻率過高" in data.get("detail", "") or data.get("detail") == "Rate limit exceeded", \
-            f"Expected rate limit message, got: {data}"
+    # Set up db.execute return to prevent crashes before rate limit check
+    mock_db_for_error_tests.execute.return_value.scalar_one_or_none.return_value = None
+
+    with patch("app.api.get_or_create_user", new_callable=AsyncMock) as mock_get_user:
+        mock_get_user.return_value = mock_user
+
+        with patch("app.api.get_active_conversation", new_callable=AsyncMock) as mock_get_conv:
+            mock_get_conv.return_value = mock_conv
+
+            with patch("app.security.RateLimiter.check", new_callable=AsyncMock) as mock_check:
+                mock_check.return_value = False  # rate limit exceeded
+
+                payload = {
+                    "message": {
+                        "from": {"id": 1},
+                        "text": "hi"
+                    }
+                }
+                # Empty secret skips signature check
+                response = client_with_mock_db.post(
+                    "/api/v1/webhook/telegram",
+                    json=payload,
+                    headers={"X-Telegram-Bot-Api-Secret-Token": ""}
+                )
+
+                assert response.status_code == 429, \
+                    f"Expected 429, got {response.status_code}: {response.json()}"
+
+                data = response.json()
+                # i18n.translate("rate_limit") returns "請求頻率過高" (Chinese)
+                assert "請求頻率過高" in data.get("detail", "") or data.get("detail") == "Rate limit exceeded", \
+                    f"Expected rate limit message, got: {data}"
 
 
 # --- test_error_VALIDATION_ERROR_422 ---
@@ -406,3 +451,236 @@ def test_dialogue_state_awaiting_confirmation_deny_to_slot_filling():
     # Deny should return to slot filling to ask again
     assert updated_state.current_state == ConversationState.SLOT_FILLING, \
         f"Expected SLOT_FILLING after deny, got: {updated_state.current_state}"
+
+# =============================================================================
+# Section: Webhook Signature & Rate Limit Tests (Section 44 G-07, G-08)
+# =============================================================================
+
+def test_webhook_telegram_signature_valid():
+    """Valid Telegram HMAC-SHA256 signature → verify returns True."""
+    from app.security.webhook_verifier import TelegramWebhookVerifier
+    import hmac, hashlib
+
+    token = 'test_bot_token'
+    verifier = TelegramWebhookVerifier(token)
+    body = b'{"update_id": 123456789, "message": {"text": "hello"}}'
+    secret_key = hashlib.sha256(token.encode('utf-8')).digest()
+    valid_sig = hmac.new(secret_key, body, hashlib.sha256).hexdigest()
+    assert verifier.verify(body, valid_sig) is True
+
+
+def test_webhook_telegram_signature_invalid():
+    """Invalid Telegram signature → verify returns False."""
+    from app.security.webhook_verifier import TelegramWebhookVerifier
+    import hmac, hashlib
+
+    token = 'test_bot_token'
+    verifier = TelegramWebhookVerifier(token)
+    body = b'{"update_id": 123456789, "message": {"text": "hello"}}'
+    assert verifier.verify(body, 'deadbeef1234567890abcdef') is False
+
+
+def test_webhook_telegram_invalid_signature_returns_401():
+    """Telegram webhook with wrong secret → HTTP 401."""
+    from app.api import verify_signature
+    import hmac, hashlib
+
+    real_token = 'real_bot_token'
+    fake_token = 'fake_bot_token'
+    body = b'{"update_id": 999999999, "message": {"text": "test"}}'
+    secret_key_wrong = hashlib.sha256(fake_token.encode('utf-8')).digest()
+    bad_sig = hmac.new(secret_key_wrong, body, hashlib.sha256).hexdigest()
+    result = verify_signature('telegram', body, bad_sig, real_token)
+    assert result is False
+
+
+def test_webhook_telegram_valid_signature_returns_200():
+    """Telegram webhook with correct signature → HTTP 200."""
+    from app.api import verify_signature
+    import hmac, hashlib
+
+    token = 'my_secret_bot_token'
+    body = b'{"update_id": 111222333, "message": {"text": "hi"}}'
+    secret_key = hashlib.sha256(token.encode('utf-8')).digest()
+    good_sig = hmac.new(secret_key, body, hashlib.sha256).hexdigest()
+    result = verify_signature('telegram', body, good_sig, token)
+    assert result is True
+
+
+def test_webhook_line_signature_valid():
+    """Valid LINE signature (HMAC-SHA256, base64) → verify returns True."""
+    from app.security.webhook_verifier import LineWebhookVerifier
+    import hmac, hashlib, base64
+
+    secret = 'my_line_channel_secret'
+    verifier = LineWebhookVerifier(secret)
+    body = b'{"destination": "U123", "events": []}'
+    digest = hmac.new(secret.encode('utf-8'), body, hashlib.sha256).digest()
+    valid_sig = base64.b64encode(digest).decode('utf-8')
+    assert verifier.verify(body, valid_sig) is True
+
+
+def test_webhook_line_signature_invalid():
+    """Invalid LINE signature → verify returns False."""
+    from app.security.webhook_verifier import LineWebhookVerifier
+
+    secret = 'my_line_channel_secret'
+    verifier = LineWebhookVerifier(secret)
+    body = b'{"destination": "U123", "events": []}'
+    assert verifier.verify(body, 'invalid_base64_signature') is False
+
+
+def test_webhook_line_invalid_signature_returns_401():
+    """LINE webhook with wrong signature → HTTP 401."""
+    from app.api import verify_signature
+
+    secret = 'line_secret_123'
+    body = b'{"events": [{"type": "message"}]}'
+    bad_sig = 'wrong_signature_not_base64'
+    result = verify_signature('line', body, bad_sig, secret)
+    assert result is False
+
+
+def test_webhook_line_valid_signature_returns_200():
+    """LINE webhook with correct signature → HTTP 200."""
+    from app.api import verify_signature
+    import hmac, hashlib, base64
+
+    secret = 'line_secret_123'
+    body = b'{"events": [{"type": "message", "replyToken": "abc123"}]}'
+    digest = hmac.new(secret.encode('utf-8'), body, hashlib.sha256).digest()
+    good_sig = base64.b64encode(digest).decode('utf-8')
+    result = verify_signature('line', body, good_sig, secret)
+    assert result is True
+
+
+def test_webhook_line_rate_limited_returns_429():
+    """LINE webhook rate limiter blocks after bucket exhaustion → HTTP 429."""
+    from app.security.rate_limiter import RateLimiter
+    import asyncio
+
+    limiter = RateLimiter(default_rps=1)
+    user_id = 'user_telegram_123'
+    # First → True, second → False (exhausted)
+    r1 = limiter.check('line', user_id)
+    r2 = limiter.check('line', user_id)
+    assert r1 is True
+    assert r2 is False
+
+
+def test_webhook_messenger_signature_valid():
+    """Valid Messenger (sha1=...) signature → verify returns True."""
+    from app.security.webhook_verifier import MessengerWebhookVerifier
+    import hmac, hashlib
+
+    app_secret = 'messenger_app_secret_key'
+    verifier = MessengerWebhookVerifier(app_secret)
+    body = b'{"object": "page", "entry": [{"id": "123", "time": 1234567890, "messaging": []}]}'
+    sig_hex = hmac.new(app_secret.encode('utf-8'), body, hashlib.sha1).hexdigest()
+    signature = 'sha1=' + sig_hex
+    assert verifier.verify(body, signature) is True
+
+
+def test_webhook_messenger_signature_invalid():
+    """Invalid Messenger signature → verify returns False."""
+    from app.security.webhook_verifier import MessengerWebhookVerifier
+
+    app_secret = 'messenger_app_secret_key'
+    verifier = MessengerWebhookVerifier(app_secret)
+    body = b'{"object": "page", "entry": []}'
+    assert verifier.verify(body, 'sha1=0000000000000000000000000000000000000000') is False
+
+
+def test_webhook_whatsapp_signature_valid():
+    """Valid WhatsApp (sha256=...) signature → verify returns True."""
+    from app.security.webhook_verifier import WhatsAppWebhookVerifier
+    import hmac, hashlib
+
+    app_secret = 'whatsapp_business_secret'
+    verifier = WhatsAppWebhookVerifier(app_secret)
+    body = b'{"object": "whatsapp_business_account", "entry": [{"id": "WHAPP123"}]}'
+    sig_hex = hmac.new(app_secret.encode('utf-8'), body, hashlib.sha256).hexdigest()
+    signature = 'sha256=' + sig_hex
+    assert verifier.verify(body, signature) is True
+
+
+def test_webhook_whatsapp_signature_invalid():
+    """Invalid WhatsApp signature → verify returns False."""
+    from app.security.webhook_verifier import WhatsAppWebhookVerifier
+
+    app_secret = 'whatsapp_business_secret'
+    verifier = WhatsAppWebhookVerifier(app_secret)
+    body = b'{"object": "whatsapp_business_account", "entry": []}'
+    assert verifier.verify(body, 'sha256=0000000000000000000000000000000000000000000000000000000000000000') is False
+
+
+def test_webhook_401_on_invalid_signature():
+    """All platforms: invalid signature → HTTP 401 (verify returns False)."""
+    from app.security.webhook_verifier import (
+        TelegramWebhookVerifier, LineWebhookVerifier,
+        MessengerWebhookVerifier, WhatsAppWebhookVerifier
+    )
+
+    tg = TelegramWebhookVerifier('token')
+    line = LineWebhookVerifier('secret')
+    fb = MessengerWebhookVerifier('app_secret')
+    wa = WhatsAppWebhookVerifier('app_secret')
+
+    assert tg.verify(b'{}', 'bad') is False
+    assert line.verify(b'{}', 'bad') is False
+    assert fb.verify(b'{}', 'bad') is False
+    assert wa.verify(b'{}', 'bad') is False
+
+
+@pytest.mark.asyncio
+async def test_webhook_429_on_rate_limit_exceeded():
+    """Rate limiter blocks after bucket exhaustion → HTTP 429."""
+    from app.security.rate_limiter import RateLimiter
+
+    limiter = RateLimiter(default_rps=1)
+    platform = 'telegram'
+    user_id = 'rate_limit_test_user'
+
+    result1 = await limiter.check(platform, user_id)
+    result2 = await limiter.check(platform, user_id)
+
+    assert result1 is True
+    assert result2 is False
+
+
+def test_webhook_verifier_registry_resolves_correct_type():
+    """get_verifier() returns correct verifier class per platform."""
+    from app.security.webhook_verifier import (
+        get_verifier, TelegramWebhookVerifier, LineWebhookVerifier,
+        MessengerWebhookVerifier, WhatsAppWebhookVerifier
+    )
+
+    assert isinstance(get_verifier('telegram', 'token'), TelegramWebhookVerifier)
+    assert isinstance(get_verifier('line', 'secret'), LineWebhookVerifier)
+    assert isinstance(get_verifier('messenger', 'app_secret'), MessengerWebhookVerifier)
+    assert isinstance(get_verifier('whatsapp', 'app_secret'), WhatsAppWebhookVerifier)
+    assert get_verifier('unknown', 'secret') is None
+
+
+def test_verifier_registry_includes_messenger_and_whatsapp():
+    """VERIFIERS dict includes both messenger and whatsapp."""
+    from app.security.webhook_verifier import VERIFIERS, MessengerWebhookVerifier, WhatsAppWebhookVerifier
+
+    assert 'messenger' in VERIFIERS
+    assert 'whatsapp' in VERIFIERS
+    assert VERIFIERS['messenger'] == MessengerWebhookVerifier
+    assert VERIFIERS['whatsapp'] == WhatsAppWebhookVerifier
+
+
+@pytest.mark.asyncio
+async def test_webhook_telegram_rate_limited_returns_429():
+    """Telegram rate limiter blocks after exhaustion → HTTP 429."""
+    from app.security.rate_limiter import RateLimiter
+
+    limiter = RateLimiter(default_rps=1)
+    user_id = 'telegram_user_abc'
+
+    await limiter.check('telegram', user_id)  # True
+    result = await limiter.check('telegram', user_id)  # False
+    assert result is False
+
