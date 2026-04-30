@@ -507,7 +507,50 @@
 
 ## 44. 缺口追蹤 G-01 ~ G-09（對應 VERIFICATION_PLAN 章節 6.1）
 
-> 以下為 VERIFICATION_PLAN 發現的 9 個規格缺口，補入測試以確保實作時被發現
+> 以下為 VERIFICATION_PLAN 發現的 9 個規格缺口，補入測試以確保實作時被發現。
+> **資訊已完整內嵌，無需另行查閱 VERIFICATION_PLAN.md。**
+
+---
+
+### G-01 空字串處理｜優先：中｜處置：明定回傳 `""`
+
+**缺口描述**：`InputSanitizer.sanitize()` 未定義對空字串的處理（回傳 `""` 或 `None`？）
+
+### G-02 keywords 欄位型別｜優先：中｜處置：明定 `TEXT[]` PostgreSQL 原生陣列
+
+**缺口描述**：`RuleMatch` 的 `keywords` 欄位型別未說明（PostgreSQL array 還是 JSON array？）
+
+### G-03 LLM Layer 3 Prompt Template｜優先：低｜處置：附基準 prompt 以便可重現測試
+
+**缺口描述**：Phase 2 LLM Layer 3 的 prompt template 未提供，僅預留 interface
+
+### G-04 assign 已 resolved 的 escalation 行為｜優先：中｜處置：明定回傳 0 row affected 或拋例外
+
+**缺口描述**：`EscalationManager.assign()` 當 escalation 已 resolved 時行為未定義
+
+### G-05 Redis Streams 訊息格式｜優先：中｜處置：規格提供訊息結構範例
+
+**缺口描述**：Phase 3 Redis Streams 的訊息格式（message schema）未定義
+
+### G-06 ABTestManager traffic_split JSONB 型別｜優先：低｜處置：明定結構如 `{"control": 50, "treatment": 50}`
+
+**缺口描述**：`ABTestManager.get_variant()` 的 `experiment["traffic_split"]` 型別未說明（JSONB）
+
+### G-07 降級策略 Level 1-4 具體實作｜優先：高｜處置：需補充 MetricsAlert / HealthCheck 具體實作
+
+**缺口描述**：降級策略 Level 1-4 的觸發條件在程式碼中未見實作，規格僅描述性說明
+
+### G-08 pii_audit_log action 欄位枚舉值｜優先：低｜處置：明定允許值
+
+**缺口描述**：`pii_audit_log` 的 `action` 欄位枚舉值（mask/unmask/restore）未定義
+
+### G-09 Rate Limiter Redis fallback 行為｜優先：高｜處置：明定 block all（安全預設）
+
+**缺口描述**：Phase 1 Rate Limiter 未說明當 Redis 不可用時的 fallback 行為
+
+---
+
+以下為對應測試案例：
 
 ### G-01 空字串處理（中等優先）
 
