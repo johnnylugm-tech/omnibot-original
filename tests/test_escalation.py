@@ -204,6 +204,42 @@ async def test_escalation_manager_get_sla_breaches_ordered_by_priority():
         f"SQL should order by priority DESC: {stmt_str}"
 
 
+# --- test_escalation_manager_sla_normal_30_minutes ---
+@pytest.mark.asyncio
+async def test_escalation_manager_sla_normal_30_minutes():
+    """NORMAL priority (0) escalation SLA = 30 minutes.
+
+    Spec: Priority 0 (NORMAL) has SLA of 30 minutes (SLA_MINUTES[0] = 30).
+    """
+    mock_db = AsyncMock()
+    mock_db.add = MagicMock()
+    mock_db.commit = AsyncMock()
+
+    async def refresh_side_effect(obj):
+        obj.id = 1
+
+    mock_db.refresh = AsyncMock(side_effect=refresh_side_effect)
+
+    manager = EscalationManager(db=mock_db)
+    req = EscalationRequest(conversation_id=1, reason="normal issue")
+
+    ticket_id = await manager.create(req, priority=0)
+
+    # Verify SLA_MINUTES for priority 0 is 30
+    assert manager.SLA_MINUTES[0] == 30, \
+        f"NORMAL priority (0) SLA should be 30 minutes, got {manager.SLA_MINUTES[0]}"
+
+    # Check that ticket was created with correct deadline
+    call_args = mock_db.add.call_args[0][0]
+    deadline = call_args.sla_deadline
+    expected_deadline = datetime.utcnow() + timedelta(minutes=30)
+
+    # Allow 5 second tolerance
+    diff = abs((deadline - expected_deadline).total_seconds())
+    assert diff < 5, \
+        f"Expected deadline ~30min from now, got {deadline}"
+
+
 # --- test_escalation_manager_sla_high_15_minutes ---
 @pytest.mark.asyncio
 async def test_escalation_manager_sla_high_15_minutes():
@@ -216,23 +252,23 @@ async def test_escalation_manager_sla_high_15_minutes():
     mock_db.commit = AsyncMock()
 
     async def refresh_side_effect(obj):
-        obj.id = 1
+        obj.id = 2
 
     mock_db.refresh = AsyncMock(side_effect=refresh_side_effect)
 
     manager = EscalationManager(db=mock_db)
-    req = EscalationRequest(conversation_id=1, reason="high priority issue")
+    req = EscalationRequest(conversation_id=2, reason="high priority issue")
 
     ticket_id = await manager.create(req, priority=1)
 
-    # Verify SLA_MINUTES for priority 1 is 30
-    assert manager.SLA_MINUTES[1] == 30, \
-        f"HIGH priority (1) SLA should be 30 minutes, got {manager.SLA_MINUTES[1]}"
+    # Verify SLA_MINUTES for priority 1 is 15
+    assert manager.SLA_MINUTES[1] == 15, \
+        f"HIGH priority (1) SLA should be 15 minutes, got {manager.SLA_MINUTES[1]}"
 
     # Check that ticket was created with correct deadline
     call_args = mock_db.add.call_args[0][0]
     deadline = call_args.sla_deadline
-    expected_deadline = datetime.utcnow() + timedelta(minutes=30)
+    expected_deadline = datetime.utcnow() + timedelta(minutes=15)
 
     # Allow 5 second tolerance
     diff = abs((deadline - expected_deadline).total_seconds())
@@ -240,46 +276,12 @@ async def test_escalation_manager_sla_high_15_minutes():
         f"Expected deadline ~15min from now, got {deadline}"
 
 
-# --- test_escalation_manager_sla_normal_30_minutes ---
-@pytest.mark.asyncio
-async def test_escalation_manager_sla_normal_30_minutes():
-    """NORMAL priority (2) escalation SLA = 30 minutes.
-
-    Spec: Priority 2 (NORMAL) has SLA of 30 minutes (SLA_MINUTES[2] = 30).
-    """
-    mock_db = AsyncMock()
-    mock_db.add = MagicMock()
-    mock_db.commit = AsyncMock()
-
-    async def refresh_side_effect(obj):
-        obj.id = 2
-
-    mock_db.refresh = AsyncMock(side_effect=refresh_side_effect)
-
-    manager = EscalationManager(db=mock_db)
-    req = EscalationRequest(conversation_id=2, reason="normal issue")
-
-    ticket_id = await manager.create(req, priority=2)
-
-    # Verify SLA_MINUTES for priority 2 is 120
-    assert manager.SLA_MINUTES[2] == 120, \
-        f"NORMAL priority (2) SLA should be 120 minutes, got {manager.SLA_MINUTES[2]}"
-
-    call_args = mock_db.add.call_args[0][0]
-    deadline = call_args.sla_deadline
-    expected_deadline = datetime.utcnow() + timedelta(minutes=120)
-
-    diff = abs((deadline - expected_deadline).total_seconds())
-    assert diff < 5, \
-        f"Expected deadline ~30min from now, got {deadline}"
-
-
 # --- test_escalation_manager_sla_urgent_5_minutes ---
 @pytest.mark.asyncio
-async def test_escalation_manager_sla_urgent_15_minutes():
-    """URGENT priority (0) escalation SLA = 15 minutes.
+async def test_escalation_manager_sla_urgent_5_minutes():
+    """URGENT priority (2) escalation SLA = 5 minutes.
 
-    Spec: Priority 0 (URGENT) has SLA of 15 minutes (SLA_MINUTES[0] = 15).
+    Spec: Priority 2 (URGENT / emotion_trigger) has SLA of 5 minutes (SLA_MINUTES[2] = 5).
     """
 
     mock_db = AsyncMock()
@@ -294,15 +296,15 @@ async def test_escalation_manager_sla_urgent_15_minutes():
     manager = EscalationManager(db=mock_db)
     req = EscalationRequest(conversation_id=3, reason="urgent issue")
 
-    ticket_id = await manager.create(req, priority=0)
+    ticket_id = await manager.create(req, priority=2)
 
-    # Verify SLA_MINUTES for priority 0 is 15
-    assert manager.SLA_MINUTES[0] == 15, \
-        f"URGENT priority (0) SLA should be 15 minutes, got {manager.SLA_MINUTES[0]}"
+    # Verify SLA_MINUTES for priority 2 is 5
+    assert manager.SLA_MINUTES[2] == 5, \
+        f"URGENT priority (2) SLA should be 5 minutes, got {manager.SLA_MINUTES[2]}"
 
     call_args = mock_db.add.call_args[0][0]
     deadline = call_args.sla_deadline
-    expected_deadline = datetime.utcnow() + timedelta(minutes=15)
+    expected_deadline = datetime.utcnow() + timedelta(minutes=5)
 
     diff = abs((deadline - expected_deadline).total_seconds())
     assert diff < 5, \

@@ -193,36 +193,6 @@ def test_error_INTERNAL_ERROR_500(client_with_mock_db, mock_db_for_error_tests):
         assert "Database crash" in str(exc_info.value)
 
 
-# --- test_error_LLM_TIMEOUT_504 ---
-def test_error_LLM_TIMEOUT_504(client_with_mock_db, mock_db_for_error_tests):
-    """LLM timeout returns 504 LLM_TIMEOUT.
-
-    Spec: When process_webhook_message raises TimeoutError, the webhook
-    endpoint must return HTTP 504 with detail "LLM_TIMEOUT".
-    """
-    with patch("app.api.process_webhook_message", new_callable=AsyncMock) as mock_process:
-        mock_process.side_effect = TimeoutError("LLM request timed out")
-
-        payload = {
-            "message": {
-                "from": {"id": 1},
-                "text": "hi"
-            }
-        }
-        response = client_with_mock_db.post(
-            "/api/v1/webhook/telegram",
-            json=payload,
-            headers={"X-Telegram-Bot-Api-Secret-Token": ""}
-        )
-
-        assert response.status_code == 504, \
-            f"Expected 504, got {response.status_code}: {response.json()}"
-
-        data = response.json()
-        assert data.get("detail") == "LLM_TIMEOUT", \
-            f"Expected 'LLM_TIMEOUT', got: {data}"
-
-
 # --- test_error_AUTHZ_INSUFFICIENT_ROLE_403 ---
 def test_error_AUTHZ_INSUFFICIENT_ROLE_403(client_with_mock_db, mock_db_for_error_tests):
     """Agent role cannot write knowledge → 403.
@@ -474,25 +444,6 @@ def test_unified_message_immutable():
 # =============================================================================
 # Section: Auth Token Expiry Tests (Batch A)
 # =============================================================================
-
-def test_token_expired_returns_401_AUTH_TOKEN_EXPIRED(client_with_mock_db, mock_db_for_error_tests):
-    """Expired or invalid auth token returns 401 with error_code AUTH_TOKEN_EXPIRED"""
-    from app.security.rbac import rbac
-    from starlette.responses import JSONResponse
-
-    # Use a malformed token to trigger 401
-    bad_token = "invalid.malformed.token"
-
-    headers = {"Authorization": f"Bearer {bad_token}"}
-    response = client_with_mock_db.get("/api/v1/knowledge", headers=headers)
-
-    assert response.status_code == 401, \
-        f"Expected 401 for invalid token, got {response.status_code}"
-
-    data = response.json()
-    assert data.get("error_code") == "AUTH_TOKEN_EXPIRED", \
-        f"Expected error_code AUTH_TOKEN_EXPIRED, got {data}"
-
 
 # =============================================================================
 # Section: Webhook Telegram Signature Tests (Batch A)

@@ -3,9 +3,47 @@ Atomic TDD Tests for Phase 2: SLA Escalation (#21)
 """
 import pytest
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock, AsyncMock, patch
 from app.services.escalation import EscalationManager
 from app.models import EscalationRequest
+
+
+# =============================================================================
+# Fixtures shared with error-code tests (migrated from test_phase1_extra.py)
+# =============================================================================
+
+@pytest.fixture
+def mock_db_for_error_tests():
+    """Mock DB for error code tests."""
+    from sqlalchemy.ext.asyncio import AsyncSession
+    db = AsyncMock(spec=AsyncSession)
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = []
+    mock_result.scalar_one_or_none.return_value = None
+    db.execute.return_value = mock_result
+    db.commit = AsyncMock()
+
+    def side_effect_add(obj):
+        if hasattr(obj, "id") and obj.id is None:
+            obj.id = 1
+
+    db.add = MagicMock(side_effect=side_effect_add)
+    db.refresh = AsyncMock()
+    return db
+
+
+@pytest.fixture
+def client_with_mock_db(mock_db_for_error_tests):
+    """TestClient with overridden DB dependency."""
+    from fastapi.testclient import TestClient
+    from app.api import app
+    from app.models.database import get_db
+
+    app.dependency_overrides[get_db] = lambda: mock_db_for_error_tests
+    with TestClient(app, raise_server_exceptions=False) as client:
+        yield client
+    app.dependency_overrides.clear()
+
 
 @pytest.fixture
 def mock_db():
@@ -17,41 +55,37 @@ def mock_db():
     return db
 
 @pytest.mark.asyncio
-async def test_id_21_01_sla_p0_15_minutes(mock_db):
-    """priority=0 (P0) → 15min SLA"""
+async def test_id_21_01_sla_p0_30_minutes(mock_db):
+    """priority=0 (NORMAL) → 30min SLA"""
     manager = EscalationManager(mock_db)
     req = EscalationRequest(conversation_id="c1", reason="test")
-    
-    # We need to capture the object passed to db.add
     await manager.create(req, priority=0)
-    
+
     added_obj = mock_db.add.call_args[0][0]
-    expected_deadline = datetime.utcnow() + timedelta(minutes=15)
-    # Check within 5 seconds tolerance
+    expected_deadline = datetime.utcnow() + timedelta(minutes=30)
     assert abs((added_obj.sla_deadline - expected_deadline).total_seconds()) < 5
     assert added_obj.priority == 0
 
 @pytest.mark.asyncio
-async def test_id_21_02_sla_p1_30_minutes(mock_db):
-    """priority=1 (P1) → 30min SLA"""
+async def test_id_21_02_sla_p1_15_minutes(mock_db):
+    """priority=1 (HIGH) → 15min SLA"""
     manager = EscalationManager(mock_db)
     req = EscalationRequest(conversation_id="c1", reason="test")
     await manager.create(req, priority=1)
-    
+
     added_obj = mock_db.add.call_args[0][0]
     assert added_obj.priority == 1
-    assert abs((added_obj.sla_deadline - (datetime.utcnow() + timedelta(minutes=30))).total_seconds()) < 5
+    assert abs((added_obj.sla_deadline - (datetime.utcnow() + timedelta(minutes=15))).total_seconds()) < 5
 
-@pytest.mark.asyncio
-async def test_id_21_03_sla_p2_120_minutes(mock_db):
-    """priority=2 (P2) → 120min SLA"""
+async def test_id_21_03_sla_p2_5_minutes(mock_db):
+    """priority=2 (URGENT/emotion_trigger) → 5min SLA"""
     manager = EscalationManager(mock_db)
     req = EscalationRequest(conversation_id="c1", reason="test")
     await manager.create(req, priority=2)
-    
+
     added_obj = mock_db.add.call_args[0][0]
     assert added_obj.priority == 2
-    assert abs((added_obj.sla_deadline - (datetime.utcnow() + timedelta(minutes=120))).total_seconds()) < 5
+    assert abs((added_obj.sla_deadline - (datetime.utcnow() + timedelta(minutes=5))).total_seconds()) < 5
 
 @pytest.mark.asyncio
 async def test_id_21_04_get_sla_breaches(mock_db):
@@ -95,13 +129,12 @@ async def test_id_21_05_get_sla_breaches_ordered_by_priority(mock_db):
 
 @pytest.mark.asyncio
 async def test_sla_breach_detection_varies_by_priority(mock_db):
-    """Different priority levels have different SLA thresholds:
-    - p0 (critical) = 15 min
-    - p1 (high) = 30 min
-    - p2 (normal) = 120 min
+    """Different priority levels have different SLA thresholds (SPEC: Phase 2 Escalation):
+    - priority=0 (NORMAL) = 30 min
+    - priority=1 (HIGH) = 15 min
+    - priority=2 (URGENT/emotion_trigger) = 5 min
 
-    RED reason: The current SLA implementation does not vary by priority with these exact thresholds.
-    The function get_sla_breaches() must accept priority filter and calculate deadline from now.
+    Spec: SLA_MINUTES = {0: 30, 1: 15, 2: 5}
     """
     from datetime import datetime, timedelta
     from app.services.escalation import EscalationManager
@@ -110,9 +143,9 @@ async def test_sla_breach_detection_varies_by_priority(mock_db):
     manager = EscalationManager(mock_db)
 
     thresholds = {
-        0: 15,   # p0 critical → 15 min
-        1: 30,   # p1 high → 30 min
-        2: 120,  # p2 normal → 120 min
+        0: 30,   # NORMAL → 30 min
+        1: 15,   # HIGH → 15 min
+        2: 5,    # URGENT/emotion_trigger → 5 min
     }
 
     # For each priority, verify the SLA deadline is correct
@@ -183,3 +216,36 @@ async def test_escalation_manager_resolve_sets_resolved_at(mock_db):
 
     assert mock_db.execute.called, "resolve() must call db.execute()"
     assert mock_db.commit.called, "resolve() must call db.commit()"
+
+
+# =============================================================================
+# S21 – Error handling: LLM timeout (Phase 2)
+# =============================================================================
+
+def test_error_LLM_TIMEOUT_504(client_with_mock_db, mock_db_for_error_tests):
+    """LLM timeout returns 504 LLM_TIMEOUT.
+
+    Spec: When process_webhook_message raises TimeoutError, the webhook
+    endpoint must return HTTP 504 with detail "LLM_TIMEOUT".
+    """
+    with patch("app.api.process_webhook_message", new_callable=AsyncMock) as mock_process:
+        mock_process.side_effect = TimeoutError("LLM request timed out")
+
+        payload = {
+            "message": {
+                "from": {"id": 1},
+                "text": "hi"
+            }
+        }
+        response = client_with_mock_db.post(
+            "/api/v1/webhook/telegram",
+            json=payload,
+            headers={"X-Telegram-Bot-Api-Secret-Token": ""}
+        )
+
+        assert response.status_code == 504, \
+            f"Expected 504, got {response.status_code}: {response.json()}"
+
+        data = response.json()
+        assert data.get("detail") == "LLM_TIMEOUT", \
+            f"Expected 'LLM_TIMEOUT', got: {data}"

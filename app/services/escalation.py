@@ -59,11 +59,11 @@ class FeedbackManager:
 class EscalationManager:
     """Phase 2: Escalation with SLA tracking and DB persistence"""
 
-    # Priority 0: URGENT (15m), 1: HIGH (30m), 2: NORMAL (120m)
+    # Priority: 0=normal(30m), 1=high(15m), 2=urgent/emotion_trigger(5m)
     SLA_MINUTES = {
-        0: 15,
-        1: 30,
-        2: 120
+        0: 30,
+        1: 15,
+        2: 5
     }
 
     def __init__(self, db: AsyncSession):

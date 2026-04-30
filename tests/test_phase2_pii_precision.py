@@ -176,3 +176,30 @@ def test_pii_mask_credit_card_valid_16digits(masker):
     # Verify original card number is not visible
     assert "4111111111111111" not in result.masked_text, \
         "Full credit card number should not appear in masked text"
+
+
+def test_pii_mask_credit_card_with_spaces(masker):
+    """Credit card with spaces (4111 1111 1111 1111) must be masked. RED-phase test.
+
+    Spec: Credit card numbers with digit grouping (spaces, dashes) must be
+    detected and masked regardless of formatting.
+    """
+    text = "請刷卡 卡號是 4111 1111 1111 1111"
+    result = masker.mask(text)
+    assert "[credit_card_masked]" in result.masked_text, \
+        "Credit card with spaces must be masked"
+    assert "4111" not in result.masked_text, \
+        "Full credit card number should not appear in masked text"
+
+
+def test_pii_mask_credit_card_with_dashes(masker):
+    """Credit card with dashes (4111-1111-1111-1111) must be masked. RED-phase test.
+
+    Spec: Credit card numbers with dash grouping must be detected and masked.
+    """
+    text = "請刷卡 卡號是 4111-1111-1111-1111"
+    result = masker.mask(text)
+    assert "[credit_card_masked]" in result.masked_text, \
+        "Credit card with dashes must be masked"
+    assert "4111" not in result.masked_text, \
+        "Full credit card number should not appear in masked text"

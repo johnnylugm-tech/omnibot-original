@@ -31,3 +31,10 @@ def test_expansion_roadmap_ja_content_exists_and_non_empty():
     assert "ja" in TRANSLATIONS, "TRANSLATIONS missing 'ja' key"
     assert len(TRANSLATIONS["ja"]) > 0
     assert "greeting" in TRANSLATIONS["ja"]
+
+
+def test_expansion_roadmap_en_content_exists_and_non_empty():
+    """test_id_30_09: TRANSLATIONS 必須包含 en 英文（用戶要求預設語言）"""
+    assert "en" in TRANSLATIONS, "TRANSLATIONS missing 'en' key"
+    assert len(TRANSLATIONS["en"]) > 0, "English translations must be non-empty"
+    assert "greeting" in TRANSLATIONS["en"], "English must have 'greeting' key"

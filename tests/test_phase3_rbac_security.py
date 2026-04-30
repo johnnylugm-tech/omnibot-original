@@ -3,7 +3,7 @@ Atomic TDD Tests for Phase 3: RBAC Security (#26)
 Focus: Bearer Token Extraction, Privilege Escalation Prevention, and DELETE protection.
 """
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 from fastapi import Request, HTTPException
 from app.security.rbac import RBACEnforcer
 
@@ -62,3 +62,61 @@ async def test_id_26_04_missing_authorization_header(enforcer):
     with pytest.raises(HTTPException) as exc:
         await dependency(mock_request)
     assert exc.value.status_code == 401
+
+
+# =============================================================================
+# S26 – Auth token expiry (Phase 3)
+# =============================================================================
+
+def test_token_expired_returns_401_AUTH_TOKEN_EXPIRED(client_with_mock_db, mock_db_for_error_tests):
+    """Expired or invalid auth token returns 401 with error_code AUTH_TOKEN_EXPIRED"""
+    from app.security.rbac import rbac
+    from starlette.responses import JSONResponse
+
+    bad_token = "invalid.malformed.token"
+    headers = {"Authorization": f"Bearer {bad_token}"}
+    response = client_with_mock_db.get("/api/v1/knowledge", headers=headers)
+
+    assert response.status_code == 401, \
+        f"Expected 401 for invalid token, got {response.status_code}"
+
+    data = response.json()
+    assert data.get("error_code") == "AUTH_TOKEN_EXPIRED", \
+        f"Expected error_code AUTH_TOKEN_EXPIRED, got {data}"
+
+
+# =============================================================================
+# Fixtures for token expiry tests (migrated from test_phase1_extra.py)
+# =============================================================================
+
+@pytest.fixture
+def mock_db_for_error_tests():
+    """Mock DB for error code tests."""
+    from sqlalchemy.ext.asyncio import AsyncSession
+    db = AsyncMock(spec=AsyncSession)
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = []
+    mock_result.scalar_one_or_none.return_value = None
+    db.execute.return_value = mock_result
+    db.commit = AsyncMock()
+
+    def side_effect_add(obj):
+        if hasattr(obj, "id") and obj.id is None:
+            obj.id = 1
+
+    db.add = MagicMock(side_effect=side_effect_add)
+    db.refresh = AsyncMock()
+    return db
+
+
+@pytest.fixture
+def client_with_mock_db(mock_db_for_error_tests):
+    """TestClient with overridden DB dependency."""
+    from fastapi.testclient import TestClient
+    from app.api import app
+    from app.models.database import get_db
+
+    app.dependency_overrides[get_db] = lambda: mock_db_for_error_tests
+    with TestClient(app, raise_server_exceptions=False) as client:
+        yield client
+    app.dependency_overrides.clear()
