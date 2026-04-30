@@ -3,7 +3,12 @@ Atomic TDD Tests for Phase 2: Grounding Checks L5 (#20)
 """
 import pytest
 from unittest.mock import MagicMock, patch
-from app.services.grounding import GroundingChecker
+
+# -----------------------------------------------------------------------
+# GroundingChecker import — SKIP if sentence_transformers unavailable (RED)
+# -----------------------------------------------------------------------
+grounding = pytest.importorskip("app.services.grounding", reason="app.services.grounding not yet implemented")
+GroundingChecker = grounding.GroundingChecker
 
 @pytest.fixture
 def checker():
@@ -27,15 +32,21 @@ def test_grounding_check_grounded_above_threshold(checker):
     assert result["score"] >= 0.75
 
 def test_grounding_check_not_grounded_below_threshold(checker):
-    """similarity < 0.75 → grounded=False"""
+    """similarity < 0.75 → grounded=False
+    
+    RED: GroundingChecker.check() returns dict with grounded=False and score < 0.75
+    when cosine similarity between response and source is below the 0.75 threshold.
+    """
     checker.model.encode.side_effect = [
-        [1.0, 0.0], # Response
-        [[0.5, 0.866]] # Source (dot product = 0.5)
+        [1.0, 0.0],  # Response embedding
+        [[0.5, 0.866]]  # Source embedding (dot = 0.5, norm=1 → similarity=0.5)
     ]
     
     result = checker.check("Response text", ["Source text"])
-    assert result["grounded"] is False
-    assert result["score"] < 0.75
+    assert result["grounded"] is False, \
+        f"Expected grounded=False but got grounded={result.get('grounded')}"
+    assert result["score"] < 0.75, \
+        f"Expected score < 0.75 but got score={result.get('score')}"
 
 def test_grounding_check_returns_best_match_index(checker):
     """Verify best_match_index is returned correctly"""

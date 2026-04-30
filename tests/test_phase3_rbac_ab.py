@@ -250,6 +250,28 @@ class TestABTestDeterministic:
         assert variant == "control"
 
 
+@pytest.mark.asyncio
+async def test_experiment_abort_returns_all_traffic_to_control():
+    """Aborted experiment unconditionally returns 'control' variant (Section 27)"""
+    mock_db = AsyncMock()
+    mock_result = MagicMock()
+    mock_exp = MagicMock()
+    mock_exp.id = 1
+    mock_exp.status = "aborted"
+    mock_exp.traffic_split = {"control": 50, "test_v1": 50}
+    mock_exp.variants = {
+        "control": {"prompt": "Hello control"},
+        "test_v1": {"prompt": "Hello test v1"}
+    }
+    mock_result.scalar_one_or_none.return_value = mock_exp
+    mock_db.execute.return_value = mock_result
+    manager = ABTestManager(mock_db)
+    # Aborted status must unconditionally return 'control'
+    variant = await manager.get_variant("any_user", 1)
+    assert variant == "control", \
+        "get_variant() must return 'control' when experiment status is 'aborted'"
+
+
 class TestABTestExperimentExecution:
     """Test run_experiment and analyze_results"""
 

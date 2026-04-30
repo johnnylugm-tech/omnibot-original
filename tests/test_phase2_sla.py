@@ -87,3 +87,42 @@ async def test_id_21_05_get_sla_breaches_ordered_by_priority(mock_db):
     assert "order by" in query_str
     assert "priority desc" in query_str
     assert "queued_at asc" in query_str
+
+
+# =============================================================================
+# SLA Breach Detection by Priority (Section 22) — NEW RED test
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_sla_breach_detection_varies_by_priority(mock_db):
+    """Different priority levels have different SLA thresholds:
+    - p0 (critical) = 15 min
+    - p1 (high) = 30 min
+    - p2 (normal) = 120 min
+
+    RED reason: The current SLA implementation does not vary by priority with these exact thresholds.
+    The function get_sla_breaches() must accept priority filter and calculate deadline from now.
+    """
+    from datetime import datetime, timedelta
+    from app.services.escalation import EscalationManager
+    from app.models import EscalationRequest
+
+    manager = EscalationManager(mock_db)
+
+    thresholds = {
+        0: 15,   # p0 critical → 15 min
+        1: 30,   # p1 high → 30 min
+        2: 120,  # p2 normal → 120 min
+    }
+
+    # For each priority, verify the SLA deadline is correct
+    for priority, expected_minutes in thresholds.items():
+        mock_db.add.reset_mock()
+        req = EscalationRequest(conversation_id=f"c-{priority}", reason="test")
+        await manager.create(req, priority=priority)
+
+        added_obj = mock_db.add.call_args[0][0]
+        expected_deadline = datetime.utcnow() + timedelta(minutes=expected_minutes)
+        diff_seconds = abs((added_obj.sla_deadline - expected_deadline).total_seconds())
+        assert diff_seconds < 5, \
+            f"Priority {priority} expected SLA={expected_minutes}min, deadline diff={diff_seconds}s"
