@@ -399,7 +399,7 @@ FROM security_logs WHERE layer = 'L3';
 ### 4.4 資料庫 Schema 驗證 (Phase 3 增量)
 
 ```sql
--- 確認 Phase 3 全部 7 張新表
+-- 確認 Phase 3 全部 8 張新表
 SELECT tablename FROM pg_tables WHERE schemaname = 'public'
 AND tablename IN (
   'roles', 'role_assignments', 'pii_audit_log',

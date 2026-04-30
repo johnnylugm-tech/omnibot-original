@@ -1090,7 +1090,7 @@ ORDER BY e.name, er.variant;
 - [ ] 成本模型 + 月度報告 SQL
 - [ ] Schema 遷移管理（Alembic 3 版本）
 - [ ] i18n 擴充指引
-- [ ] Phase 3 Schema（7 張新表）
+- [ ] Phase 3 Schema（8 張新表）
 - [ ] Phase 3 ODD SQL 查詢
 
 ---

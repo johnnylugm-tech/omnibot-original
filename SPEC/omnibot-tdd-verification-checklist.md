@@ -463,6 +463,7 @@ test_api_conversations_list_filter_by_timerange:
 ### Phase 3 商業目標
 
 - [ ] `test_kpi_fcr_phase3_target_90_percent`: ODD SQL FCR >= 90%（Phase 2 基礎 + A/B 優化）
+- [ ] `test_kpi_csat_phase3_improvement_50_percent`: satisfaction_score 相比 Phase 2 基線提升 +15%（累計 +50%）
 - [ ] `test_kpi_availability_99.9_percent_monthly`: Prometheus 監控月可用性 >= 99.9%
 - [ ] `test_kpi_p95_latency_phase3_under_1s`: k6 stress test p95 < 1000ms
 - [ ] `test_kpi_disaster_recovery_under_5_minutes`: 演練測試，模擬全量故障後 5 分鐘內恢復
@@ -511,7 +512,7 @@ test_api_conversations_list_filter_by_timerange:
 - [ ] `test_version_consistency_schema_tables_p1`: Phase 1 完成後共 8 張核心表
 - [ ] `test_version_consistency_schema_tables_p2`: Phase 2 完成後累計 10 張表
 - [ ] `test_version_consistency_schema_tables_p3`: Phase 3 完成後累計 18 張表
-- [ ] `test_version_consistency_odd_sql_total_13_queries`: 全部 13 支 ODD SQL 皆可正常執行
+- [ ] `test_version_consistency_odd_sql_total_14_queries`: 全部 14 支 ODD SQL 皆可正常執行
 
 ### API 向後相容
 
