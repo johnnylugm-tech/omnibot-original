@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime, timedelta
 
-from app.services.escalation import EscalationManager
+from app.services.escalation import EscalationManager, FeedbackManager, ValidationError
 from app.models import EscalationRequest
 
 

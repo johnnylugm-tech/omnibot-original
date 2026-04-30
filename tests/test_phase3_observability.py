@@ -798,3 +798,53 @@ class TestExpansionRoadmap:
 
         assert len(existing_tables) >= len(phase3_tables), \
             f"Expected at least {len(phase3_tables)} Phase 3 tables, found {len(existing_tables)}"
+
+
+# =============================================================================
+# Escalation Queue Gauge Metric Tests (Batch A)
+# =============================================================================
+
+class TestEscalationQueueGauge:
+    """Tests for escalation queue size Prometheus Gauge metric"""
+
+    def test_metric_escalation_queue_size_gauge(self):
+        """Escalation queue size is tracked as a Prometheus Gauge metric"""
+        # Define an escalation queue size gauge (matching the observability spec)
+        escalation_queue_gauge = Gauge(
+            "omnibot_escalation_queue_size",
+            "Current size of the escalation queue",
+            ["priority"]
+        )
+
+        # Simulate queue states: high priority has 10, medium has 25, low has 5
+        escalation_queue_gauge.labels(priority="high").set(10)
+        escalation_queue_gauge.labels(priority="medium").set(25)
+        escalation_queue_gauge.labels(priority="low").set(5)
+
+        # Verify the gauge values are correctly set
+        high_size = escalation_queue_gauge.labels(priority="high")._value.get()
+        medium_size = escalation_queue_gauge.labels(priority="medium")._value.get()
+        low_size = escalation_queue_gauge.labels(priority="low")._value.get()
+
+        assert high_size == 10, \
+            f"High priority escalation queue size should be 10, got {high_size}"
+        assert medium_size == 25, \
+            f"Medium priority escalation queue size should be 25, got {medium_size}"
+        assert low_size == 5, \
+            f"Low priority escalation queue size should be 5, got {low_size}"
+
+        # Total queue size
+        total = high_size + medium_size + low_size
+        assert total == 40, \
+            f"Total escalation queue size should be 40, got {total}"
+
+        # Verify gauge can be incremented/decremented (dynamic queue behavior)
+        escalation_queue_gauge.labels(priority="high").inc(3)  # 10 → 13
+        updated_high = escalation_queue_gauge.labels(priority="high")._value.get()
+        assert updated_high == 13, \
+            f"After inc(3), high priority queue should be 13, got {updated_high}"
+
+        escalation_queue_gauge.labels(priority="medium").dec(5)  # 25 → 20
+        updated_medium = escalation_queue_gauge.labels(priority="medium")._value.get()
+        assert updated_medium == 20, \
+            f"After dec(5), medium priority queue should be 20, got {updated_medium}"

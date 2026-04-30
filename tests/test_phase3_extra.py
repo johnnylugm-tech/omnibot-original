@@ -291,3 +291,37 @@ def test_golden_dataset_used_in_regression():
                 # (Not strictly required for this unit test to pass,
                 # but the file existing is a proxy for regression coverage)
                 assert os.path.getsize(fpath) > 0
+
+
+# =============================================================================
+# Emotion Intensity Range Tests (Batch A)
+# =============================================================================
+
+def test_emotion_intensity_range_0_to_1():
+    """EmotionScore intensity must always be in range [0.0, 1.0]"""
+    from app.services.emotion import EmotionScore, EmotionCategory
+    from datetime import datetime
+
+    # Valid intensity values should work
+    score_0 = EmotionScore(category=EmotionCategory.POSITIVE, intensity=0.0)
+    score_1 = EmotionScore(category=EmotionCategory.POSITIVE, intensity=1.0)
+    score_half = EmotionScore(category=EmotionCategory.NEUTRAL, intensity=0.5)
+
+    assert score_0.intensity == 0.0, "intensity=0.0 should be valid"
+    assert score_1.intensity == 1.0, "intensity=1.0 should be valid"
+    assert score_half.intensity == 0.5, "intensity=0.5 should be valid"
+
+    # Verify the constraint: all EmotionScore instances have intensity in [0, 1]
+    # Create a tracker and verify intensities stay in range
+    from app.services.emotion import EmotionTracker
+
+    tracker = EmotionTracker(history=[], half_life_hours=24.0)
+    tracker.add(EmotionScore(category=EmotionCategory.POSITIVE, intensity=0.0))
+    tracker.add(EmotionScore(category=EmotionCategory.NEGATIVE, intensity=1.0))
+    tracker.add(EmotionScore(category=EmotionCategory.POSITIVE, intensity=0.75))
+    tracker.add(EmotionScore(category=EmotionCategory.NEUTRAL, intensity=0.5))
+
+    # All intensities in history should be in [0, 1]
+    for score in tracker.history:
+        assert 0.0 <= score.intensity <= 1.0, \
+            f"intensity must be in [0, 1], got {score.intensity}"

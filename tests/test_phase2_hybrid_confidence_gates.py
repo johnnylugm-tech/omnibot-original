@@ -136,3 +136,35 @@ def test_llm_layer3_base_prompt_is_reproducible():
         # A proper template should have at least one placeholder like {query} or {context}
         assert '{' in content, \
             f"Prompt template should contain placeholders like {{query}}, got: {content[:100]}"
+
+
+# =============================================================================
+# LLM Layer Fall-through Tests (Batch A)
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_hybrid_layer_llm_generate_returns_none_falls_through_to_layer4():
+    """When _llm_generate() returns None, Layer 4 (escalate) takes over"""
+
+    class NoLLMHybrid(HybridKnowledgeV7):
+        async def _llm_generate(self, query, context):
+            return None
+
+    mock_db = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = []
+    mock_result.fetchall.return_value = []
+    mock_db.execute.return_value = mock_result
+
+    layer = NoLLMHybrid(db=mock_db)
+    layer.llm = None
+
+    with patch.dict(os.environ, {"SIMULATE_LLM": "false"}):
+        result = await layer.query("test query with no LLM result")
+
+    assert result is not None, "Query should always return a result"
+    # When LLM returns None, it should fall through to escalate (Layer 4)
+    assert result.source == "escalate", \
+        f"LLM returns None → Layer 4 (escalate), got source='{result.source}'"
+    assert result.id == -1, \
+        f"Escalate result should have id=-1, got id={result.id}"

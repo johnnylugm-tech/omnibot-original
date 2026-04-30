@@ -575,3 +575,31 @@ async def test_hybrid_layer_returns_knowledge_result_with_correct_source():
         f"Layer 1 exact match should return source='rule', got '{result.source}'"
 
 
+# =============================================================================
+# Knowledge Layer Escalation Tests (Batch A)
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_knowledge_layer_escalate_when_no_match():
+    """Knowledge layer returns escalate source when no match found in any layer"""
+    mock_db = AsyncMock()
+
+    # All layers return empty
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = []
+    mock_result.fetchall.return_value = []
+    mock_db.execute.return_value = mock_result
+
+    layer = HybridKnowledgeV7(db=mock_db)
+    layer.llm = None  # No LLM - ensure Layer 3 also returns None
+
+    with patch.dict(os.environ, {"SIMULATE_LLM": "false"}):
+        result = await layer.query("完全不匹配的查詢 xyz")
+
+    assert result is not None, "Knowledge layer query should always return a result"
+    assert result.source == "escalate", \
+        f"No match found → escalate, got source='{result.source}'"
+    assert result.id == -1, \
+        f"Escalate result should have id=-1, got id={result.id}"
+
+

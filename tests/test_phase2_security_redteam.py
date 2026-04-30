@@ -329,3 +329,40 @@ def test_redteam_rbac_token_tampering():
     with p.raises(Exception) as exc_info:
         enforcer.decode_token(forged_token)
     assert "401" in str(exc_info.value) or "Invalid signature" in str(exc_info.value)
+
+
+# =============================================================================
+# Distributed Rate Limiting Tests (Batch B)
+# =============================================================================
+
+@pytest.mark.asyncio
+async def test_redteam_rate_limitDistributed_from_multiple_user_ids():
+    """Distributed rate limiting: multiple user IDs should each get their own quota"""
+    from app.security.rate_limiter import RateLimiter
+
+    # Create a rate limiter with low capacity to trigger limits quickly
+    limiter = RateLimiter(default_rps=2)  # Only 2 requests per second
+
+    platform = "telegram"
+
+    # User A makes 2 requests (hits limit)
+    assert await limiter.check(platform, "user_a") is True
+    assert await limiter.check(platform, "user_a") is True
+    assert await limiter.check(platform, "user_a") is False  # Limit reached
+
+    # User B should still have quota (independent of User A)
+    assert await limiter.check(platform, "user_b") is True, \
+        "User B should have independent rate limit quota from User A"
+    assert await limiter.check(platform, "user_b") is True
+    assert await limiter.check(platform, "user_b") is False  # User B limit reached
+
+    # User C (another platform) should also be independent
+    assert await limiter.check("line", "user_c") is True, \
+        "Cross-platform rate limits should be independent per platform-user pair"
+
+    # Verify that user_a is still rate limited (quota not restored immediately)
+    assert await limiter.check(platform, "user_a") is False, \
+        "User A should still be rate limited after exhausting quota"
+
+    # Verify total: user_a limit, user_b limit, user_c limit are independent
+    # This demonstrates distributed rate limiting across multiple user IDs

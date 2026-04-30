@@ -513,3 +513,54 @@ def test_paginated_response_has_next_true(client, mock_db):
     # Current implementation may not compute has_next correctly
     # This is a RED-phase assertion
 
+
+# =============================================================================
+# Health Check PostgreSQL Degraded Tests (Batch A)
+# =============================================================================
+
+def test_api_health_postgres_down_returns_degraded(client, mock_db):
+    """When PostgreSQL is down, /api/v1/health returns status='degraded'"""
+    # Mock postgres failing but redis OK
+    mock_db.execute.side_effect = Exception("PostgreSQL connection refused")
+    with patch("redis.asyncio.from_url") as mock_redis_from_url:
+        mock_redis = AsyncMock()
+        mock_redis_from_url.return_value = mock_redis
+        response = client.get("/api/v1/health")
+        data = response.json()
+        assert data["status"] == "degraded", \
+            f"Health should be 'degraded' when Postgres is down, got '{data['status']}'"
+        assert data["postgres"] is False, \
+            f"postgres should be False when down, got {data.get('postgres')}"
+
+
+# =============================================================================
+# Knowledge POST Idempotent Tests (Batch B)
+# =============================================================================
+
+def test_api_knowledge_post_idempotent(client, mock_db):
+    """POST /api/v1/knowledge is idempotent - duplicate submissions return same result"""
+    from app.security.rbac import rbac
+    headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
+
+    payload = {"question": "test question", "answer": "test answer", "category": "General"}
+
+    # First POST
+    response1 = client.post("/api/v1/knowledge", json=payload, headers=headers)
+    # Second POST with same payload (duplicate)
+    response2 = client.post("/api/v1/knowledge", json=payload, headers=headers)
+
+    # Both should succeed with 200
+    assert response1.status_code == 200, \
+        f"First POST should succeed, got {response1.status_code}"
+    assert response2.status_code == 200, \
+        f"Second POST (duplicate) should succeed, got {response2.status_code}"
+
+    # Results should be consistent (idempotent)
+    data1 = response1.json()
+    data2 = response2.json()
+    # Both should have success=True
+    assert data1.get("success") is True, \
+        f"First POST should return success=True, got {data1}"
+    assert data2.get("success") is True, \
+        f"Second POST should return success=True, got {data2}"
+
