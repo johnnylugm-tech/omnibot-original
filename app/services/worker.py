@@ -61,10 +61,20 @@ class AsyncMessageProcessor:
         await self.redis.xack(stream_name, self.group, message_id)
 
     async def get_pending(self, stream_name: str, count: int = 10) -> List[Any]:
-        """Get pending messages from the group's PEL"""
-        return await self.redis.xpending_range(
+        """Get pending messages from the group's PEL with ID deduplication"""
+        # xpending_range format: [message_id, consumer, idle_time, deliveries]
+        raw_pending = await self.redis.xpending_range(
             stream_name, self.group, "-", "+", count
         )
+        
+        seen_ids = set()
+        unique_pending = []
+        for entry in raw_pending:
+            msg_id = entry[0]
+            if msg_id not in seen_ids:
+                seen_ids.add(msg_id)
+                unique_pending.append(entry)
+        return unique_pending
 
     async def claim_stale_message(
         self,

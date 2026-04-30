@@ -1,6 +1,6 @@
 """Shared pytest fixtures and mocks for omnibot test suite."""
 import sys
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import datetime, timedelta
 
 import pytest
@@ -101,12 +101,20 @@ def _make_kpi_stub():
 # sys.modules["app.services.degradation"] = _make_degradation_stub() (Removed as real module exists)
 # sys.modules["app.utils.cost_model"] = _make_cost_model_stub()
 # sys.modules["app.services.odd_queries"] = _make_odd_queries_stub() (Removed)
-# sys.modules["app.services.kpi"] = _make_kpi_stub()
-
-
-# -----------------------------------------------------------------------
-# Shared fixtures
-# -----------------------------------------------------------------------
+@pytest.fixture
+def mock_backup_service():
+    """Mock for BackupService."""
+    with patch("app.services.backup.BackupService") as mock:
+        instance = mock.return_value
+        instance.create_backup = AsyncMock(return_value={"id": 1, "status": "completed"})
+        instance.schedule_next_backup = AsyncMock(
+            return_value=datetime.utcnow() + timedelta(hours=24)
+        )
+        instance.cleanup_old_backups = AsyncMock(return_value=None)
+        instance.get_backup_status = MagicMock(
+            return_value={"id": 1, "status": "completed", "created_at": datetime.utcnow()}
+        )
+        yield instance
 
 @pytest.fixture
 def rbac_token():
