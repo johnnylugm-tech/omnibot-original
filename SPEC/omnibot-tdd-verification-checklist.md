@@ -129,7 +129,28 @@ test_health_check_status_unhealthy_when_service_down:
 
 ### 12. 對話記錄 API
 
-- [ ] `test_conversations_list_returns_api_response`: GET `/api/v1/conversations` 回傳列表
+- [ ] `test_api_conversations_list_filter_by_platform`
+- [ ] `test_api_conversations_list_filter_by_timerange`
+
+test_api_conversations_list_filter_by_platform:
+
+**描述：** 呼叫 `GET /api/v1/conversations?platform=telegram`，只回傳 Telegram 平台的對話
+
+**預期行為：**
+- HTTP 200
+- 所有回傳 conversation 的 `platform` 欄位為 `"telegram"`
+- 混合平台時不應出現其他 platform
+
+---
+
+test_api_conversations_list_filter_by_timerange:
+
+**描述：** 呼叫 `GET /api/v1/conversations?started_after=<ISO>&started_before=<ISO>`，依時間範圍篩選
+
+**預期行為：**
+- HTTP 200
+- 所有回傳 conversation 的 `started_at` 在指定範圍內
+- 超出範圍的 conversation 不出現
 
 ### 13. Database Schema
 
@@ -471,8 +492,6 @@ test_health_check_status_unhealthy_when_service_down:
 ### 對話記錄
 
 - [ ] `test_api_conversations_list_pagination`: 分頁參數正常運作
-- [ ] `test_api_conversations_list_filter_by_platform`: 可依 platform 篩選
-- [ ] `test_api_conversations_list_filter_by_timerange`: 可依時間範圍篩選
 
 ### 健康檢查
 
