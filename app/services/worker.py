@@ -67,6 +67,10 @@ class AsyncMessageProcessor:
             stream_name, self.group, "-", "+", count
         )
         
+        if not raw_pending:
+            return []
+
+        # Dedup based on message_id (entry[0]) while preserving order
         seen_ids = set()
         unique_pending = []
         for entry in raw_pending:
@@ -84,7 +88,8 @@ class AsyncMessageProcessor:
         message_ids: Sequence[str]
     ) -> List[Any]:
         """Claim stale messages from another consumer with ID deduplication"""
-        unique_ids = list(set(message_ids))  # Deduplicate using set() as requested
+        # Deduplicate using dict.fromkeys for order preservation
+        unique_ids = list(dict.fromkeys(message_ids))
         return await self.redis.xclaim(
             stream_name,
             self.group,
