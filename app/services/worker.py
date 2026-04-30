@@ -36,7 +36,21 @@ class AsyncMessageProcessor:
                 raise
 
     async def produce(self, stream_name: str, payload: dict) -> str:
-        """Add a message to the stream"""
+        """Add a message to the stream.
+
+        Args:
+            stream_name: Redis stream key (e.g. "omnibot:messages").
+            payload: Dictionary of message fields. Required: ``conversation_id`` (int).
+                    Other standard fields: ``role`` (str), ``content`` (str),
+                    ``timestamp`` (str, ISO format).
+
+        Returns:
+            The Redis message ID of the inserted entry.
+
+        Raises:
+            redis.exceptions.ResponseError: If the stream does not exist
+                and ``mkstream`` is not enabled on the consumer group.
+        """
         return await self.redis.xadd(stream_name, payload)
 
     async def consume(
