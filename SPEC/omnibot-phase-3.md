@@ -221,6 +221,58 @@ rbac = RBACEnforcer()
 # async def create_knowledge(request, ...): ...
 ```
 
+### 高級 IP 白名單（Advanced IP Whitelisting）
+
+#### 功能定義
+API Gateway 需支援來源 IP 白名單過濾，僅允許已登記的 IP 區塊發送請求。
+
+#### 資料結構
+- 白名單格式：CIDR 表示法（例如：`203.0.113.0/24`、`198.51.100.0/24`）
+- 最大登記數量：100 個 CIDR 區塊
+- 儲存位置：`IP_WHITELIST_CIDRS` 環境變數（逗號分隔）
+  - 或 `config/ip_whitelist.yaml`（Phase 3 擴展時）
+
+#### 比對邏輯
+- 對每一個連入請求，提取來源 IP：
+  - 優先讀取 `X-Forwarded-For` 表頭，取**最左側（即第一個）IP**（原始客戶端）
+  - 若無表頭，則使用 `request.client.host`（直接連線 IP）
+- 檢查來源 IP 是否落在任一白名單 CIDR 區塊內
+- 若無匹配：回應 `HTTP 403 Forbidden`，body 為空，request 不送至下游
+
+#### 行為矩陣
+
+| 情境 | 白名單有匹配 | 白名單無匹配 |
+|------|-------------|-------------|
+| 已在白名單的 IP | 允許通過 | 回 403 |
+| 未在白名單的 IP | N/A | 回 403 |
+| 白名單為空 | N/A | 回 403（fail-secure） |
+| 格式異常的 IP | N/A | 回 403（fail-secure） |
+
+#### 在攔截鏈中的順序
+
+```
+Rate Limiting → IP Whitelist → TLS → Platform Adapter → RBAC
+```
+
+- **Rate Limiting（Phase 1）**：在 IP 白名單檢查**之後**（IP 未通過則不消耗配額）
+- **RBAC（Phase 3）**：在 IP 白名單檢查**之後**（IP 未通過則不送至 RBAC）
+
+#### 實作位置
+- 模組：`app/security/ip_whitelist.py`
+- 主類別：`IPWhitelist`
+- 初始化：`app/api/__init__.py`（模組層級單例）
+- 钩入點：四個 webhook 端點（telegram/line/messenger/whatsapp）
+
+#### 環境變數
+
+| 變數 | 格式 | 預設值 |
+|------|------|--------|
+| `IP_WHITELIST_CIDRS` | 逗號分隔的 CIDR 字串 | ""（空 = 拒絕所有）|
+
+#### 錯誤處理
+- 無效 CIDR 格式：拋出 `IPWhitelistError`（啟動時驗證）
+- 無效 IP 格式（`is_allowed`）：回 `False`（fail-secure，不拋例外）
+
 ### 管理 API 安全標註更新
 
 ```yaml
