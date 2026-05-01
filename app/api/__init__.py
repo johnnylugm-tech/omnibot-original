@@ -30,6 +30,7 @@ from app.security import (
     RateLimiter,
     get_verifier,
     rbac,
+    get_ip_whitelist,
 )
 from app.security.encryption import EncryptionService
 from app.services.degradation import DegradationManager
@@ -54,6 +55,7 @@ sanitizer = InputSanitizer()
 pii_masking = PIIMasking()
 prompt_defense = PromptInjectionDefense()
 rate_limiter = RateLimiter()
+ip_whitelist = get_ip_whitelist()
 dst_manager = DSTManager()
 degradation_manager = DegradationManager()
 encryption_service = EncryptionService()
@@ -398,6 +400,12 @@ async def telegram_webhook(
                          platform="telegram").inc()
     body = await request.body()
 
+    # IP Whitelist check (before rate limiting - fail-secure)
+    client_ip = ip_whitelist.get_client_ip(request)
+    if not ip_whitelist.is_allowed(client_ip):
+        logger.warn("telegram_ip_not_whitelisted", client_ip=client_ip)
+        return JSONResponse(status_code=403, content={})
+
     if not await rate_limiter.check("telegram", "user"):
         raise HTTPException(
             status_code=429, detail=i18n.translate("rate_limit"))
@@ -430,6 +438,12 @@ async def line_webhook(
     """LINE Messaging API webhook"""
     REQUEST_COUNT.labels(method="POST", endpoint="line", platform="line").inc()
     body = await request.body()
+
+    # IP Whitelist check (before rate limiting - fail-secure)
+    client_ip = ip_whitelist.get_client_ip(request)
+    if not ip_whitelist.is_allowed(client_ip):
+        logger.warn("line_ip_not_whitelisted", client_ip=client_ip)
+        return JSONResponse(status_code=403, content={})
 
     if not await rate_limiter.check("line", "user"):
         raise HTTPException(
@@ -469,6 +483,13 @@ async def messenger_webhook(
     REQUEST_COUNT.labels(method="POST", endpoint="messenger",
                          platform="messenger").inc()
     body = await request.body()
+
+    # IP Whitelist check (before rate limiting - fail-secure)
+    client_ip = ip_whitelist.get_client_ip(request)
+    if not ip_whitelist.is_allowed(client_ip):
+        logger.warn("messenger_ip_not_whitelisted", client_ip=client_ip)
+        return JSONResponse(status_code=403, content={})
+
     if not await rate_limiter.check("messenger", "user"):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
@@ -502,6 +523,13 @@ async def whatsapp_webhook(
     REQUEST_COUNT.labels(method="POST", endpoint="whatsapp",
                          platform="whatsapp").inc()
     body = await request.body()
+
+    # IP Whitelist check (before rate limiting - fail-secure)
+    client_ip = ip_whitelist.get_client_ip(request)
+    if not ip_whitelist.is_allowed(client_ip):
+        logger.warn("whatsapp_ip_not_whitelisted", client_ip=client_ip)
+        return JSONResponse(status_code=403, content={})
+
     if not await rate_limiter.check("whatsapp", "user"):
         raise HTTPException(status_code=429, detail="Rate limit exceeded")
 
