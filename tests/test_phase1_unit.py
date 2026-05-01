@@ -344,9 +344,10 @@ class TestKnowledgeLayer:
 
         knowledge = HybridKnowledgeV7(mock_db)
 
-        # Query should escalate when no rules match
-        result = await knowledge.query("未知問題")
-        assert result.source == "escalate"
+        # Query should escalate when no rules match and LLM is disabled
+        with patch.dict(os.environ, {"SIMULATE_LLM": "false"}):
+            result = await knowledge.query("未知問題")
+            assert result.source == "escalate"
         assert result.id == -1
 
 

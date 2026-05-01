@@ -3,7 +3,6 @@ Phase 2 Hybrid Knowledge Layer V7 — RRF Fusion Tests (Section 17)
 All 30 gap tests for knowledge, hybrid layer, and ODD SQL.
 """
 import os
-os.environ['SIMULATE_LLM'] = 'false'
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 

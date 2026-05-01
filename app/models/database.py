@@ -493,3 +493,20 @@ CREATE TABLE IF NOT EXISTS retry_log (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 """
+
+class KnowledgeVersion(Base):
+    __tablename__ = "knowledge_versions"
+    id = Column(Integer, primary_key=True)
+    knowledge_id = Column(Integer, ForeignKey("knowledge_base.id"))
+    version = Column(Integer, default=1)
+    content = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    session_token = Column(String(255), unique=True)
+    expires_at = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+

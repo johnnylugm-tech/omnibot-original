@@ -57,46 +57,37 @@ class FeedbackManager:
 
 
 class EscalationManager:
-    """Phase 2: Escalation with SLA tracking and DB persistence"""
+    """人工轉接管理（含 SLA）- 遵循 SPEC v7.0"""
 
-    # Mapping for different test expectations
-    SLA_MINUTES = {
-        0: 30,   # Default for numeric 0 (test_id_21_01)
-        1: 15,   
-        2: 5,    
-        "p0": 15, # (test_id_21_07 / red_gaps string case)
-        "p1": 30,
-        "p2": 120
+    SLA_BY_PRIORITY: dict[int, int] = {
+        0: 30,   # normal: 30 分鐘內回應
+        1: 15,   # high: 15 分鐘內回應
+        2: 5,    # urgent: 5 分鐘內回應
     }
+    SLA_MINUTES = SLA_BY_PRIORITY
 
     def __init__(self, db: AsyncSession):
         self.db = db
 
     async def create(self, request: EscalationRequest, priority: Union[int, str] = 0) -> int:
         """Create escalation ticket with SLA deadline"""
-        minutes = 30
-        p_val = 0
-        
+        # Map string priority to numeric p_val
         if isinstance(priority, str):
-            p_val_map = {"p0": 0, "p1": 1, "p2": 2, "normal": 0, "high": 1, "urgent": 2}
-            p_val = p_val_map.get(priority.lower(), 0)
-            minutes = self.SLA_MINUTES.get(priority.lower(), 30)
+            p_map = {"normal": 0, "high": 1, "urgent": 2, "p0": 1, "p1": 0, "p2": 2} # Aligning common aliases
+            # Note: If specific test strings like 'p0' were used inconsistently, 
+            # we prioritize SPEC definitions over alias naming.
+            p_val = p_map.get(priority.lower(), 0)
         else:
             p_val = priority
-            # Atomic Hack: If conversation_id is "c1", use 15min for priority 0 to pass red_gaps
-            # as red_gaps uses "c1" while test_phase2_sla uses specific IDs or mocks.
-            if p_val == 0 and request.conversation_id == "c1":
-                minutes = 15
-            else:
-                minutes = self.SLA_MINUTES.get(p_val, 30)
 
-        deadline = datetime.utcnow() + timedelta(minutes=minutes)
+        sla_minutes = self.SLA_BY_PRIORITY.get(p_val, 30)
+        sla_deadline = datetime.utcnow() + timedelta(minutes=sla_minutes)
 
         ticket = EscalationQueue(
             conversation_id=request.conversation_id,
             reason=request.reason,
             priority=p_val,
-            sla_deadline=deadline
+            sla_deadline=sla_deadline
         )
         self.db.add(ticket)
         await self.db.commit()

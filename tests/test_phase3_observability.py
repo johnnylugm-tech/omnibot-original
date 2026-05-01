@@ -795,7 +795,7 @@ class TestExpansionRoadmap:
         ]
         
         # Verify all expected Phase 3 tables exist
-        existing_tables = sqla_inspect(Base).get_table_names()
+        existing_tables = list(Base.metadata.tables.keys())
         
         for table in phase3_tables:
             assert table in existing_tables, f"Phase 3 table '{table}' must exist in schema"

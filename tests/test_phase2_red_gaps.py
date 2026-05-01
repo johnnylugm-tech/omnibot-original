@@ -33,7 +33,7 @@ async def test_redis_pending_entries_list_no_duplicate_message_ids():
 
 @pytest.mark.asyncio
 async def test_sla_breach_detection_varies_by_priority():
-    """test_id_21_07: SLA 閾值必須符合 p0=15min, p1=30min, p2=120min"""
+    """test_id_21_07: SLA 閾值必須符合 0=30min, 1=15min, 2=5min (SPEC v7.0)"""
     mock_db = MagicMock()
     mock_db.add = MagicMock()
     mock_db.commit = AsyncMock()
@@ -41,21 +41,21 @@ async def test_sla_breach_detection_varies_by_priority():
     
     manager = EscalationManager(mock_db)
     
-    # Test p0 (priority 0) -> 15 min
+    # Test priority 0 -> 30 min (Normal)
     req = EscalationRequest(conversation_id="c1", reason="test")
     await manager.create(req, priority=0)
-    added_p0 = mock_db.add.call_args[0][0]
-    expected_p0 = datetime.utcnow() + timedelta(minutes=15)
-    assert abs((added_p0.sla_deadline - expected_p0).total_seconds()) < 5, "p0 SLA should be 15 min"
+    added_0 = mock_db.add.call_args[0][0]
+    expected_0 = datetime.utcnow() + timedelta(minutes=30)
+    assert abs((added_0.sla_deadline - expected_0).total_seconds()) < 5, "Priority 0 SLA should be 30 min"
     
-    # Test p1 (priority 1) -> 30 min
+    # Test priority 1 -> 15 min (High)
     await manager.create(req, priority=1)
-    added_p1 = mock_db.add.call_args[0][0]
-    expected_p1 = datetime.utcnow() + timedelta(minutes=30)
-    assert abs((added_p1.sla_deadline - expected_p1).total_seconds()) < 5, "p1 SLA should be 30 min"
+    added_1 = mock_db.add.call_args[0][0]
+    expected_1 = datetime.utcnow() + timedelta(minutes=15)
+    assert abs((added_1.sla_deadline - expected_1).total_seconds()) < 5, "Priority 1 SLA should be 15 min"
     
-    # Test p2 (priority 2) -> 120 min
+    # Test priority 2 -> 5 min (Urgent)
     await manager.create(req, priority=2)
-    added_p2 = mock_db.add.call_args[0][0]
-    expected_p2 = datetime.utcnow() + timedelta(minutes=120)
-    assert abs((added_p2.sla_deadline - expected_p2).total_seconds()) < 5, "p2 SLA should be 120 min"
+    added_2 = mock_db.add.call_args[0][0]
+    expected_2 = datetime.utcnow() + timedelta(minutes=5)
+    assert abs((added_2.sla_deadline - expected_2).total_seconds()) < 5, "Priority 2 SLA should be 5 min"

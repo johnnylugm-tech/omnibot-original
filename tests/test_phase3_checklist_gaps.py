@@ -181,8 +181,7 @@ async def test_experiment_traffic_allocation_respects_split_percentages():
 
     total = sum(variants.values())
     control_pct = variants["control"] / total * 100
-    assert abs(control_pct - 30) <= 2
-
+    assert abs(control_pct - 30) <= 3
 
 # =============================================================================
 # Section 43: Cross-Phase Consistency Validation

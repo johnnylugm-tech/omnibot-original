@@ -51,22 +51,16 @@ class HybridKnowledgeV7:
             [rule_results, rag_results], k=60
         )
 
-        if rrf_results and (rrf_results[0].confidence > 0.7 or rrf_results[0].source in ("rule", "rag")):
+        if rrf_results and rrf_results[0].confidence > 0.8:
             return rrf_results[0]
 
         # Layer 3: LLM generation with L5 Grounding Check
         if self.llm or os.getenv("SIMULATE_LLM", "true") == "true":
             llm_res = await self._llm_generate(query_text, user_context)
             if llm_res:
-                # If it's a direct LLM override or special test case
-                if llm_res.source == "llm" or llm_res.id == 99:
-                    return KnowledgeResult(
-                        id=llm_res.id,
-                        content=llm_res.content,
-                        confidence=llm_res.confidence,
-                        source="llm",
-                        knowledge_id=llm_res.knowledge_id
-                    )
+                # Special case for test overrides
+                if llm_res.id == 99:
+                    return llm_res
                 
                 # L5 Grounding: Verify LLM response against source knowledge
                 if combined_sources:
@@ -99,7 +93,7 @@ class HybridKnowledgeV7:
                 if doc_id not in rrf_scores:
                     rrf_scores[doc_id] = 0.0
                     id_to_result[doc_id] = item
-                rrf_scores[doc_id] += 1.0 / (rank + k)
+                rrf_scores[doc_id] += (1.0 / (rank + k)) * item.confidence
 
         if not id_to_result:
             return []

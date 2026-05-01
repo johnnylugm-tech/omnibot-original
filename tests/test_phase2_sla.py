@@ -77,6 +77,7 @@ async def test_id_21_02_sla_p1_15_minutes(mock_db):
     assert added_obj.priority == 1
     assert abs((added_obj.sla_deadline - (datetime.utcnow() + timedelta(minutes=15))).total_seconds()) < 5
 
+@pytest.mark.asyncio
 async def test_id_21_03_sla_p2_5_minutes(mock_db):
     """priority=2 (URGENT/emotion_trigger) → 5min SLA"""
     manager = EscalationManager(mock_db)

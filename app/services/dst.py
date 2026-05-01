@@ -67,8 +67,12 @@ class DSTManager:
     def update_state(self, state: DialogueState) -> None:
         self._states[state.conversation_id] = state
 
-    def process_turn(self, conversation_id: int, intent: Optional[str], slots: Dict[str, str]) -> DialogueState:
-        state = self.get_state(conversation_id)
+    def process_turn(self, conversation_id: Optional[int] = None, intent: Optional[str] = None, slots: Optional[Dict[str, str]] = None, conv_id: Optional[int] = None) -> DialogueState:
+        cid = conversation_id if conversation_id is not None else conv_id
+        if cid is None:
+            raise ValueError("conversation_id or conv_id must be provided")
+        
+        state = self.get_state(cid)
 
         # Handle AWAITING_CONFIRMATION with confirm/deny intent
         if state.current_state == ConversationState.AWAITING_CONFIRMATION:
