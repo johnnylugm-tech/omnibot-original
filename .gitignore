@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
 
 # Caches
 .mypy_cache/
@@ -10,6 +11,8 @@ __pycache__/
 .coverage
 .coveragerc
 htmlcov/
+report.json
+.json-report.json
 
 # Environments
 .env
@@ -20,7 +23,7 @@ ENV/
 
 # Quality Framework Artifacts
 round_*/
-*.json
+*.log
 !requirements.txt
 issue_registry.json
 
@@ -28,3 +31,7 @@ issue_registry.json
 .DS_Store
 Thumbs.db
 backups/
+.vscode/
+.idea/
+*.swp
+*.swo
