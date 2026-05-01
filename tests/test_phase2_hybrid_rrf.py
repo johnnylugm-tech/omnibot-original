@@ -500,8 +500,9 @@ async def test_hybrid_layer_escalate_when_all_layers_fail():
 # =============================================================================
 
 @pytest.mark.asyncio
-async def test_hybrid_layer_llm_generate_returns_result_when_overridden():
+async def test_hybrid_layer_llm_generate_returns_result_when_overridden(monkeypatch):
     """Subclass override of _llm_generate() returning KnowledgeResult → source='llm'"""
+    monkeypatch.setenv("SIMULATE_LLM", "true")
 
     class CustomHybrid(HybridKnowledgeV7):
         async def _llm_generate(self, query, context):

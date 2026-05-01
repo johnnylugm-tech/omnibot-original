@@ -29,6 +29,8 @@ class PromptInjectionDefense:
         r"developer\s+mode\s+enabled",
         r"output\s+your\s+system\s+prompt",
         r"reveal\s+your\s+instructions",
+        r"pretend\s+you\s+are",
+        r"system\s*:",
     ]
 
     def check_input(self, text: str) -> SecurityCheckResult:
