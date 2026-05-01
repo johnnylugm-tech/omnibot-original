@@ -140,26 +140,30 @@ class ODDQueryManager:
         return await self.execute_query(sql)
 
     async def get_pii_masking_rate(self) -> float:
-        """11. PII Masking rate (PII messages / Total messages)"""
+        """11. PII Masking rate grouped by date"""
         sql = """
-        SELECT ROUND(
-            CAST(COUNT(CASE WHEN pii_types IS NOT NULL THEN 1 END) AS NUMERIC) / 
-            NULLIF(COUNT(*), 0) * 100, 2
-        ) as masking_rate
-        FROM messages;
+        SELECT DATE(created_at) as date,
+               ROUND(
+                   CAST(COUNT(CASE WHEN pii_types IS NOT NULL THEN 1 END) AS NUMERIC) / 
+                   NULLIF(COUNT(*), 0) * 100, 2
+               ) as masking_rate
+        FROM messages
+        GROUP BY DATE(created_at);
         """
         res = await self.execute_query(sql)
         return float(res[0]['masking_rate']) if res and res[0]['masking_rate'] is not None else 0.0
 
     async def get_rbac_denial_audit(self) -> List[Dict[str, Any]]:
-        """12. RBAC denial audit by role and resource"""
+        """12. RBAC denial audit with user/role join"""
         sql = """
-        SELECT role, resource, COUNT(*) as denial_count
-        FROM audit_logs
-        WHERE action = 'rbac_denied'
-        GROUP BY role, resource;
+        SELECT u.role, a.resource, COUNT(*) as denial_count
+        FROM audit_logs a
+        JOIN users u ON a.user_id = u.id
+        WHERE a.action = 'rbac_denied'
+        GROUP BY u.role, a.resource;
         """
         return await self.execute_query(sql)
+
 
     async def get_ab_test_performance(self) -> List[Dict[str, Any]]:
         """13. A/B test variant performance (conversion rate)"""

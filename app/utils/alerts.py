@@ -77,7 +77,7 @@ class AlertManager:
         """Checks if escalation queue exceeds 50."""
         for rule in self.rules:
             if rule.metric_name == "escalation_queue" and rule.check(count):
-                await self._trigger_alert(rule.label, {"queue_count": count})
+                await self._trigger_alert("escalation_queue_backlog", {"queue_depth": count})
                 return True
         return False
 

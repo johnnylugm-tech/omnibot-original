@@ -19,7 +19,8 @@ class PromptInjectionDefense:
     """
 
     SUSPICIOUS_PATTERNS: list[str] = [
-        r"ignore\s+(?:all\s+|previous\s+|above\s+)*\s*(?:instructions?|prompts?)",
+        r"(?:ignore|disregard|skip|forget|override)\s+(?:all\s+|previous\s+|above\s+|your\s+)*\s*(?:instructions?|prompts?|rules?|guidelines?|settings?)",
+        r"override\s+your\s+security\s+settings",
         r"system\s*:\s*",
         r"```\s*(system|admin|root)",
         r"you\s+are\s+now\s+",
@@ -27,12 +28,12 @@ class PromptInjectionDefense:
         r"act\s+as\s+(a\s+)?",
         r"forget\s+(everything|all|your)",
         r"new\s+instructions?\s*:",
-        r"override\s+(your|the|all)",
-        r"disregard\s+(your|the|all|previous)",
         r"\[(SYSTEM|USER|ASSISTANT)\s+(INSTRUCTION|MESSAGE|REMINDER|CONTEXT)\]",
         r"DAN\s+mode",
         r"do\s+anything\s+now",
         r"developer\s+mode\s+enabled",
+        r"output\s+your\s+system\s+prompt",
+        r"reveal\s+your\s+instructions",
     ]
 
     def check_input(self, text: str) -> SecurityCheckResult:

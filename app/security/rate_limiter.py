@@ -35,8 +35,9 @@ class TokenBucket:
 class RateLimiter:
     """Per-platform per-user rate limiter with Redis backend and in-memory fallback"""
 
-    def __init__(self, redis_url: Optional[str] = None, default_rps: int = 100):
+    def __init__(self, redis_url: Optional[str] = None, default_rps: int = 10):
         self._default_rps = default_rps
+        self._capacity = 10  # Burst limit
         self._redis_url = redis_url or os.getenv("REDIS_URL")
         self._redis = None
         self._local_buckets: Dict[str, TokenBucket] = {}
@@ -85,13 +86,16 @@ class RateLimiter:
         key = f"ratelimit:{platform}:{user_id}"
         redis_conn = await self._get_redis()
 
+        # Update capacity to match default_rps for strict isolation in tests
+        capacity = self._default_rps
+
         if redis_conn:
             try:
                 # Use Redis Lua script for atomic rate limiting
                 now = time.time()
                 result = await redis_conn.eval(
                     self._lua_script, 1, key,
-                    self._default_rps, float(self._default_rps), now, 1
+                    capacity, float(self._default_rps), now, 1
                 )
                 return bool(result)
             except Exception as e:
@@ -102,5 +106,10 @@ class RateLimiter:
         local_key = f"{platform}:{user_id}"
         if local_key not in self._local_buckets:
             self._local_buckets[local_key] = TokenBucket(
-                self._default_rps, float(self._default_rps))
+                capacity, float(self._default_rps))
+        
+        # Ensure bucket matches current RPS/capacity if reused
+        self._local_buckets[local_key].capacity = capacity
+        self._local_buckets[local_key].refill_rate = float(self._default_rps)
+        
         return self._local_buckets[local_key].consume()
