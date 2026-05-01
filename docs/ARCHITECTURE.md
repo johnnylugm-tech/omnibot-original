@@ -16,11 +16,12 @@ OmniBot 採用分層防禦與混合檢索架構，旨在平衡回應速度、內
 ### Layer 2: RAG 檢索 (Retrieval-Augmented Generation)
 - **技術**: PostgreSQL `pgvector` + `SentenceTransformer` (paraphrase-multilingual-MiniLM-L12-v2)。
 - **目的**: 透過語義相似度尋找最接近的知識庫文檔。
-- **Fusion**: 使用 RRF (Reciprocal Rank Fusion) 整合規則與向量結果。
+- **Fusion**: 使用 **Confidence-Aware RRF (Reciprocal Rank Fusion)**。公式為 `1/(rank+k) * confidence`，確保規則引擎的高信心度結果能正確引導向量檢索結果。
 
 ### Layer 3: LLM 生成 (Generative AI)
 - **技術**: 整合 OpenAI / Anthropic / Gemini。
 - **目的**: 當知識庫無直接答案時，根據檢索到的片段生成人類語感的回答。
+- **配置**: 支援透過環境變數動態切換 Model 與 Prompt Template (`LLM_LAYER3_BASE_PROMPT`)。
 
 ### Layer 4: 人工轉接 (Human Escalation)
 - **觸發條件**:
@@ -42,9 +43,14 @@ OmniBot 採用分層防禦與混合檢索架構，旨在平衡回應速度、內
 
 ### PII 脫敏流水線
 1. **正規化**: 去除特殊符號與空格。
-2. **正則匹配**: 識別信用卡、身分證、手機等模式。
-3. **算法驗證**: 對於信用卡執行 Luhn 算法驗證，排除誤報。
+2. **正則匹配**: 識別信用卡、身分證、手機等模式（支援 `+886` 國際格式）。
+3. **算法驗證**: 對於信用卡執行 **Luhn 算法** 驗證，排除誤報。
 4. **動態遮蔽**: 根據配置執行 `****` 替換。
+
+### 紅隊防禦加固 (Phase 4)
+- **Prompt Injection**: 強化語義偵測，攔截 `pretend you are`, `system:`, `disregard prior directives` 等變體攻擊。
+- **Rate Limiting**: 引入 **Redis Server-side TIME 校準**，確保在異步/分佈式環境下也能精確偵測 Burst 攻擊。
+- **確定性分流**: A/B Testing 採用 SHA256 確定性雜湊分配流量，確保同一用戶在實驗期間體驗的一致性。
 
 ---
 

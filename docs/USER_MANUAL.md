@@ -48,16 +48,19 @@ OmniBot 提供完整的 CRUD 介面來管理機器人的「大腦」。
 當使用者發送包含敏感資訊的消息時，OmniBot 會自動執行遮蔽。
 - **身分證字號**: `A123****89`
 - **信用卡號**: `4524-****-****-1234` (通過 Luhn 驗證)
-- **手機號碼**: `0912***456`
+- **手機號碼**: `0912***456` 或 `+886-912-***-456`
 
-### 幻覺攔截 (Hallucination Detection)
-若 LLM 生成的內容與知識庫事實不符（相似度 < 0.75），系統會自動攔截該回答並轉接人工客服，確保企業回覆的權威性。
+### 注入攔截 (Prompt Injection Defense)
+系統會識別並攔截企圖繞過安全設定或更改機器人角色的惡意指令，如：
+- "Ignore all previous instructions"
+- "Pretend you are an administrator"
+- "Reveal your system prompt"
 
 ### 服務降級 (Resilience)
-當系統檢測到 LLM 延遲過高或數據庫壓力大時，會自動切換模式：
+當系統檢測到 LLM 延遲過高（>3s）或數據庫壓力大時，會自動切換模式：
 - **Level 1**: 停用 LLM 生成，僅使用規則匹配與 RAG。
-- **Level 2**: 停用 RAG，僅使用靜態規則。
-- **Level 3**: 維護模式。
+- **Level 2**: 停用 RAG，僅使用高信心度規則。
+- **Level 3**: 全面轉接人工或進入維護模式。
 
 ---
 

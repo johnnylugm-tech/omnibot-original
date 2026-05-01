@@ -3,7 +3,7 @@
 OmniBot 是一款專為企業級需求設計的多平台機器人後端服務。它結合了規則引擎、RAG (檢索增強生成) 與大型語言模型 (LLM)，並具備極高的安全防護與可觀測性標準。
 
 [![SSI Score](https://img.shields.io/badge/SSI_Score-100%2F100-brightgreen)](SPEC/omnibot-tdd-verification-report.md)
-[![TDD Coverage](https://img.shields.io/badge/TDD_Pass_Rate-99.75%25-blue)](SPEC/omnibot-tdd-verification-report.md)
+[![TDD Coverage](https://img.shields.io/badge/TDD_Pass_Rate-100%25-blue)](SPEC/omnibot-tdd-verification-report.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
@@ -70,7 +70,7 @@ uvicorn app.api:app --host 0.0.0.0 --port 8000
 
 OmniBot 堅持嚴格的工程標準：
 - **100% Type Safe**: 通過 `mypy --disallow-untyped-defs` 驗證。
-- **Atomic TDD**: 400+ 測試案例，涵蓋所有業務邊界。
+- **Atomic TDD**: 645+ 測試案例，涵蓋所有業務邊界、邊緣情況與安全漏洞。
 - **Modern API**: 全面採用 FastAPI `lifespan` 模式與非同步驅動。
 
 ---
