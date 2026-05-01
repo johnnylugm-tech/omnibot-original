@@ -12,13 +12,14 @@ class PIIMasking:
     Phase 2: Credit card Luhn validation.
     """
 
-    # Taiwan phone patterns (including 886), email, address, credit card, and national ID
+    # Taiwan phone patterns, email, address, credit card, and national ID
+    # Use refined regex patterns
     PATTERNS = {
         "credit_card": re.compile(
-            r"\b(?:\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}|\d{4}[- ]?\d{6}[- ]?\d{5}|\d{13,19})\b"
+            r"(?:(?:\d[ -]*?){13,19})"
         ),
         "phone": re.compile(
-            r"(?<!\d)(?:\+886[- ]?|0)9\d{2}[- ]?\d{3}[- ]?\d{3}(?!\d)|(?<!\d)\+8869\d{8}(?!\d)"
+            r"(?:\+886[- ]?|0)9\d{2}[- ]?\d{3}[- ]?\d{3}"
         ),
         "email": re.compile(
             r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b"
@@ -31,7 +32,6 @@ class PIIMasking:
         "national_id": re.compile(r"\b[A-Z][12]\d{8}\b"),
     }
 
-    # Sensitive keywords that trigger escalation
     SENSITIVE_KEYWORDS: List[re.Pattern] = [
         re.compile(r"密碼"),
         re.compile(r"銀行帳戶"),
@@ -42,28 +42,29 @@ class PIIMasking:
     def mask(self, text: str) -> PIIMaskResult:
         """Mask PII in text with Luhn validation for credit cards"""
         masked = text
-        count = 0
-        pii_types: List[str] = []
+        found_types = set()
+        total_count = 0
 
+        # Process each PII type
+        # We process credit_card separately to ensure Luhn check is applied correctly
         for pii_type, pattern in self.PATTERNS.items():
-            matches = list(pattern.finditer(masked))
-            for match in reversed(matches):
-                value = match.group()
+            def replacer(match):
+                nonlocal total_count
+                val = match.group()
+                if pii_type == "credit_card":
+                    if not self._luhn_check(val):
+                        return val
+                
+                total_count += 1
+                found_types.add(pii_type)
+                return f"[{pii_type}_masked]"
 
-                # Luhn check for credit cards
-                if pii_type == "credit_card" and not self._luhn_check(value):
-                    continue
-
-                start, end = match.start(), match.end()
-                masked = masked[:start] + f"[{pii_type}_masked]" + masked[end:]
-                count += 1
-                if pii_type not in pii_types:
-                    pii_types.append(pii_type)
+            masked = pattern.sub(replacer, masked)
 
         return PIIMaskResult(
             masked_text=masked,
-            mask_count=count,
-            pii_types=pii_types
+            mask_count=total_count,
+            pii_types=sorted(list(found_types))
         )
 
     def should_escalate(self, text: str) -> bool:

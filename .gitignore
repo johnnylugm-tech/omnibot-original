@@ -11,10 +11,17 @@ __pycache__/
 .coveragerc
 htmlcov/
 
+# Environments
+.env
+.venv/
+env/
+venv/
+ENV/
+
 # Quality Framework Artifacts
 round_*/
 *.json
-!requirements.txt # 除非有特別用途，否則保留 txt
+!requirements.txt
 issue_registry.json
 
 # OS files

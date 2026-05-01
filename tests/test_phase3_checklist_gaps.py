@@ -173,15 +173,15 @@ async def test_experiment_traffic_allocation_respects_split_percentages():
 
     manager = ABTestManager(mock_db)
     variants = {"control": 0, "test_v1": 0}
-    for i in range(1000):
-        user_id = f"user_{i}_{uuid4()}"
+    for i in range(5000):
+        user_id = f"user_{i}" # Use stable IDs for 5000 samples
         variant = await manager.get_variant(user_id, experiment_id=1)
         if variant in variants:
             variants[variant] += 1
 
     total = sum(variants.values())
     control_pct = variants["control"] / total * 100
-    assert abs(control_pct - 30) <= 3
+    assert abs(control_pct - 30) <= 2
 
 # =============================================================================
 # Section 43: Cross-Phase Consistency Validation

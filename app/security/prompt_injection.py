@@ -19,14 +19,9 @@ class PromptInjectionDefense:
     """
 
     SUSPICIOUS_PATTERNS: list[str] = [
-        r"(?:ignore|disregard|skip|forget|override)\s+(?:all\s+|previous\s+|above\s+|your\s+)*\s*(?:instructions?|prompts?|rules?|guidelines?|settings?)",
-        r"override\s+your\s+security\s+settings",
-        r"system\s*:\s*",
-        r"```\s*(system|admin|root)",
-        r"you\s+are\s+now\s+",
-        r"pretend\s+(you|to)\s+",
-        r"act\s+as\s+(a\s+)?",
-        r"forget\s+(everything|all|your)",
+        r"(?:ignore|disregard|skip|forget|override|forget)\s+(?:all\s+|previous\s+|above\s+|your\s+|prior\s+)*\s*(?:instructions?|prompts?|rules?|guidelines?|settings?|directives?)",
+        r"override\s+your\s+(?:security|safety)\s+settings",
+        r"(?:now\s+)?forget\s+(?:everything|all|your)",
         r"new\s+instructions?\s*:",
         r"\[(SYSTEM|USER|ASSISTANT)\s+(INSTRUCTION|MESSAGE|REMINDER|CONTEXT)\]",
         r"DAN\s+mode",

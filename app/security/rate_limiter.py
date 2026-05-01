@@ -35,20 +35,23 @@ class TokenBucket:
 class RateLimiter:
     """Per-platform per-user rate limiter with Redis backend and in-memory fallback"""
 
-    def __init__(self, redis_url: Optional[str] = None, default_rps: int = 10):
+    def __init__(self, redis_url: Optional[str] = None, default_rps: int = 10, burst_factor: float = 1.0):
         self._default_rps = default_rps
-        self._capacity = 10  # Burst limit
+        self._burst_factor = burst_factor
         self._redis_url = redis_url or os.getenv("REDIS_URL")
         self._redis = None
         self._local_buckets: Dict[str, TokenBucket] = {}
 
-        # Lua script for atomic token bucket in Redis
+        # Lua script with Redis-side timestamp for accuracy
         self._lua_script = """
         local key = KEYS[1]
         local capacity = tonumber(ARGV[1])
         local refill_rate = tonumber(ARGV[2])
-        local now = tonumber(ARGV[3])
-        local requested = tonumber(ARGV[4])
+        local requested = tonumber(ARGV[3])
+        
+        -- Get Redis server time
+        local time = redis.call('TIME')
+        local now = tonumber(time[1]) + tonumber(time[2]) / 1000000
 
         local bucket = redis.call("HMGET", key, "tokens", "last_refill")
         local tokens = tonumber(bucket[1]) or capacity
@@ -60,7 +63,7 @@ class RateLimiter:
         if tokens >= requested then
             tokens = tokens - requested
             redis.call("HMSET", key, "tokens", tokens, "last_refill", now)
-            redis.call("EXPIRE", key, 3600) -- Auto-cleanup after 1 hour
+            redis.call("EXPIRE", key, 3600)
             return 1
         else
             redis.call("HMSET", key, "tokens", tokens, "last_refill", now)
@@ -86,16 +89,15 @@ class RateLimiter:
         key = f"ratelimit:{platform}:{user_id}"
         redis_conn = await self._get_redis()
 
-        # Update capacity to match default_rps for strict isolation in tests
-        capacity = self._default_rps
+        # Capacity calculation: Allow burst based on factor
+        capacity = max(1, int(self._default_rps * self._burst_factor))
 
         if redis_conn:
             try:
-                # Use Redis Lua script for atomic rate limiting
-                now = time.time()
+                # result = 1 if allowed, 0 if blocked
                 result = await redis_conn.eval(
                     self._lua_script, 1, key,
-                    capacity, float(self._default_rps), now, 1
+                    capacity, float(self._default_rps), 1
                 )
                 return bool(result)
             except Exception as e:
@@ -108,7 +110,6 @@ class RateLimiter:
             self._local_buckets[local_key] = TokenBucket(
                 capacity, float(self._default_rps))
         
-        # Ensure bucket matches current RPS/capacity if reused
         self._local_buckets[local_key].capacity = capacity
         self._local_buckets[local_key].refill_rate = float(self._default_rps)
         
