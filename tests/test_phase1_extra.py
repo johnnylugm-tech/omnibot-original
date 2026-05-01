@@ -451,17 +451,14 @@ def test_unified_message_immutable():
 
 def test_webhook_telegram_signature_valid():
     """Telegram verify_signature with correct secret returns True"""
-    import hashlib
-    import hmac
     from app.security.webhook_verifier import TelegramWebhookVerifier
 
-    token = "test_bot_token"
+    token = "test_secret_token"
     verifier = TelegramWebhookVerifier(token)
     body = b'{"message":{"from":{"id":123},"text":"hello"}}'
 
-    # Compute correct signature
-    secret_key = hashlib.sha256(token.encode()).digest()
-    correct_sig = hmac.new(secret_key, body, hashlib.sha256).hexdigest()
+    # Telegram uses a plain text shared secret, not an HMAC over the body.
+    correct_sig = token
 
     assert verifier.verify(body, correct_sig) is True, \
         "Correct Telegram signature should return True"
@@ -481,35 +478,28 @@ def test_webhook_telegram_signature_invalid():
 
 def test_webhook_telegram_valid_signature_returns_200():
     """Telegram webhook with valid signature returns 200"""
-    import os
-    import hashlib
-    import hmac
     from fastapi.testclient import TestClient
     from app.api import app
-
-    old_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-    os.environ["TELEGRAM_BOT_TOKEN"] = "valid_bot_token"
+    from unittest.mock import patch, AsyncMock
 
     client = TestClient(app, raise_server_exceptions=False)
 
-    try:
-        token = "valid_bot_token"
-        body_bytes = b'{"message":{"from":{"id":123},"text":"test"}}'
+    token = "valid_bot_token"
+    body_bytes = b'{"message":{"from":{"id":123},"text":"test"}}'
 
-        with patch("app.api.process_webhook_message", new_callable=AsyncMock) as mock_proc:
-            mock_proc.return_value = ("ok", "rule")
-            response = client.post(
-                "/api/v1/webhook/telegram",
-                content=body_bytes,
-                headers={
-                    "Content-Type": "application/json",
-                    "X-Telegram-Bot-Api-Secret-Token": token
-                }
-            )
-            assert response.status_code == 200, \
-                f"Valid Telegram signature should return 200, got {response.status_code}: {response.json()}"
-    finally:
-        os.environ["TELEGRAM_BOT_TOKEN"] = old_token
+    with patch("app.api.process_webhook_message", new_callable=AsyncMock) as mock_proc, \
+         patch("app.api.TELEGRAM_BOT_TOKEN", token):
+        mock_proc.return_value = ("ok", "rule")
+        response = client.post(
+            "/api/v1/webhook/telegram",
+            content=body_bytes,
+            headers={
+                "Content-Type": "application/json",
+                "X-Telegram-Bot-Api-Secret-Token": token
+            }
+        )
+        assert response.status_code == 200, \
+            f"Valid Telegram signature should return 200, got {response.status_code}: {response.json()}"
 
 
 def test_webhook_telegram_invalid_signature_returns_401():
@@ -635,24 +625,20 @@ def test_webhook_line_invalid_signature_returns_401():
     import os
     from fastapi.testclient import TestClient
     from app.api import app
-
-    old_secret = os.environ.get("LINE_CHANNEL_SECRET", "")
-    os.environ["LINE_CHANNEL_SECRET"] = "line_channel_secret"
+    from unittest.mock import patch, AsyncMock
 
     client = TestClient(app, raise_server_exceptions=False)
 
-    try:
-        with patch("app.api.process_webhook_message", new_callable=AsyncMock) as mock_proc:
-            mock_proc.return_value = ("ok", "rule")
-            response = client.post(
-                "/api/v1/webhook/line",
-                json={"events": [{"type": "message", "message": {"text": "hi"}}]},
-                headers={"X-Line-Signature": "invalid_signature"}
-            )
-            assert response.status_code == 401, \
-                f"Invalid LINE signature should return 401, got {response.status_code}: {response.json()}"
-    finally:
-        os.environ["LINE_CHANNEL_SECRET"] = old_secret
+    with patch("app.api.process_webhook_message", new_callable=AsyncMock) as mock_proc, \
+         patch("app.api.LINE_CHANNEL_SECRET", "line_channel_secret"):
+        mock_proc.return_value = ("ok", "rule")
+        response = client.post(
+            "/api/v1/webhook/line",
+            json={"events": [{"type": "message", "message": {"text": "hi"}}]},
+            headers={"X-Line-Signature": "invalid_signature"}
+        )
+        assert response.status_code == 401, \
+            f"Invalid LINE signature should return 401, got {response.status_code}: {response.json()}"
 
 
 def test_webhook_line_rate_limited_returns_429():

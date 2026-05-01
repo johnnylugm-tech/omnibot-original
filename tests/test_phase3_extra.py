@@ -120,7 +120,7 @@ def test_edge_multi_intent_single_message():
 
     # Second example: complaint + refund in one message
     multi_intent_2 = "我對你們的服務很不滿意，要求退費"
-    state2 = dst.process_turn(conv_id=2, intent=None, context={"content": multi_intent_2})
+    state2 = dst.process_turn(conversation_id=2, intent=None, slots={"content": multi_intent_2})
     # Should detect negative sentiment and escalate intent
     assert state2 is not None
 

@@ -373,14 +373,10 @@ class TestExistingPatterns:
 
     def test_telegram_verifier_integration(self):
         """Telegram webhook verifier - integration pattern from test_security.py"""
-        import hmac
-        import hashlib
-
         token = "bot_token"
         verifier = TelegramWebhookVerifier(token)
         body = b'{"message":{}}'
-        secret_key = hashlib.sha256(token.encode()).digest()
-        signature = hmac.new(secret_key, body, hashlib.sha256).hexdigest()
+        signature = token # telegram sends token as plain text in header
         assert verifier.verify(body, signature) is True
         assert verifier.verify(body, "wrong") is False
 
