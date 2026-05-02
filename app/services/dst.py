@@ -1,8 +1,8 @@
 """Dialogue State Tracking (DST) - Phase 2"""
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional
-from datetime import datetime
 
 
 class ConversationState(Enum):
@@ -71,7 +71,7 @@ class DSTManager:
         cid = conversation_id if conversation_id is not None else conv_id
         if cid is None:
             raise ValueError("conversation_id or conv_id must be provided")
-        
+
         state = self.get_state(cid)
 
         # Handle AWAITING_CONFIRMATION with confirm/deny intent

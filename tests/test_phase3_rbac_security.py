@@ -2,10 +2,13 @@
 Atomic TDD Tests for Phase 3: RBAC Security (#26)
 Focus: Bearer Token Extraction, Privilege Escalation Prevention, and DELETE protection.
 """
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
-from fastapi import Request, HTTPException
+from fastapi import HTTPException, Request
+
 from app.security.rbac import RBACEnforcer
+
 
 @pytest.fixture
 def enforcer():
@@ -15,10 +18,10 @@ def enforcer():
 async def test_id_26_01_secure_token_role_extraction(enforcer):
     """Verify role is extracted from Bearer token (simulated JWT)"""
     dependency = enforcer.require("knowledge", "read")
-    
+
     mock_request = MagicMock(spec=Request)
     mock_request.headers = {"Authorization": "Bearer admin_token"}
-    
+
     # Use patch.object for cleaner class method patching
     with patch.object(RBACEnforcer, "decode_token", return_value={"role": "admin"}):
         result = await dependency(mock_request)
@@ -28,10 +31,10 @@ async def test_id_26_01_secure_token_role_extraction(enforcer):
 async def test_id_26_02_rbac_delete_requires_admin(enforcer):
     """Editor trying to DELETE knowledge -> 403"""
     dependency = enforcer.require("knowledge", "delete")
-    
+
     mock_request = MagicMock(spec=Request)
     mock_request.headers = {"Authorization": "Bearer editor_token"}
-    
+
     with patch.object(RBACEnforcer, "decode_token", return_value={"role": "editor"}):
         with pytest.raises(HTTPException) as exc:
             await dependency(mock_request)
@@ -42,10 +45,10 @@ async def test_id_26_02_rbac_delete_requires_admin(enforcer):
 async def test_id_26_03_token_tamper_detection(enforcer):
     """Invalid token format -> 401 Unauthorized"""
     dependency = enforcer.require("knowledge", "read")
-    
+
     mock_request = MagicMock(spec=Request)
     mock_request.headers = {"Authorization": "Bearer invalid_token"}
-    
+
     with patch.object(RBACEnforcer, "decode_token", side_effect=HTTPException(status_code=401, detail="Invalid token")):
         with pytest.raises(HTTPException) as exc:
             await dependency(mock_request)
@@ -55,10 +58,10 @@ async def test_id_26_03_token_tamper_detection(enforcer):
 async def test_id_26_04_missing_authorization_header(enforcer):
     """No Authorization header -> 401"""
     dependency = enforcer.require("knowledge", "read")
-    
+
     mock_request = MagicMock(spec=Request)
     mock_request.headers = {}
-    
+
     with pytest.raises(HTTPException) as exc:
         await dependency(mock_request)
     assert exc.value.status_code == 401
@@ -70,8 +73,6 @@ async def test_id_26_04_missing_authorization_header(enforcer):
 
 def test_token_expired_returns_401_AUTH_TOKEN_EXPIRED(client_with_mock_db, mock_db_for_error_tests):
     """Expired or invalid auth token returns 401 with error_code AUTH_TOKEN_EXPIRED"""
-    from app.security.rbac import rbac
-    from starlette.responses import JSONResponse
 
     bad_token = "invalid.malformed.token"
     headers = {"Authorization": f"Bearer {bad_token}"}
@@ -113,6 +114,7 @@ def mock_db_for_error_tests():
 def client_with_mock_db(mock_db_for_error_tests):
     """TestClient with overridden DB dependency."""
     from fastapi.testclient import TestClient
+
     from app.api import app
     from app.models.database import get_db
 

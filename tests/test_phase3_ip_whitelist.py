@@ -8,9 +8,16 @@ Covers:
 
 Run with: python3 -m pytest tests/test_phase3_ip_whitelist.py -v
 """
-import pytest
 from unittest.mock import MagicMock, patch
-from app.security.ip_whitelist import IPWhitelist, IPWhitelistError, get_ip_whitelist, reset_ip_whitelist
+
+import pytest
+
+from app.security.ip_whitelist import (
+    IPWhitelist,
+    IPWhitelistError,
+    get_ip_whitelist,
+    reset_ip_whitelist,
+)
 
 
 # ---------------------------------------------------------------------------

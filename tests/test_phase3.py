@@ -1,11 +1,12 @@
-from app.security.rbac import rbac
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock
-from fastapi import Request, HTTPException
-from app.security.rbac import RBACEnforcer
+from fastapi import HTTPException, Request
+
+from app.security.rbac import RBACEnforcer, rbac
 from app.services.ab_test import ABTestManager
 from app.utils.retry import RetryStrategy
-import asyncio
+
 
 # 1. RBAC Tests
 def test_rbac_check():
@@ -21,7 +22,7 @@ def test_rbac_check():
 @pytest.mark.asyncio
 async def test_rbac_dependency():
     enforcer = RBACEnforcer({"admin": {"system": ["read"]}})
-    
+
     # Now it's a dependency, not a decorator
     dependency = enforcer.require("system", "read")
 
@@ -47,13 +48,13 @@ async def test_ab_test_deterministic_variant():
     mock_exp.id = 1
     mock_exp.status = "running"
     mock_exp.traffic_split = {"control": 50, "variant_a": 50}
-    
+
     # Chain: await db.execute() -> mock_result -> mock_result.scalar_one_or_none() -> mock_exp
     mock_db.execute.return_value = mock_result
     mock_result.scalar_one_or_none.return_value = mock_exp
-    
+
     manager = ABTestManager(mock_db)
-    
+
     # Same user should get same variant
     v1 = await manager.get_variant("user_123", 1)
     v2 = await manager.get_variant("user_123", 1)
@@ -65,7 +66,7 @@ async def test_ab_test_deterministic_variant():
 async def test_retry_strategy_success():
     strategy = RetryStrategy(max_retries=2, base_delay=0.01)
     mock_func = AsyncMock(return_value="done")
-    
+
     result = await strategy.execute(mock_func)
     assert result == "done"
     assert mock_func.call_count == 1
@@ -74,8 +75,8 @@ async def test_retry_strategy_success():
 async def test_retry_strategy_failure():
     strategy = RetryStrategy(max_retries=2, base_delay=0.01)
     mock_func = AsyncMock(side_effect=Exception("fail"))
-    
+
     with pytest.raises(Exception):
         await strategy.execute(mock_func)
-    
+
     assert mock_func.call_count == 3 # 1 initial + 2 retries

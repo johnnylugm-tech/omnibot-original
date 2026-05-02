@@ -9,8 +9,10 @@ Missing tests (14):
   Phase 2: FCR >= 80%, p95 < 1.5s, 4 platforms, CSAT +35%, disaster_recovery < 5min
   Phase 3: FCR >= 90%, p95 < 1s
 """
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
 from app.services.odd_queries import ODDQueryManager
 
 

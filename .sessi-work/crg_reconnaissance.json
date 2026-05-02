@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-05-02T10:07:00Z",
+  "repo": "/Users/johnny/omnibot-original",
+  "graph_stats": {
+    "nodes": 707,
+    "edges": 4593,
+    "files": 63,
+    "languages": ["python"]
+  },
+  "risk_score": 0.0,
+  "suggested_questions": [],
+  "high_risk_hubs": [],
+  "low_cohesion_communities": [
+    { "name": "security-encryption", "cohesion": 0.3333, "size": 5 },
+    { "name": "tests-check", "cohesion": 0.3149, "size": 57 },
+    { "name": "api-webhook", "cohesion": 0.1282, "size": 20 }
+  ],
+  "untested_hotspots": [],
+  "unexpected_couplings": [],
+  "dead_code": [
+    {"name": "InputSanitizer.sanitize", "file": "app/security/input_sanitizer.py"},
+    {"name": "PIIMasking.mask", "file": "app/security/pii_masking.py"}
+  ],
+  "pre_seeded_issues": 0,
+  "evaluation_priorities": {
+    "deepest_analysis_files": ["app/api/__init__.py"],
+    "dimensions_to_focus": ["architecture", "readability"]
+  }
+}

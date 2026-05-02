@@ -8,9 +8,12 @@ These tests verify the confidence threshold logic in HybridKnowledgeLayer:
 RED stage: these tests FAIL until the confidence gate is implemented.
 """
 import os
+
 os.environ['SIMULATE_LLM'] = 'false'
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+
 from app.services.knowledge import HybridKnowledgeV7
 
 # Only SKIP the import if the module truly doesn't exist.
@@ -107,29 +110,29 @@ def test_llm_layer3_base_prompt_is_reproducible():
     that LLM Layer 3 loads its base prompt from a configuration source.
     """
     import os
-    
+
     # Check if LLM Layer 3 base prompt config exists
     # It could be in various forms:
     # 1. Environment variable LLM_LAYER3_BASE_PROMPT
     # 2. A config file referenced by LLM_LAYER3_PROMPT_CONFIG path
     # 3. A database record
-    
+
     base_prompt_config = os.getenv("LLM_LAYER3_BASE_PROMPT")
     prompt_config_path = os.getenv("LLM_LAYER3_PROMPT_CONFIG")
-    
+
     has_config = base_prompt_config is not None or prompt_config_path is not None
-    
+
     assert has_config, \
         "LLM Layer 3 base prompt template must be configurable via " \
         "LLM_LAYER3_BASE_PROMPT env var or LLM_LAYER3_PROMPT_CONFIG path. " \
         f"Got LLM_LAYER3_BASE_PROMPT={base_prompt_config}, " \
         f"LLM_LAYER3_PROMPT_CONFIG={prompt_config_path}"
-    
+
     # If using a config file path, verify the file exists
     if prompt_config_path:
         assert os.path.isfile(prompt_config_path), \
             f"LLM_LAYER3_PROMPT_CONFIG points to non-existent file: {prompt_config_path}"
-        
+
         # Verify it's a valid template (should contain placeholders)
         with open(prompt_config_path, 'r') as f:
             content = f.read()

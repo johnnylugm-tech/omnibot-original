@@ -1,0 +1,70 @@
+{
+  "risk_score": 0.0,
+  "eval_depth": "fast",
+  "data_warnings": [
+    "  missing 'flows' (populated by list_flows / get_affected_flows) — CRG MCP tools may have been unavailable during reconnaissance"
+  ],
+  "thresholds": {
+    "risk_deep": 0.7,
+    "risk_fast": 0.3,
+    "cohesion_healthy": 0.4,
+    "community_oversized": 50,
+    "dead_code_escalate_ratio": 0.05,
+    "hub_critical_fan_in": 15,
+    "hub_high_fan_in": 8,
+    "flow_good_handler_pct": 80
+  },
+  "community_cohesion": {
+    "score": 0.95,
+    "healthy": 0,
+    "total": 3,
+    "unhealthy": [
+      {
+        "name": "security-encryption",
+        "cohesion": 0.3333,
+        "size": 5,
+        "issues": [
+          "low_cohesion(0.33)"
+        ]
+      },
+      {
+        "name": "tests-check",
+        "cohesion": 0.3149,
+        "size": 57,
+        "issues": [
+          "low_cohesion(0.31)",
+          "oversized(57)"
+        ]
+      },
+      {
+        "name": "api-webhook",
+        "cohesion": 0.1282,
+        "size": 20,
+        "issues": [
+          "low_cohesion(0.13)"
+        ]
+      }
+    ]
+  },
+  "flow_coverage": {
+    "score": 100,
+    "with_handler": 0,
+    "total": 0,
+    "missing": []
+  },
+  "dead_code": {
+    "count": 2,
+    "total_nodes": 707,
+    "ratio": 0.0028,
+    "ratio_pct": 0.28,
+    "escalate_severity": false,
+    "escalated_to": "low"
+  },
+  "hub_risk_map": {
+    "hubs": [],
+    "critical_count": 0,
+    "high_count": 0,
+    "medium_count": 0
+  },
+  "suggested_questions": []
+}

@@ -54,7 +54,7 @@ class PIIMasking:
                 if pii_type == "credit_card":
                     if not self._luhn_check(val):
                         return val
-                
+
                 total_count += 1
                 found_types.add(pii_type)
                 return f"[{pii_type}_masked]"

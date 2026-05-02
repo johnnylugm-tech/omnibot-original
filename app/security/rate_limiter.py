@@ -1,9 +1,9 @@
 """Rate limiter - Token Bucket with Redis support"""
-import time
-import os
 import logging
+import os
+import time
 from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger("omnibot.rate_limiter")
 
@@ -109,8 +109,8 @@ class RateLimiter:
         if local_key not in self._local_buckets:
             self._local_buckets[local_key] = TokenBucket(
                 capacity, float(self._default_rps))
-        
+
         self._local_buckets[local_key].capacity = capacity
         self._local_buckets[local_key].refill_rate = float(self._default_rps)
-        
+
         return self._local_buckets[local_key].consume()

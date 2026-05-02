@@ -1,18 +1,16 @@
 """Phase 1 extra tests: Error codes, Structured Logger, Dialogue State."""
-import pytest
 import json
 import logging
 from io import StringIO
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from fastapi.testclient import TestClient
-from fastapi import HTTPException
 
 from app.api import app
 from app.models.database import get_db
+from app.services.dst import ConversationState, DSTManager
 from app.utils.logger import StructuredLogger
-from app.services.dst import DSTManager, ConversationState
-
 
 # =============================================================================
 # Section: Error Code Tests (7 tests)
@@ -57,7 +55,6 @@ def test_error_AUTH_INVALID_SIGNATURE_401(client_with_mock_db, mock_db_for_error
     Spec: When a request carries a malformed/invalid Authorization header,
     the rbac.require() dependency must raise HTTPException(401).
     """
-    from app.security.rbac import rbac
 
     # Malformed token (invalid base64 padding)
     headers = {"Authorization": "Bearer not_valid_base64.token"}
@@ -78,7 +75,6 @@ def test_error_KNOWLEDGE_NOT_FOUND_404(client_with_mock_db, mock_db_for_error_te
     We test the PUT endpoint (update) with a non-existent ID.
     """
     from app.security.rbac import rbac
-    from app.models.database import KnowledgeBase
 
     # No knowledge entry with id=99999 exists
     mock_db_for_error_tests.execute.return_value.scalar_one_or_none.return_value = None
@@ -425,7 +421,7 @@ def test_sanitizer_whitespace_only_returns_empty_string():
 
 def test_unified_message_immutable():
     """UnifiedMessage is a frozen dataclass - attributes cannot be changed"""
-    from app.models import UnifiedMessage, Platform, MessageType
+    from app.models import MessageType, Platform, UnifiedMessage
     msg = UnifiedMessage(
         platform=Platform.TELEGRAM,
         platform_user_id="12345",
@@ -478,9 +474,11 @@ def test_webhook_telegram_signature_invalid():
 
 def test_webhook_telegram_valid_signature_returns_200():
     """Telegram webhook with valid signature returns 200"""
+    from unittest.mock import AsyncMock, patch
+
     from fastapi.testclient import TestClient
+
     from app.api import app
-    from unittest.mock import patch, AsyncMock
 
     client = TestClient(app, raise_server_exceptions=False)
 
@@ -505,7 +503,9 @@ def test_webhook_telegram_valid_signature_returns_200():
 def test_webhook_telegram_invalid_signature_returns_401():
     """Telegram webhook with invalid signature returns 401"""
     import os
+
     from fastapi.testclient import TestClient
+
     from app.api import app
 
     old_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
@@ -530,7 +530,9 @@ def test_webhook_telegram_invalid_signature_returns_401():
 def test_webhook_telegram_rate_limited_returns_429():
     """Telegram webhook when rate limited returns 429"""
     import os
+
     from fastapi.testclient import TestClient
+
     from app.api import app
 
     old_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
@@ -558,9 +560,10 @@ def test_webhook_telegram_rate_limited_returns_429():
 
 def test_webhook_line_signature_valid():
     """LINE verify_signature with correct secret returns True"""
-    import hmac
-    import hashlib
     import base64
+    import hashlib
+    import hmac
+
     from app.security.webhook_verifier import LineWebhookVerifier
 
     secret = "channel_secret"
@@ -586,11 +589,13 @@ def test_webhook_line_signature_invalid():
 
 def test_webhook_line_valid_signature_returns_200():
     """LINE webhook with valid signature returns 200"""
-    import os
-    import hmac
-    import hashlib
     import base64
+    import hashlib
+    import hmac
+    import os
+
     from fastapi.testclient import TestClient
+
     from app.api import app
 
     old_secret = os.environ.get("LINE_CHANNEL_SECRET", "")
@@ -622,10 +627,11 @@ def test_webhook_line_valid_signature_returns_200():
 
 def test_webhook_line_invalid_signature_returns_401():
     """LINE webhook with invalid signature returns 401"""
-    import os
+    from unittest.mock import AsyncMock, patch
+
     from fastapi.testclient import TestClient
+
     from app.api import app
-    from unittest.mock import patch, AsyncMock
 
     client = TestClient(app, raise_server_exceptions=False)
 
@@ -644,7 +650,9 @@ def test_webhook_line_invalid_signature_returns_401():
 def test_webhook_line_rate_limited_returns_429():
     """LINE webhook when rate limited returns 429"""
     import os
+
     from fastapi.testclient import TestClient
+
     from app.api import app
 
     old_secret = os.environ.get("LINE_CHANNEL_SECRET", "")
@@ -672,8 +680,9 @@ def test_webhook_line_rate_limited_returns_429():
 
 def test_webhook_messenger_signature_valid():
     """Messenger verify_signature with correct secret returns True"""
-    import hmac
     import hashlib
+    import hmac
+
     from app.security.webhook_verifier import MessengerWebhookVerifier
 
     app_secret = "messenger_app_secret"
@@ -702,8 +711,9 @@ def test_webhook_messenger_signature_invalid():
 
 def test_webhook_whatsapp_signature_valid():
     """WhatsApp verify_signature with correct secret returns True"""
-    import hmac
     import hashlib
+    import hmac
+
     from app.security.webhook_verifier import WhatsAppWebhookVerifier
 
     app_secret = "whatsapp_app_secret"
@@ -733,7 +743,9 @@ def test_webhook_whatsapp_signature_invalid():
 def test_webhook_401_on_invalid_signature():
     """Any webhook with invalid signature returns 401 (cross-platform)"""
     import os
+
     from fastapi.testclient import TestClient
+
     from app.api import app
 
     # Test with Telegram (signature provided but invalid)
@@ -759,7 +771,9 @@ def test_webhook_401_on_invalid_signature():
 def test_webhook_429_on_rate_limit_exceeded():
     """Any webhook exceeding rate limit returns 429"""
     import os
+
     from fastapi.testclient import TestClient
+
     from app.api import app
 
     old_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
@@ -784,9 +798,11 @@ def test_webhook_429_on_rate_limit_exceeded():
 def test_webhook_verifier_registry_resolves_correct_type():
     """Webhook verifier registry resolves correct type by platform name"""
     from app.security.webhook_verifier import (
-        VERIFIERS, get_verifier,
-        LineWebhookVerifier, TelegramWebhookVerifier,
-        MessengerWebhookVerifier, WhatsAppWebhookVerifier
+        LineWebhookVerifier,
+        MessengerWebhookVerifier,
+        TelegramWebhookVerifier,
+        WhatsAppWebhookVerifier,
+        get_verifier,
     )
 
     line_verifier = get_verifier("line", "secret")

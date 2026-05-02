@@ -1,8 +1,9 @@
-import subprocess
 import json
 import os
 import re
+import subprocess
 from datetime import datetime
+
 
 def run_tests():
     print("🚀 Running TDD Verification Suite...")
@@ -22,7 +23,7 @@ def get_git_revision():
 def update_report(report_data):
     report_path = "SPEC/omnibot-tdd-verification-report.md"
     summary = report_data.get("summary", {})
-    
+
     total = summary.get("total", 0)
     passed = summary.get("passed", 0)
     failed = summary.get("failed", 0)
@@ -49,13 +50,13 @@ def update_report(report_data):
 
     with open(report_path, "w") as f:
         f.write(content)
-    
+
     print(f"✅ Report updated: {passed}/{total} passed (Commit {commit})")
 
 if __name__ == "__main__":
     if not os.path.exists("SPEC"):
         os.makedirs("SPEC")
-    
+
     run_tests()
     if os.path.exists("report.json"):
         with open("report.json", "r") as f:

@@ -2,10 +2,9 @@
 Atomic TDD Tests for Phase 3: Deployment, DR, Encryption & Ops (#50)
 Covers: Deployment verification, Backup/DR, Encryption config, PostgreSQL/Redis security settings
 """
-import pytest
 import os
-import re
 
+import pytest
 
 # =============================================================================
 # Section 50: Phase 3 部署與災備驗證
@@ -47,8 +46,9 @@ async def test_backup_knowledge_soft_delete_rollback():
     # This test verifies the soft-delete mechanism allows rollback.
     # In real environment: DB must be running.
     pytest.skip("Requires running PostgreSQL and full app environment")
-    from app.models.database import KnowledgeBase, get_db
     from sqlalchemy import select
+
+    from app.models.database import KnowledgeBase, get_db
 
     async with get_db() as db:
         # Soft delete: set is_active=False
@@ -85,7 +85,6 @@ def test_deploy_docker_compose_all_services_healthy():
     Verify all services defined in docker-compose.yml are in healthy state.
     Requires: docker, docker-compose, running environment.
     """
-    import subprocess
 
     # Check docker-compose file exists and has expected services
     compose_path = "/private/tmp/omnibot-repo/docker-compose.yml"
@@ -217,7 +216,6 @@ def test_encryption_config_table_schema():
     assert hasattr(PlatformConfig, "webhook_secret_key_ref")
 
     # Verify JSONB config field can store encryption settings
-    import json
     test_config = {
         "encryption": {
             "type": "AES-256-GCM",
@@ -297,7 +295,6 @@ def test_redis_requirepass_auth():
     Section 50: Redis requirepass 認證正常。
     Verify Redis requirepass authentication is functioning correctly.
     """
-    import subprocess
 
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     # Verify Redis can be pinged with auth
@@ -351,7 +348,6 @@ def test_backup_pg_basebackup_and_restore():
     Verify pg_basebackup can create a valid backup and restore works.
     Requires: running PostgreSQL, backup script at scripts/backup.sh.
     """
-    import subprocess
 
     backup_script = "/private/tmp/omnibot-repo/scripts/backup.sh"
     assert os.path.exists(backup_script), "backup.sh must exist"

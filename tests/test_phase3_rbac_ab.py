@@ -1,14 +1,15 @@
 from app.security.rbac import rbac
+
 """Phase 3 RBAC + A/B Testing + Tracing tests"""
-import pytest
 import hashlib
-from unittest.mock import MagicMock, AsyncMock, patch
-from fastapi import Request, HTTPException
+from unittest.mock import AsyncMock, MagicMock
 
-from app.security.rbac import RBACEnforcer, rbac, ROLE_PERMISSIONS
+import pytest
+from fastapi import HTTPException, Request
+
+from app.security.rbac import RBACEnforcer
 from app.services.ab_test import ABTestManager
-from app.utils.tracing import tracer, setup_tracing
-
+from app.utils.tracing import setup_tracing, tracer
 
 # =============================================================================
 # RBAC Permission Matrix Tests (#25)
@@ -355,8 +356,9 @@ class TestABTestAnalyzeResults:
         manager = ABTestManager(mock_db)
 
         # analyze_results should query ExperimentResult and return metric data
-        from app.models.database import ExperimentResult
         from sqlalchemy import select
+
+        from app.models.database import ExperimentResult
 
         stmt = select(ExperimentResult).where(ExperimentResult.experiment_id == 1)
         result = await mock_db.execute(stmt)
@@ -530,15 +532,15 @@ async def test_ab_traffic_split_is_valid_jsonb_structure():
     representing percentages.
     """
     from app.models.database import Experiment
-    
+
     # Verify traffic_split column type is JSONB
     traffic_split_col = Experiment.__table__.columns.get('traffic_split')
     assert traffic_split_col is not None, "traffic_split column must exist on Experiment"
-    
+
     from sqlalchemy.dialects.postgresql import JSONB
     assert isinstance(traffic_split_col.type, JSONB), \
         f"traffic_split must be JSONB type, got {type(traffic_split_col.type)}"
-    
+
     # Verify the structure is valid JSONB (dict with integer percentages)
     valid_split = {"control": 50, "treatment": 50}
     import json
@@ -556,30 +558,30 @@ async def test_ab_traffic_split_sums_to_100():
     system should raise a ConfigurationError.
     """
     from app.services.ab_test import ABTestManager
-    
+
     mock_db = AsyncMock()
     manager = ABTestManager(mock_db)
-    
+
     # Test valid case: sums to 100
     valid_split = {"control": 50, "treatment": 50}
-    
+
     # Verify the sum is 100
     total = sum(valid_split.values())
     assert total == 100, f"Valid split should sum to 100, got {total}"
-    
+
     # Test invalid case: doesn't sum to 100
     invalid_split = {"control": 30, "treatment": 50}  # Sum = 80
     total_invalid = sum(invalid_split.values())
-    
+
     # The implementation should validate this and raise an error
     # For now, we document that such validation is required
     assert total_invalid != 100, "Invalid split should not sum to 100"
-    
+
     # Verify validation logic exists in ABTestManager
     # When get_variant() is called, it should check traffic_split sum
     import inspect
     get_variant_source = inspect.getsource(ABTestManager.get_variant)
-    
+
     # The method should validate that percentages sum to 100
     # This check may be in the form of an assertion or conditional
     assert "100" in get_variant_source or "sum" in get_variant_source.lower(), \
@@ -598,7 +600,6 @@ class TestOpenTelemetryTracing:
         # Setup a test tracer
         setup_tracing("test")
 
-        from opentelemetry import trace
 
         # Create a span and verify platform attribute can be set
         with tracer.start_as_current_span("test_span") as span:
@@ -620,7 +621,6 @@ class TestOpenTelemetryTracing:
         """emotion_analysis is child of handle_message"""
         setup_tracing("test")
 
-        from opentelemetry import trace
 
         with tracer.start_as_current_span("handle_message") as parent_span:
             parent_span.set_attribute("platform", "telegram")
@@ -639,7 +639,6 @@ class TestOpenTelemetryTracing:
         """knowledge_query is child span"""
         setup_tracing("test")
 
-        from opentelemetry import trace
 
         with tracer.start_as_current_span("handle_message") as parent:
             with tracer.start_as_current_span("knowledge_query") as child:
@@ -678,7 +677,6 @@ class TestTracingIntegration:
         """Test that spans are properly nested in a message flow"""
         setup_tracing("test")
 
-        from opentelemetry import trace
 
         # Simulate the message processing flow from api/__init__.py
         with tracer.start_as_current_span("process_telegram_message") as handle_span:
@@ -725,9 +723,10 @@ class TestTracingIntegration:
 @pytest.mark.asyncio
 async def test_experiment_abort_sets_status_aborted():
     """When experiment.abort() is called, status must be set to 'aborted'."""
-    from app.services.ab_test import ABTestManager
+    from unittest.mock import AsyncMock, MagicMock
+
     from app.models.database import Experiment
-    from unittest.mock import MagicMock, AsyncMock
+    from app.services.ab_test import ABTestManager
 
     mock_db = AsyncMock()
     manager = ABTestManager(mock_db)
@@ -748,9 +747,10 @@ async def test_experiment_abort_sets_status_aborted():
 @pytest.mark.asyncio
 async def test_rollback_experiment_abort_sets_status_aborted():
     """After rollback of abort, experiment status must be 'aborted' (no recovery)."""
-    from app.services.ab_test import ABTestManager
+    from unittest.mock import AsyncMock, MagicMock
+
     from app.models.database import Experiment
-    from unittest.mock import MagicMock, AsyncMock
+    from app.services.ab_test import ABTestManager
 
     mock_db = AsyncMock()
     manager = ABTestManager(mock_db)
@@ -775,8 +775,9 @@ async def test_rollback_experiment_abort_sets_status_aborted():
 @pytest.mark.asyncio
 async def test_rollback_experiment_returns_all_traffic_to_control():
     """When abort is rolled back, all traffic must return to 'control' variant."""
+    from unittest.mock import AsyncMock, MagicMock
+
     from app.services.ab_test import ABTestManager
-    from unittest.mock import MagicMock, AsyncMock
 
     mock_db = AsyncMock()
     manager = ABTestManager(mock_db)

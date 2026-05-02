@@ -1,12 +1,12 @@
 """RED Tests: Phase 1 Checklist Gaps - Section 2 (Unified Message), Section 5 (PII), Section 9 (Logger), Section 13 (DB Schema)"""
-import pytest
 import json
 import logging
 from datetime import datetime
 from io import StringIO
 
-from app.models import UnifiedMessage, Platform, MessageType
+import pytest
 
+from app.models import MessageType, Platform, UnifiedMessage
 
 # =============================================================================
 # Section 2: Unified Message Format - received_at default
@@ -240,7 +240,7 @@ class TestKnowledgeBaseEmbeddingsVector:
         # SQLAlchemy + asyncpg may not be installed in test environment
         # Use importorskip so the test SKIP-s rather than hard-crash
         sqlalchemy = pytest.importorskip("sqlalchemy")
-        
+
         from app.models.database import KnowledgeBase
 
         kb_table = KnowledgeBase.__table__
@@ -278,15 +278,14 @@ class TestUserFeedbackCheckConstraint:
         """
         # SQLAlchemy doesn't expose CHECK constraint details in ORM metadata easily.
         # Use SCHEMA_SQL raw text check as the source of truth.
-        from app.models.database import SCHEMA_SQL
-
         # The SCHEMA_SQL defines the schema - scan for the CHECK constraint on user_feedback
         # In the raw SQL, the user_feedback table is created without a CHECK.
         # After GREEN phase, a CHECK constraint should be present.
         # We assert it IS present (will fail until implementation).
-
         # Extract user_feedback table definition from SCHEMA_SQL
         import re
+
+        from app.models.database import SCHEMA_SQL
         # Find the user_feedback table block in SCHEMA_SQL
         match = re.search(
             r"CREATE TABLE IF NOT EXISTS user_feedback\s*\(\s*([^;]+)\);",

@@ -4,12 +4,9 @@ Phase 3 TDD RED Tests — Additional Checklist Gaps
 These tests fill remaining Phase 3 checklist items that are not yet
 covered (or not fully spec-compliant) in existing test files.
 """
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-import tracemalloc
-import time
-import asyncio
-import sys
-from unittest.mock import MagicMock, AsyncMock, patch
 from prometheus_client import Gauge
 
 # =============================================================================
@@ -114,6 +111,7 @@ def test_error_INTERNAL_ERROR_500():
     """Uncaught internal exception → HTTP 500 with error_code INTERNAL_ERROR"""
     try:
         from fastapi.testclient import TestClient
+
         from app.api import app
         client = TestClient(app, raise_server_exceptions=False)
     except Exception:
@@ -130,6 +128,7 @@ def test_error_AUTH_TOKEN_EXPIRED_401():
     """Expired/invalid Bearer token → HTTP 401 with error_code AUTH_TOKEN_EXPIRED"""
     try:
         from fastapi.testclient import TestClient
+
         from app.api import app
         client = TestClient(app, raise_server_exceptions=False)
     except Exception:
@@ -160,7 +159,6 @@ async def test_experiment_traffic_allocation_respects_split_percentages():
     """Traffic allocation matches traffic_split percentages precisely (±2% tolerance)"""
     mod = pytest.importorskip("app.services.ab_test")
     ABTestManager = mod.ABTestManager
-    from uuid import uuid4
 
     mock_db = AsyncMock()
     mock_result = MagicMock()

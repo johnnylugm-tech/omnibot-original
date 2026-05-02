@@ -2,16 +2,16 @@
 Ultimate Hybrid Knowledge Layer (Phase 3)
 Integrates Rule-based, RAG (pgvector), and LLM with real Vector Grounding.
 """
-import os
 import asyncio
-import numpy as np
-from typing import List, Optional, Any
-from sqlalchemy import select, or_, text
-from sqlalchemy.ext.asyncio import AsyncSession
-from sentence_transformers import SentenceTransformer
+import os
+from typing import Any, Optional
 
-from app.models.database import KnowledgeBase
+from sentence_transformers import SentenceTransformer
+from sqlalchemy import or_, select, text
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models import KnowledgeResult
+from app.models.database import KnowledgeBase
 from app.services.grounding import GroundingChecker
 
 
@@ -61,7 +61,7 @@ class HybridKnowledgeV7:
                 # Special case for test overrides
                 if llm_res.id == 99:
                     return llm_res
-                
+
                 # L5 Grounding: Verify LLM response against source knowledge
                 if combined_sources:
                     check_result = self.grounding_checker.check(
@@ -73,7 +73,7 @@ class HybridKnowledgeV7:
                     else:
                         # Log hallucination and fall back to escalation
                         return self._escalate(query_text, reason=f"hallucination_detected_{check_result['score']:.2f}")
-                
+
                 # If no sources to ground against, we trust LLM if confidence is high enough
                 return llm_res
 
@@ -171,17 +171,17 @@ class HybridKnowledgeV7:
         """State-aware LLM response generation with source grounding."""
         # Simulated LLM processing delay
         await asyncio.sleep(0.1)
-        
+
         if len(query) < 2:
             return None
 
         # Logic to simulate a high-quality LLM response using context and sources
         state_str = context.get('state', 'IDLE') if context else 'IDLE'
-        
+
         # If we have RAG sources, we "summarize" them
         # In a real app, this would be an API call to OpenAI/Anthropic/Gemini
         sources = await self._rag_search(query)
-        
+
         if sources:
             best_source = sources[0].content
             content = f"根據目前的對話狀態 ({state_str}) 與知識庫資料，關於 '{query}'：\n\n{best_source[:200]}...\n\n這是一個由大型語言模型生成的整合性回答。"

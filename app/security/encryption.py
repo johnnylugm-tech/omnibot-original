@@ -1,7 +1,8 @@
 """Data Encryption at Rest - Phase 3"""
-import os
 import base64
+import os
 from typing import Optional
+
 from cryptography.fernet import Fernet
 
 
@@ -15,7 +16,7 @@ class EncryptionService:
             # In production, this MUST be a strong key from a KMS
             raw_key = base64.urlsafe_b64encode(
                 b"omnibot-super-secret-key-32-bytes!!").decode()
-        
+
         self.key: str = str(raw_key)
 
         try:

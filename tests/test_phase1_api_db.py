@@ -1,22 +1,22 @@
 from app.security.rbac import rbac
+
 """Phase 1 API + DB Schema Tests for OmniBot"""
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-import uuid
-from unittest.mock import MagicMock, AsyncMock, patch
 from fastapi.testclient import TestClient
+
 from app.api import app
 from app.models.database import (
-    get_db,
-    User,
     Conversation,
-    Message,
-    KnowledgeBase,
     EscalationQueue,
+    KnowledgeBase,
+    Message,
     SecurityLog,
+    User,
     UserFeedback,
+    get_db,
 )
-from app.models import ApiResponse, PaginatedResponse
-
 
 # =============================================================================
 # Fixtures (reuse pattern from test_api.py)
@@ -29,11 +29,11 @@ def mock_db():
     mock_result.scalars.return_value.all.return_value = []
     mock_result.scalar_one_or_none.return_value = None
     db.execute.return_value = mock_result
-    
+
     def side_effect_add(obj):
         if hasattr(obj, 'id') and obj.id is None:
             obj.id = 1
-            
+
     db.add = MagicMock(side_effect=side_effect_add)
     db.commit = AsyncMock()
     db.refresh = AsyncMock()
@@ -163,7 +163,7 @@ def test_knowledge_get_returns_paginated_response(client, mock_db):
     # Mock returning items
     mock_k = KnowledgeBase(id=1, question="q", answer="a", category="c")
     mock_db.execute.return_value.scalars.return_value.all.return_value = [mock_k]
-    
+
     response = client.get("/api/v1/knowledge?q=test&page=1&limit=20", headers=headers)
     assert response.status_code == 200
     data = response.json()
@@ -177,7 +177,7 @@ def test_knowledge_update(client, mock_db):
     # Mock finding the object
     mock_k = KnowledgeBase(id=1, is_active=True, version=1)
     mock_db.execute.return_value.scalar_one_or_none.return_value = mock_k
-    
+
     response = client.put("/api/v1/knowledge/1", json={"answer": "updated"}, headers=headers)
     assert response.status_code == 200
     data = response.json()
@@ -190,7 +190,7 @@ def test_knowledge_delete(client, mock_db):
     # Mock finding the object
     mock_k = KnowledgeBase(id=1, is_active=True, version=1)
     mock_db.execute.return_value.scalar_one_or_none.return_value = mock_k
-    
+
     response = client.delete("/api/v1/knowledge/1", headers=headers)
     assert response.status_code == 200
     data = response.json()
@@ -290,7 +290,7 @@ def test_escalation_queue_conversation_id_unique():
     # Check that conversation_id has a unique constraint
     constraint_names = [c.name for c in eq.constraints if hasattr(c, 'name')]
     # The UNIQUE constraint on conversation_id should be present
-    has_unique = any('conversation_id' in str(c.columns) for c in eq.constraints 
+    has_unique = any('conversation_id' in str(c.columns) for c in eq.constraints
                      if hasattr(c, 'columns'))
     assert has_unique is True
 

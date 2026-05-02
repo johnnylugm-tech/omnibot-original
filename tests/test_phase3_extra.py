@@ -4,7 +4,6 @@ Covers: edge case types, ASR tolerance, emotion burst, multi-intent, prompt inje
 """
 import pytest
 
-
 # =============================================================================
 # Section 36: 黃金數據集與資料品質
 # =============================================================================
@@ -77,8 +76,8 @@ def test_edge_emotion_burst_sequence():
     Section 36: 情緒突發序列（3 次 negative 觸發 escalation）。
     Verify that 3 consecutive negative emotion events trigger escalation.
     """
-    from app.services.emotion import EmotionTracker, EmotionScore, EmotionCategory
-    from datetime import datetime
+
+    from app.services.emotion import EmotionCategory, EmotionScore, EmotionTracker
 
     tracker = EmotionTracker(history=[], half_life_hours=24.0)
 
@@ -154,8 +153,9 @@ def test_edge_spelling_error_tolerance():
     Section 36: 拼寫錯誤容錯（fuzzy match）。
     Verify that minor spelling errors in user queries are tolerated via fuzzy matching.
     """
+    from unittest.mock import AsyncMock, MagicMock
+
     from app.services.knowledge import HybridKnowledgeV7
-    from unittest.mock import MagicMock, AsyncMock
 
     # Mock db session
     mock_db = MagicMock()
@@ -299,8 +299,8 @@ def test_golden_dataset_used_in_regression():
 
 def test_emotion_intensity_range_0_to_1():
     """EmotionScore intensity must always be in range [0.0, 1.0]"""
-    from app.services.emotion import EmotionScore, EmotionCategory
-    from datetime import datetime
+
+    from app.services.emotion import EmotionCategory, EmotionScore
 
     # Valid intensity values should work
     score_0 = EmotionScore(category=EmotionCategory.POSITIVE, intensity=0.0)

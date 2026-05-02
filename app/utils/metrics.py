@@ -1,6 +1,6 @@
 """Prometheus Metrics - Phase 3"""
+
 from prometheus_client import Counter, Histogram, Summary, start_http_server
-import time
 
 # Metrics definitions
 REQUEST_COUNT = Counter(

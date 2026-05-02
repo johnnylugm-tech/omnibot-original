@@ -1,13 +1,12 @@
 """Phase 2 Security Tests - Prompt Injection Defense L3, PII Credit Card, Grounding Check L5, SLA Phase 2"""
-import pytest
-import re
-from unittest.mock import MagicMock, AsyncMock, patch
-from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.security.prompt_injection import PromptInjectionDefense, SecurityCheckResult
+import pytest
+
+from app.models import EscalationRequest
 from app.security.pii_masking import PIIMasking
+from app.security.prompt_injection import PromptInjectionDefense
 from app.services.escalation import EscalationManager
-from app.models import EscalationRequest, PIIMaskResult, KnowledgeResult
 
 # =============================================================================
 # Prompt Injection Defense L3 (#15)
@@ -118,8 +117,9 @@ class TestGroundingCheck:
     def grounding_checker(self):
         """Create GroundingChecker instance if sentence-transformers is available"""
         try:
-            from app.services.grounding import GroundingChecker
             import sentence_transformers
+
+            from app.services.grounding import GroundingChecker
             return GroundingChecker()
         except ImportError:
             pytest.skip("sentence-transformers not installed")
@@ -188,9 +188,9 @@ class TestEscalationManagerSLA:
 
 def test_rate_limiter_redis_unavailable_blocks_all_by_default():
     """When Redis is unavailable, rate limiter blocks all requests by default. RED-phase test."""
+
     from app.security.rate_limiter import RateLimiter
-    import asyncio
-    
+
     limiter = RateLimiter(redis_url="redis://invalid-host:9999", default_rps=100)
     # Use loop.run_until_complete for async in sync test if needed, or make test async
     # For simplicity, we assume the limiter.check handles the exception

@@ -1,8 +1,9 @@
 """
 Atomic TDD Tests for Phase 2: Grounding Checks L5 (#20)
 """
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import MagicMock, patch
 
 # -----------------------------------------------------------------------
 # GroundingChecker import — SKIP if sentence_transformers unavailable (RED)
@@ -26,7 +27,7 @@ def test_grounding_check_grounded_above_threshold(checker):
         [1.0, 0.0], # Response
         [[0.8, 0.6]] # Source (dot product = 0.8, both norms = 1.0)
     ]
-    
+
     result = checker.check("Response text", ["Source text"])
     assert result["grounded"] is True
     assert result["score"] >= 0.75
@@ -41,7 +42,7 @@ def test_grounding_check_not_grounded_below_threshold(checker):
         [1.0, 0.0],  # Response embedding
         [[0.5, 0.866]]  # Source embedding (dot = 0.5, norm=1 → similarity=0.5)
     ]
-    
+
     result = checker.check("Response text", ["Source text"])
     assert result["grounded"] is False, \
         f"Expected grounded=False but got grounded={result.get('grounded')}"
@@ -54,7 +55,7 @@ def test_grounding_check_returns_best_match_index(checker):
         [1.0, 0.0], # Response
         [[0.1, 0.99], [0.9, 0.43]] # Source 1 (low), Source 2 (high)
     ]
-    
+
     result = checker.check("Response", ["Low match", "High match"])
     assert result["best_match_index"] == 1
 

@@ -1,11 +1,13 @@
+
 import pytest
-from app.security.pii_masking import PIIMasking
-from app.security.rate_limiter import TokenBucket
-from app.security.prompt_injection import PromptInjectionDefense
-from app.services.emotion import EmotionTracker, EmotionCategory, EmotionScore
-from app.security.rbac import RBACEnforcer
+
 from app.security.ip_whitelist import IPWhitelist
-import ipaddress
+from app.security.pii_masking import PIIMasking
+from app.security.prompt_injection import PromptInjectionDefense
+from app.security.rate_limiter import TokenBucket
+from app.security.rbac import RBACEnforcer
+from app.services.emotion import EmotionCategory, EmotionScore, EmotionTracker
+
 
 @pytest.mark.spec
 def test_pii_masking_luhn_check_contract():
@@ -41,8 +43,6 @@ def test_emotion_tracker_escalation_contract():
 
 @pytest.mark.spec
 def test_rbac_enforcement_contract():
-    from fastapi import Request
-    from unittest.mock import MagicMock
     enforcer = RBACEnforcer()
     assert enforcer.check("admin", "knowledge", "delete") is True
     assert enforcer.check("agent", "knowledge", "delete") is False

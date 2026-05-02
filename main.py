@@ -1,9 +1,10 @@
-import uvicorn
 import signal
 import sys
-import asyncio
-from app.api import app
+
+import uvicorn
+
 from app.utils.logger import logger
+
 
 def handle_sigterm(signum, frame):
     """Graceful shutdown handler for SIGTERM"""

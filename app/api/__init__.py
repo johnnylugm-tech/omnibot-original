@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text, select, desc, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .helpers import get_or_create_user, get_active_conversation, get_emotion_tracker
 from app.models import (
     UnifiedResponse,
     EscalationRequest,

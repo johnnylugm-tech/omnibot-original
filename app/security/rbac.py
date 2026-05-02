@@ -1,10 +1,12 @@
 import os
+
 """RBAC (Role-Based Access Control) Enforcement - Phase 3"""
-import hmac
-import hashlib
-import json
 import base64
-from typing import Any, Callable, Dict, List, Optional
+import hashlib
+import hmac
+import json
+from typing import Callable, Dict, List
+
 from fastapi import HTTPException, Request
 
 # Role and Permission mapping (Phase 3 spec)

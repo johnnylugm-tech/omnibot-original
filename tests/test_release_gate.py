@@ -13,11 +13,11 @@ Phase 3 Gate:   4 tests
 A/B Test Gate:  1 test
 Total:         13 tests
 """
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from app.services.odd_queries import ODDQueryManager
+import pytest
 
+from app.services.odd_queries import ODDQueryManager
 
 # ---------------------------------------------------------------------------
 # Fixtures

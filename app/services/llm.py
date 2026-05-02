@@ -1,6 +1,7 @@
 """LLM Service - Phase 3"""
 import os
-from typing import Any, Optional
+from typing import Optional
+
 
 class LLMService:
     """Mockable LLM service for testing and production"""
@@ -8,7 +9,7 @@ class LLMService:
         # Env-aware model name
         self.model_name = model_name or os.getenv("LLM_MODEL_PROD", os.getenv("LLM_MODEL", "gpt-4"))
         self.base_prompt = self._load_base_prompt()
-        
+
     def _load_base_prompt(self) -> str:
         """Load Layer 3 base prompt from env or file config"""
         prompt = os.getenv("LLM_LAYER3_BASE_PROMPT")

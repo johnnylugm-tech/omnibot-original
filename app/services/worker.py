@@ -1,7 +1,8 @@
 """Redis Streams Async Worker - Phase 3"""
+from typing import Any, List, Sequence
+
 import redis.asyncio as aioredis
 from redis.exceptions import ResponseError
-from typing import Optional, List, Any, Sequence
 
 
 class AsyncMessageProcessor:
@@ -80,7 +81,7 @@ class AsyncMessageProcessor:
         raw_pending = await self.redis.xpending_range(
             stream_name, self.group, "-", "+", count
         )
-        
+
         if not raw_pending:
             return []
 

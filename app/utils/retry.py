@@ -1,8 +1,8 @@
 """Exponential Backoff Retry Strategy - Phase 3"""
 import asyncio
-import secrets
 import logging
-from typing import Any, Callable, TypeVar, Coroutine
+import secrets
+from typing import Any, Callable, Coroutine, TypeVar
 
 T = TypeVar("T")
 logger = logging.getLogger("omnibot.retry")

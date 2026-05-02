@@ -1,9 +1,13 @@
 import os
+
 os.environ['SIMULATE_LLM'] = 'false'
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from app.services.knowledge import HybridKnowledgeV7
+
 from app.models import KnowledgeResult
+from app.services.knowledge import HybridKnowledgeV7
+
 
 @pytest.mark.asyncio
 async def test_hybrid_knowledge_layer_escalate():

@@ -1,7 +1,9 @@
-import pytest
-import os
 import subprocess
+
+import pytest
+
 from app.services.backup import BackupService
+
 
 @pytest.mark.security
 def test_id_security_backup_subprocess_contract():

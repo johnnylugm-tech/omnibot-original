@@ -1,7 +1,6 @@
 """Shared pytest fixtures and mocks for omnibot test suite."""
-import sys
-from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 

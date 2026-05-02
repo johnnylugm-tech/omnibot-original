@@ -3,8 +3,10 @@ Atomic TDD Tests for Phase 1-3: ODD SQL Accuracy (#40)
 Focus: Numerical accuracy of 13 analysis SQLs using a Data Factory.
 All 11 gap tests for ODD SQL queries.
 """
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
 from app.services.odd_queries import ODDQueryManager
 
 
@@ -380,7 +382,6 @@ async def test_id_40_13_ab_test_performance(mock_db):
 async def test_cost_estimation_layer1_zero():
     """Layer 1 (rule-based) knowledge lookup costs $0 - no LLM involved"""
     from app.services.knowledge import HybridKnowledgeV7
-    from app.models import KnowledgeResult
 
     mock_db = AsyncMock()
     mock_result = MagicMock()

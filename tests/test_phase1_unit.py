@@ -1,32 +1,33 @@
 import os
+
 os.environ['SIMULATE_LLM'] = 'false'
 """Phase 1 Unit Tests for OmniBot - Comprehensive Coverage"""
-import pytest
 import time
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # Models
 from app.models import (
     ApiResponse,
+    KnowledgeResult,
     PaginatedResponse,
     UnifiedResponse,
-    KnowledgeResult,
 )
+from app.security.input_sanitizer import InputSanitizer
+from app.security.pii_masking import PIIMasking
+from app.security.rate_limiter import RateLimiter, TokenBucket
 
 # Security modules
 from app.security.webhook_verifier import (
     VERIFIERS,
-    get_verifier,
     LineWebhookVerifier,
-    TelegramWebhookVerifier,
     MessengerWebhookVerifier,
+    TelegramWebhookVerifier,
     WhatsAppWebhookVerifier,
+    get_verifier,
 )
-from app.security.rate_limiter import RateLimiter, TokenBucket
-from app.security.pii_masking import PIIMasking
-from app.security.input_sanitizer import InputSanitizer
 from app.services.knowledge import HybridKnowledgeV7
-
 
 # =============================================================================
 # 1. Webhook Verifier Registry Tests
@@ -331,9 +332,6 @@ class TestKnowledgeLayer:
     @pytest.mark.asyncio
     async def test_knowledge_layer_no_match_confidence_below_0_7(self):
         """When rule match confidence <= 0.7, it should not be adopted as high confidence"""
-        from app.models.database import KnowledgeBase
-        from unittest.mock import AsyncMock, MagicMock
-        from sqlalchemy import select
 
         # Create mock db session
         mock_db = AsyncMock()
@@ -360,9 +358,9 @@ class TestExistingPatterns:
 
     def test_line_verifier_integration(self):
         """Line webhook verifier - integration pattern from test_security.py"""
-        import hmac
-        import hashlib
         import base64
+        import hashlib
+        import hmac
 
         secret = "channel_secret"
         verifier = LineWebhookVerifier(secret)

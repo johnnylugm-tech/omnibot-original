@@ -1,13 +1,13 @@
 """Phase 3 i18n + Cost Model + ODD SQL + KPI + API Consistency tests"""
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from datetime import datetime, timedelta
-from uuid import uuid4
 import re
+from datetime import datetime, timedelta
+from unittest.mock import MagicMock
+from uuid import uuid4
 
-from app.utils.i18n import i18n, I18nManager, TRANSLATIONS
+import pytest
+
 from app.models import ApiResponse, PaginatedResponse
-
+from app.utils.i18n import TRANSLATIONS, I18nManager, i18n
 
 # =============================================================================
 # i18n / Localization Tests (#37)
@@ -120,12 +120,11 @@ def test_i18n_date_format_respects_locale():
     # Chinese date format typically uses yyyy年MM月DD日
     # English uses MM/DD/yyyy
     # We test that locale-specific date formatting is available
-    from app.utils.i18n import I18nManager
-    
+
     # Verify different locales have different translations
     zh_greeting = i18n.translate("greeting", "zh-TW")
     en_greeting = i18n.translate("greeting", "en")
-    
+
     assert zh_greeting != en_greeting
     assert "請問" in zh_greeting or "您好" in zh_greeting
     assert "Hello" in en_greeting
@@ -136,10 +135,9 @@ def test_i18n_currency_format_respects_locale():
     # Currency format differs by locale
     # zh-TW: uses TWD with ¥ or 元
     # en-US: uses USD with $
-    
+
     # The locale-specific formatting should produce different results
-    from app.utils.i18n import I18nManager
-    
+
     # We can't fully test currency without actual formatting functions,
     # but we verify the locale system supports different translations
     assert "zh-TW" in TRANSLATIONS
@@ -175,11 +173,11 @@ def test_cost_model_combined_input_and_output():
     output_tokens = 500_000
     price_per_1M_input = 0.5
     price_per_1M_output = 1.5
-    
+
     input_cost = (input_tokens / 1_000_000) * price_per_1M_input
     output_cost = (output_tokens / 1_000_000) * price_per_1M_output
     total = input_cost + output_cost
-    
+
     assert total == 1.25  # 0.5 + 0.75
 
 
@@ -192,7 +190,7 @@ def test_cost_model_accumulates_across_conversation():
         {"knowledge_source": "llm", "cost": 0.02},
         {"knowledge_source": "rule", "cost": 0.001},
     ]
-    
+
     total_cost = sum(turn["cost"] for turn in turns)
     assert abs(total_cost - 0.027) < 1e-9  # 0.001 + 0.005 + 0.02 + 0.001
 
@@ -201,7 +199,7 @@ def test_cost_model_respects_daily_cap():
     """exceeding daily_cap cost is capped"""
     daily_cap = 10.0
     actual_cost = 15.0
-    
+
     capped_cost = min(actual_cost, daily_cap)
     assert capped_cost == 10.0
 
@@ -209,7 +207,7 @@ def test_cost_model_respects_daily_cap():
 def test_cost_model_logs_to_security_layer():
     """cost logged to security_logs table"""
     from app.models.database import SecurityLog
-    
+
     # Verify SecurityLog model exists and has cost-related fields
     log = SecurityLog(
         conversation_id=1,
@@ -217,7 +215,7 @@ def test_cost_model_logs_to_security_layer():
         blocked=False,
         platform="telegram"
     )
-    
+
     assert log.conversation_id == 1
     assert log.layer == "cost"
 
@@ -227,10 +225,10 @@ def test_cost_model_budget_alert_at_threshold():
     budget = 100.0
     current_spend = 80.0
     threshold = 0.8
-    
+
     is_at_threshold = current_spend >= budget * threshold
     assert is_at_threshold is True
-    
+
     # Also test just under threshold
     current_spend = 79.0
     is_at_threshold = current_spend >= budget * threshold
@@ -241,7 +239,7 @@ def test_cost_model_budget_alert_blocked_at_100_percent():
     """100% budget blocks requests"""
     budget = 100.0
     current_spend = 100.0
-    
+
     should_block = current_spend >= budget
     assert should_block is True
 
@@ -269,7 +267,7 @@ def test_cost_model_empty_conversation_returns_zero():
 def test_odd_queries_count_returns_total():
     """count_query returns total number of odd records"""
     from app.models.database import EscalationQueue
-    
+
     # Verify EscalationQueue model exists
     assert EscalationQueue.__tablename__ == "escalation_queue"
     # Verify it has required fields
@@ -281,7 +279,7 @@ def test_odd_queries_count_returns_total():
 def test_odd_queries_filter_by_status():
     """filter by status works"""
     from app.models.database import EscalationQueue
-    
+
     # Status field should exist for filtering pending/completed
     assert hasattr(EscalationQueue, "queued_at")
     assert hasattr(EscalationQueue, "resolved_at")
@@ -290,7 +288,7 @@ def test_odd_queries_filter_by_status():
 def test_odd_queries_filter_by_priority():
     """filter by priority works"""
     from app.models.database import EscalationQueue
-    
+
     assert hasattr(EscalationQueue, "priority")
     # Priority is used for ordering and filtering
 
@@ -301,10 +299,10 @@ def test_odd_queries_pagination():
     limit = 20
     offset = 0
     page = 1
-    
+
     calculated_offset = (page - 1) * limit
     assert calculated_offset == offset
-    
+
     # Page 2
     page = 2
     calculated_offset = (page - 1) * limit
@@ -320,8 +318,8 @@ def test_odd_queries_order_by_queued_at():
 
 def test_odd_queries_join_conversations():
     """join with conversations table works"""
-    from app.models.database import EscalationQueue, Conversation
-    
+    from app.models.database import Conversation, EscalationQueue
+
     # Verify foreign key relationship exists
     assert hasattr(EscalationQueue, "conversation_id")
     # Verify conversations table exists
@@ -330,8 +328,8 @@ def test_odd_queries_join_conversations():
 
 def test_odd_queries_join_users():
     """join with users table works"""
-    from app.models.database import User, EscalationQueue
-    
+    from app.models.database import EscalationQueue, User
+
     # Verify assigned_agent field links to users
     assert hasattr(EscalationQueue, "assigned_agent")
     # Verify users table exists
@@ -341,7 +339,7 @@ def test_odd_queries_join_users():
 def test_odd_queries_select_required_columns():
     """required columns present in result"""
     from app.models.database import EscalationQueue
-    
+
     required_columns = ["id", "conversation_id", "reason", "priority", "queued_at"]
     for col in required_columns:
         assert hasattr(EscalationQueue, col)
@@ -352,19 +350,19 @@ def test_odd_queries_where_clause_and_or_precedence():
     # Simulate SQL precedence: AND has higher precedence than OR
     # WHERE status = 'pending' AND priority > 0 OR priority > 5
     # Should be evaluated as: (status = 'pending' AND priority > 0) OR priority > 5
-    
+
     # Test case: pending + high priority should match
     status = "pending"
     priority = 3
     result = (status == "pending" and priority > 0) or priority > 5
     assert result is True
-    
+
     # Test case: resolved + high priority should match (OR part)
     status = "resolved"
     priority = 6
     result = (status == "pending" and priority > 0) or priority > 5
     assert result is True
-    
+
     # Test case: resolved + low priority should NOT match
     status = "resolved"
     priority = 3
@@ -376,7 +374,7 @@ def test_odd_queries_limit_capped_at_100():
     """limit > 100 is capped to 100"""
     requested_limit = 200
     max_limit = 100
-    
+
     capped_limit = min(requested_limit, max_limit)
     assert capped_limit == 100
 
@@ -385,7 +383,7 @@ def test_odd_queries_page_calculation():
     """page 2 with limit 20 produces offset 20"""
     page = 2
     limit = 20
-    
+
     offset = (page - 1) * limit
     assert offset == 20
 
@@ -401,13 +399,13 @@ def test_odd_queries_empty_result_handled():
 def test_odd_queries_invalid_params_returns_error():
     """invalid params return error response"""
     from app.models import ApiResponse
-    
+
     error_response = ApiResponse(
         success=False,
         error="Invalid query parameters",
         error_code="INVALID_PARAMS"
     )
-    
+
     assert error_response.success is False
     assert error_response.error_code == "INVALID_PARAMS"
 
@@ -424,7 +422,7 @@ def test_kpi_total_conversations():
         {"id": 2, "status": "closed"},
         {"id": 3, "status": "active"},
     ]
-    
+
     total = len(conversations)
     assert total == 3
 
@@ -437,7 +435,7 @@ def test_kpi_avg_resolution_time():
         {"id": 2, "response_time_ms": 2000},
         {"id": 3, "response_time_ms": 3000},
     ]
-    
+
     total_time = sum(c["response_time_ms"] for c in conversations)
     avg_time = total_time / len(conversations)
     assert avg_time == 2000.0  # (1000 + 2000 + 3000) / 3
@@ -447,7 +445,7 @@ def test_kpi_escalation_rate():
     """escalation_rate = escalated / total * 100"""
     total_conversations = 100
     escalated = 15
-    
+
     escalation_rate = (escalated / total_conversations) * 100
     assert escalation_rate == 15.0
 
@@ -456,7 +454,7 @@ def test_kpi_knowledge_hit_rate():
     """knowledge_hit_rate = knowledge_hits / total * 100"""
     total_conversations = 100
     knowledge_hits = 72
-    
+
     knowledge_hit_rate = (knowledge_hits / total_conversations) * 100
     assert knowledge_hit_rate == 72.0
 
@@ -465,7 +463,7 @@ def test_kpi_sla_compliance_rate():
     """sla_compliance_rate = on_time / total * 100"""
     total = 100
     on_time = 95
-    
+
     sla_compliance_rate = (on_time / total) * 100
     assert sla_compliance_rate == 95.0
 
@@ -474,46 +472,44 @@ def test_kpi_revenue_per_conversation():
     """revenue_per_conversation calculated"""
     total_revenue = 5000.0
     total_conversations = 100
-    
+
     revenue_per_conversation = total_revenue / total_conversations
     assert revenue_per_conversation == 50.0
 
 
 def test_kpi_daily_breakdown():
     """daily breakdown with date dimension"""
-    from datetime import datetime, timedelta
-    
+
     # Simulate daily breakdown data
     today = datetime.now().date()
     yesterday = today - timedelta(days=1)
-    
+
     daily_data = {
         yesterday: {"conversations": 45, "revenue": 2250.0},
         today: {"conversations": 55, "revenue": 2750.0},
     }
-    
+
     assert daily_data[yesterday]["conversations"] == 45
     assert daily_data[today]["conversations"] == 55
 
 
 def test_kpi_filters_by_date_range():
     """date_from and date_to filters applied"""
-    from datetime import datetime, timedelta
-    
+
     date_from = datetime(2024, 1, 1)
     date_to = datetime(2024, 1, 31)
-    
+
     conversations = [
         {"id": 1, "started_at": datetime(2024, 1, 15)},
         {"id": 2, "started_at": datetime(2024, 1, 20)},
         {"id": 3, "started_at": datetime(2024, 2, 5)},  # outside range
     ]
-    
+
     filtered = [
         c for c in conversations
         if date_from <= c["started_at"] <= date_to
     ]
-    
+
     assert len(filtered) == 2
     assert filtered[0]["id"] == 1
     assert filtered[1]["id"] == 2
@@ -532,7 +528,7 @@ def test_phase1_phase2_phase3_api_contract_consistent():
         error=None,
         error_code=None
     )
-    
+
     assert response.success is True
     assert response.data is not None
     assert response.error is None
@@ -546,7 +542,7 @@ def test_phase1_phase2_phase3_error_response_consistent():
         error="Not found",
         error_code="NOT_FOUND"
     )
-    
+
     assert error_response.success is False
     assert error_response.error == "Not found"
     assert error_response.error_code == "NOT_FOUND"
@@ -563,7 +559,7 @@ def test_phase1_phase2_phase3_pagination_consistent():
         limit=20,
         has_next=True
     )
-    
+
     assert paginated.success is True
     assert len(paginated.data) == 2
     assert paginated.total == 100
@@ -576,10 +572,10 @@ def test_phase1_phase2_phase3_auth_header_consistent():
     """all authenticated endpoints use same Authorization header format"""
     # Pattern: X-User-Role header for RBAC
     auth_header_pattern = r"^Bearer\s+.+$|^X-User-Role:\s+.+$"
-    
+
     valid_bearer = "Bearer abc123token"
     valid_x_role = "X-User-Role: admin"
-    
+
     assert re.match(auth_header_pattern, valid_bearer) or re.match(auth_header_pattern, valid_x_role)
 
 
@@ -592,7 +588,7 @@ def test_phase1_phase2_phase3_version_prefix_consistent():
         "/api/v1/knowledge",
         "/api/v1/conversations",
     ]
-    
+
     for path in endpoint_paths:
         assert path.startswith("/api/v1/"), f"Path {path} should start with /api/v1/"
 
@@ -604,12 +600,12 @@ def test_phase1_phase2_phase3_version_prefix_consistent():
 def test_api_conversations_conversation_id_type_is_uuid():
     """conversation_id is UUID format"""
     from uuid import UUID
-    
+
     # Test valid UUID
     valid_uuid = str(uuid4())
     parsed = UUID(valid_uuid)
     assert str(parsed) == valid_uuid
-    
+
     # Test invalid UUID raises error
     invalid_uuid = "not-a-uuid"
     with pytest.raises(ValueError):
@@ -622,10 +618,10 @@ def test_api_messages_pagination():
     all_messages = [{"id": i} for i in range(1, 101)]  # 100 messages
     page = 2
     limit = 20
-    
+
     offset = (page - 1) * limit
     paginated_messages = all_messages[offset : offset + limit]
-    
+
     assert len(paginated_messages) == 20
     assert paginated_messages[0]["id"] == 21
     assert paginated_messages[-1]["id"] == 40
@@ -639,10 +635,10 @@ def test_api_messages_filter_by_conversation():
         {"id": 3, "conversation_id": 200},
         {"id": 4, "conversation_id": 100},
     ]
-    
+
     conversation_id = 100
     filtered = [m for m in messages if m["conversation_id"] == conversation_id]
-    
+
     assert len(filtered) == 3
     assert all(m["conversation_id"] == 100 for m in filtered)
 
@@ -654,21 +650,20 @@ def test_api_messages_filter_by_conversation():
 @pytest.mark.asyncio
 async def test_cost_model_with_mock_db():
     """Cost model integration with mocked DB"""
-    from app.models.database import Conversation, Message
-    from unittest.mock import MagicMock
-    
+    from app.models.database import Conversation
+
     # Mock conversation with resolution_cost
     mock_conv = MagicMock(spec=Conversation)
     mock_conv.id = 1
     mock_conv.resolution_cost = 0.0
-    
+
     # Simulate adding a message with cost
     cost_map = {"rule": 0.001, "rag": 0.005, "llm": 0.02, "escalate": 0.05}
     knowledge_source = "rag"
     cost = cost_map[knowledge_source]
-    
+
     mock_conv.resolution_cost += cost
-    
+
     assert mock_conv.resolution_cost == 0.005
 
 
@@ -676,8 +671,7 @@ async def test_cost_model_with_mock_db():
 async def test_kpi_calculation_with_mock_db():
     """KPI calculation with mocked database results"""
     from app.models.database import Conversation
-    from unittest.mock import MagicMock
-    
+
     # Mock conversations with response_time_ms
     mock_convs = []
     for i, rt in enumerate([1000, 2000, 3000, 4000, 5000]):
@@ -686,27 +680,26 @@ async def test_kpi_calculation_with_mock_db():
         mock_conv.response_time_ms = rt
         mock_conv.first_contact_resolution = i < 3  # First 3 are FCR
         mock_convs.append(mock_conv)
-    
+
     # Calculate avg resolution time
     total_time = sum(c.response_time_ms for c in mock_convs)
     avg_time = total_time / len(mock_convs)
-    
+
     assert avg_time == 3000.0
-    
+
     # Calculate FCR rate
     fcr_count = sum(1 for c in mock_convs if c.first_contact_resolution)
     fcr_rate = (fcr_count / len(mock_convs)) * 100
-    
+
     assert fcr_rate == 60.0  # 3/5 * 100
 
 
 @pytest.mark.asyncio
 async def test_odd_query_with_mock_db():
     """ODD queries with mocked database session"""
+
     from app.models.database import EscalationQueue
-    from unittest.mock import MagicMock, AsyncMock
-    from sqlalchemy import select
-    
+
     # Mock query result for escalation queue
     mock_result = MagicMock()
     mock_records = [
@@ -717,9 +710,9 @@ async def test_odd_query_with_mock_db():
     mock_records[0].priority = 1
     mock_records[1].id = 2
     mock_records[1].priority = 0
-    
+
     mock_result.scalars.return_value.all.return_value = mock_records
-    
+
     # Verify the query would return 2 records
     assert len(mock_records) == 2
 
@@ -728,12 +721,12 @@ async def test_odd_query_with_mock_db():
 async def test_api_contract_with_mock_request():
     """API contract consistency with mocked request"""
     from app.models import ApiResponse, PaginatedResponse
-    
+
     # Standard success response
     response = ApiResponse(success=True, data={"key": "value"})
     assert response.success is True
     assert response.error is None
-    
+
     # Error response
     error_resp = ApiResponse(
         success=False,
@@ -742,7 +735,7 @@ async def test_api_contract_with_mock_request():
     )
     assert error_resp.success is False
     assert error_resp.error_code == "VALIDATION_ERROR"
-    
+
     # Paginated response
     paginated = PaginatedResponse(
         success=True,

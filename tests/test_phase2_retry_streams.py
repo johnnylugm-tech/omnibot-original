@@ -1,14 +1,11 @@
 """Phase 2 Tests: Retry + Redis Streams (Issues #23, #24, #31, #32)"""
+from unittest.mock import AsyncMock, patch
+
 import pytest
-import asyncio
-import time
-import random
-from unittest.mock import AsyncMock, MagicMock, patch, ANY
 from redis.exceptions import ResponseError
 
-from app.utils.retry import RetryStrategy
 from app.services.worker import AsyncMessageProcessor
-
+from app.utils.retry import RetryStrategy
 
 # ==============================================================================
 # Redis Streams Async Processing Tests (#23, #31)

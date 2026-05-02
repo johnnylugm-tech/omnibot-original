@@ -1,8 +1,10 @@
 """A/B Testing Framework - Phase 3"""
 import hashlib
-from typing import Dict, List, Optional
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Optional
+
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.database import Experiment
 
 

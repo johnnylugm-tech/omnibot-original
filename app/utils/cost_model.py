@@ -1,9 +1,10 @@
 """Cost estimation model for LLM usage tracking."""
-from typing import Dict, Any, Optional
+from typing import Any, Dict
+
 
 class CostModel:
     """Calculates and logs costs based on token usage and model tier."""
-    
+
     PRICING = {
         "gpt-4": {"prompt": 0.03, "completion": 0.06},
         "gpt-3.5-turbo": {"prompt": 0.0015, "completion": 0.002},
@@ -36,6 +37,6 @@ class CostModel:
         """
         if current_total >= cap:
             return 0.0
-        
+
         remaining = cap - current_total
         return min(next_cost, remaining)

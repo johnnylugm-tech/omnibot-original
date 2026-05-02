@@ -1,11 +1,11 @@
 """Escalation Manager tests - SLA tracking and User Feedback."""
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock
 
-from app.services.escalation import EscalationManager, FeedbackManager, ValidationError
+import pytest
+
 from app.models import EscalationRequest
-
+from app.services.escalation import EscalationManager, FeedbackManager, ValidationError
 
 # =============================================================================
 # Escalation Manager SLA Tests (5 tests)
@@ -322,7 +322,6 @@ async def test_feedback_thumbs_up_accepted():
     Spec: User-submitted feedback with rating='thumbs_up' must be
     accepted without raising ValidationError.
     """
-    from app.services.escalation import FeedbackManager
 
     mock_db = AsyncMock()
     mock_db.add = MagicMock()
@@ -347,7 +346,6 @@ async def test_feedback_thumbs_down_accepted():
     Spec: User-submitted feedback with rating='thumbs_down' must be
     accepted without raising ValidationError.
     """
-    from app.services.escalation import FeedbackManager
 
     mock_db = AsyncMock()
     mock_db.add = MagicMock()
@@ -373,7 +371,6 @@ async def test_feedback_invalid_value_rejected():
     Passing any other value (e.g., 'stars', 'emoji', '') must raise
     ValidationError with status 422.
     """
-    from app.services.escalation import FeedbackManager, ValidationError
 
     mock_db = AsyncMock()
 
@@ -397,7 +394,6 @@ async def test_feedback_optional_comment():
     Spec: The comment field in feedback submission is optional;
     passing comment=None must be accepted.
     """
-    from app.services.escalation import FeedbackManager
 
     mock_db = AsyncMock()
     mock_db.add = MagicMock()

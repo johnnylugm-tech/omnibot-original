@@ -1,8 +1,10 @@
 """Alert management and threshold monitoring."""
-from typing import Dict, Any, List, Optional
-from enum import Enum
-import httpx
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, Optional
+
+import httpx
+
 from app.utils.logger import StructuredLogger
 
 logger = StructuredLogger("alerts")
@@ -30,7 +32,7 @@ class AlertRule:
 
 class AlertManager:
     """Monitors metrics and triggers alerts based on rules."""
-    
+
     def __init__(self, webhook_url: Optional[str] = None):
         self.webhook_url = webhook_url
         self.rules = [

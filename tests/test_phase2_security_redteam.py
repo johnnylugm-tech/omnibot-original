@@ -3,7 +3,9 @@ Atomic TDD Tests for Phase 2: Red Team Security (#48/15)
 Focus: Advanced Prompt Injection Variants (Unicode, Sandwich, Jailbreak)
 """
 import pytest
+
 from app.security.prompt_injection import PromptInjectionDefense
+
 
 @pytest.fixture
 def defense():
@@ -48,6 +50,7 @@ def test_id_48_04_sandwich_hybrid_attack_neutralization(defense):
 # =============================================================================
 
 from app.security.pii_masking import PIIMasking
+
 
 @pytest.fixture
 def pii_masker():
@@ -200,8 +203,9 @@ def test_redteam_rate_limit():
     Red Team: Rate limiting enforcement.
     Rapid requests from a single source must be rate-limited.
     """
-    from app.security.rate_limiter import RateLimiter
     import asyncio
+
+    from app.security.rate_limiter import RateLimiter
 
     limiter = RateLimiter()
 

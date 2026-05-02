@@ -1,12 +1,13 @@
 """
 Atomic TDD Tests for Phase 2: SLA Escalation (#21)
 """
-import pytest
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, AsyncMock, patch
-from app.services.escalation import EscalationManager
-from app.models import EscalationRequest
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+from app.models import EscalationRequest
+from app.services.escalation import EscalationManager
 
 # =============================================================================
 # Fixtures shared with error-code tests (migrated from test_phase1_extra.py)
@@ -36,6 +37,7 @@ def mock_db_for_error_tests():
 def client_with_mock_db(mock_db_for_error_tests):
     """TestClient with overridden DB dependency."""
     from fastapi.testclient import TestClient
+
     from app.api import app
     from app.models.database import get_db
 
@@ -92,13 +94,13 @@ async def test_id_21_03_sla_p2_5_minutes(mock_db):
 async def test_id_21_04_get_sla_breaches(mock_db):
     """Verify get_sla_breaches filters correctly"""
     manager = EscalationManager(mock_db)
-    
+
     mock_result = MagicMock()
     mock_result.scalars.return_value.all.return_value = ["breach1", "breach2"]
     mock_db.execute.return_value = mock_result
-    
+
     results = await manager.get_sla_breaches()
-    
+
     assert results == ["breach1", "breach2"]
     # Verify the query conditions (conceptually)
     args, kwargs = mock_db.execute.call_args
@@ -110,13 +112,13 @@ async def test_id_21_04_get_sla_breaches(mock_db):
 async def test_id_21_05_get_sla_breaches_ordered_by_priority(mock_db):
     """Verify results are ordered by priority DESC, queued_at ASC"""
     manager = EscalationManager(mock_db)
-    
+
     mock_result = MagicMock()
     mock_result.scalars.return_value.all.return_value = []
     mock_db.execute.return_value = mock_result
-    
+
     await manager.get_sla_breaches()
-    
+
     args, kwargs = mock_db.execute.call_args
     query_str = str(args[0]).lower()
     assert "order by" in query_str
@@ -138,8 +140,9 @@ async def test_sla_breach_detection_varies_by_priority(mock_db):
     Spec: SLA_MINUTES = {0: 30, 1: 15, 2: 5}
     """
     from datetime import datetime, timedelta
-    from app.services.escalation import EscalationManager
+
     from app.models import EscalationRequest
+    from app.services.escalation import EscalationManager
 
     manager = EscalationManager(mock_db)
 

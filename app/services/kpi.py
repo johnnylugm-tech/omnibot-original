@@ -1,13 +1,16 @@
 """High-level KPI management and business intelligence service."""
-from typing import Dict, Any, List
 from datetime import datetime, timedelta
-from sqlalchemy import select, func, text, cast, Float
+from typing import Any, Dict, List
+
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.database import Conversation, EscalationQueue, Message
+
 
 class KPIManager:
     """Aggregates metrics and database logs to provide business KPIs."""
-    
+
     def __init__(self, db_session: AsyncSession):
         self.db = db_session
 
@@ -28,10 +31,10 @@ class KPIManager:
         """Returns percentage of conversations that were escalated."""
         total_stmt = select(func.count(Conversation.id))
         esc_stmt = select(func.count(EscalationQueue.id))
-        
+
         total = await self.db.execute(total_stmt)
         esc = await self.db.execute(esc_stmt)
-        
+
         total_val = total.scalar() or 0
         if total_val == 0:
             return 0.0
@@ -44,10 +47,10 @@ class KPIManager:
             Message.role == "assistant",
             Message.knowledge_source.in_(["rule", "rag"])
         )
-        
+
         total = await self.db.execute(total_stmt)
         hit = await self.db.execute(hit_stmt)
-        
+
         total_val = total.scalar() or 0
         if total_val == 0:
             return 0.0
@@ -60,10 +63,10 @@ class KPIManager:
             EscalationQueue.resolved_at.isnot(None),
             EscalationQueue.resolved_at <= EscalationQueue.sla_deadline
         )
-        
+
         total = await self.db.execute(total_stmt)
         compliant = await self.db.execute(compliant_stmt)
-        
+
         total_val = total.scalar() or 0
         if total_val == 0:
             return 1.0  # Default to compliant if no escalations

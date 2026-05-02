@@ -1,7 +1,8 @@
 """Escalation manager with SLA tracking - Phase 2"""
 from datetime import datetime, timedelta
-from typing import List, Union, Optional
-from sqlalchemy import select, update, desc, asc
+from typing import List, Optional, Union
+
+from sqlalchemy import asc, desc, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import EscalationRequest
@@ -74,7 +75,7 @@ class EscalationManager:
         # Map string priority to numeric p_val
         if isinstance(priority, str):
             p_map = {"normal": 0, "high": 1, "urgent": 2, "p0": 1, "p1": 0, "p2": 2} # Aligning common aliases
-            # Note: If specific test strings like 'p0' were used inconsistently, 
+            # Note: If specific test strings like 'p0' were used inconsistently,
             # we prioritize SPEC definitions over alias naming.
             p_val = p_map.get(priority.lower(), 0)
         else:

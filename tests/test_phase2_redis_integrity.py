@@ -2,11 +2,12 @@
 Atomic TDD Tests for Phase 2: Redis Streams Integrity (#23)
 Focus: Consumer Timeout Handling and Block Mode Verification, plus Alembic migration validation.
 """
-import pytest
 import os
-from unittest.mock import AsyncMock, MagicMock, patch
-from app.services.worker import AsyncMessageProcessor
+from unittest.mock import AsyncMock
 
+import pytest
+
+from app.services.worker import AsyncMessageProcessor
 
 # =============================================================================
 # Alembic / Schema Migration Tests
@@ -14,11 +15,7 @@ from app.services.worker import AsyncMessageProcessor
 
 def test_alembic_migration_001_upgrade_creates_phase1_tables():
     """Migration 001 upgrade creates Phase 1 tables (experiments, knowledge_base, platform_configs, users, conversations)."""
-    from alembic.config import Config
-    from alembic.script import ScriptDirectory
     import importlib.util
-    import sys
-    import os
 
     # Load the initial migration
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -54,7 +51,6 @@ def test_alembic_migration_001_upgrade_creates_phase1_tables():
 def test_alembic_migration_001_downgrade_reverses():
     """Migration 001 downgrade drops all tables created by upgrade."""
     import importlib.util
-    import os
 
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     migration_path = os.path.join(project_root, "migrations", "versions", "2d2a67f50200_initial_migration.py")
@@ -84,7 +80,6 @@ def test_alembic_migration_001_downgrade_reverses():
 
 def test_alembic_migration_002_upgrade_adds_phase2_tables():
     """Migration 002 (if exists) adds Phase 2 tables. If only one migration exists, verify Phase 1 has enough tables."""
-    import os
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     migration_dir = os.path.join(project_root, "migrations", "versions")
     if os.path.exists(migration_dir):
@@ -94,8 +89,9 @@ def test_alembic_migration_002_upgrade_adds_phase2_tables():
     # Phase 2 additions would be in subsequent migrations.
     # This test verifies the schema is sufficient for Phase 2.
     from app.models.database import (
-        Experiment, KnowledgeBase, PlatformConfig,
-        User, Conversation, Message
+        Experiment,
+        KnowledgeBase,
+        PlatformConfig,
     )
 
     # Verify key tables exist via model inspection
@@ -107,14 +103,13 @@ def test_alembic_migration_002_upgrade_adds_phase2_tables():
 
 def test_alembic_migration_003_upgrade_adds_phase3_tables():
     """Migration 003 (if exists) adds Phase 3 tables. If only 2 migrations, verify Phase 1+2 schema covers Phase 3."""
-    import os
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     migration_dir = os.path.join(project_root, "migrations", "versions")
     if os.path.exists(migration_dir):
         versions = sorted([f for f in os.listdir(migration_dir) if f.endswith(".py")])
 
     # Phase 3 RBAC tables: roles, role_assignments
-    from app.models.database import RoleAssignment, Role
+    from app.models.database import RoleAssignment
 
     # Verify role-based models exist and have expected fields
     assert hasattr(RoleAssignment, "user_id"), "RoleAssignment needs user_id"
@@ -129,8 +124,8 @@ def test_alembic_migration_003_upgrade_adds_phase3_tables():
 
 def test_schema_migrations_version_uniqueness():
     """schema_migrations table version column must enforce uniqueness (no duplicate version strings)."""
+
     from app.models.database import SchemaMigration
-    from sqlalchemy import UniqueConstraint
 
     # Check that the SchemaMigration model has a unique constraint on version
     table = SchemaMigration.__table__
@@ -162,7 +157,6 @@ def test_backup_knowledge_soft_delete_rollback():
     # Verify model supports the soft-delete pattern
     # (In real DB test: create entry, set is_active=False, rollback, verify is_active=True)
     # For unit test: verify the field exists and is Boolean
-    from sqlalchemy import Boolean
     is_active_col = KnowledgeBase.__table__.columns.get("is_active")
     assert is_active_col is not None, "is_active column must exist on KnowledgeBase"
     # The column should be nullable (for soft-delete: NULL = deleted)
@@ -215,9 +209,9 @@ async def test_id_23_03_claim_stale_message():
     processor = AsyncMessageProcessor(mock_redis, group="test_group")
     # Claim message 'msg_id_1' if idle for > 30s
     result = await processor.claim(
-        "omnibot:messages", 
-        "new_consumer", 
-        min_idle_time_ms=30000, 
+        "omnibot:messages",
+        "new_consumer",
+        min_idle_time_ms=30000,
         message_ids=["msg_id_1"]
     )
 
@@ -238,14 +232,14 @@ async def test_id_23_04_consume_from_pel_first():
     pel_msgs = [["omnibot:messages", [["msg_id_pending", {"data": "old"}]]]]
     # New msgs result
     new_msgs = [["omnibot:messages", [["msg_id_new", {"data": "new"}]]]]
-    
+
     mock_redis.xreadgroup = AsyncMock(side_effect=[pel_msgs, new_msgs])
 
     processor = AsyncMessageProcessor(mock_redis, group="test_group")
     # First call should get PEL messages
     result_pel = await processor.consume("consumer_1", id_mode="0")
     assert result_pel == pel_msgs
-    
+
     # Second call (manual in this test) would get new messages
     result_new = await processor.consume("consumer_1", id_mode=">")
     assert result_new == new_msgs
@@ -339,13 +333,14 @@ def test_redis_streams_message_schema_defined():
     """
     # Verify the message schema is defined in the produce() method
     # or a schema definition somewhere
-    
-    from app.services.worker import AsyncMessageProcessor
+
     import inspect
-    
+
+    from app.services.worker import AsyncMessageProcessor
+
     # Get the produce method source to verify schema documentation
     produce_source = inspect.getsource(AsyncMessageProcessor.produce)
-    
+
     # Verify that the schema is documented
     # The method should document or enforce required fields
     assert "conversation_id" in produce_source or "required" in produce_source.lower(), \
@@ -361,9 +356,9 @@ async def test_redis_streams_consumer_handles_unknown_fields_gracefully(mock_red
     ignored or logged but not cause processing failures.
     """
     from app.services.worker import AsyncMessageProcessor
-    
+
     processor = AsyncMessageProcessor(mock_redis, group="test_group")
-    
+
     # Simulate a message with extra unknown fields
     message_with_unknown = {
         "conversation_id": "conv-123",
@@ -375,22 +370,22 @@ async def test_redis_streams_consumer_handles_unknown_fields_gracefully(mock_red
         "unknown_field": "should_be_ignored",
         "another_unknown": 12345,
     }
-    
+
     # Mock xreadgroup to return message with unknown fields
     stream_data = [["omnibot:messages", [["msg-id-1", message_with_unknown]]]]
     mock_redis.xreadgroup = AsyncMock(return_value=stream_data)
-    
+
     # consume() should process this without raising
     result = await processor.consume("test_consumer", count=10, block_ms=100)
-    
+
     # Verify the consumer processed it successfully
     # Even with unknown fields, the message should be returned
     assert result is not None, \
         "Consumer should handle messages with unknown fields gracefully"
-    
+
     # Verify the known fields are still accessible
     if result and len(result) > 0:
         stream_name, messages = result[0]
         if messages and len(messages) > 0:
             msg_id, msg_data = messages[0]
-            assert "conversation_id" in msg_data, "Known fields should be preserved" 
+            assert "conversation_id" in msg_data, "Known fields should be preserved"

@@ -1,10 +1,11 @@
 from typing import Optional
+
 """
 Degradation Manager - Phase 3 Resilience
 Handles automatic service level switching based on performance and failure metrics.
 """
 from enum import IntEnum
-from typing import Dict, Any
+from typing import Dict
 
 
 class DegradationLevel(IntEnum):

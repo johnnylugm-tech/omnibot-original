@@ -3,18 +3,16 @@ Phase 2 Hybrid Knowledge Layer V7 — RRF Fusion Tests (Section 17)
 All 30 gap tests for knowledge, hybrid layer, and ODD SQL.
 """
 import os
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-
-from app.services.knowledge import HybridKnowledgeV7
-from app.models import KnowledgeResult
-
-
 from fastapi.testclient import TestClient
-from app.api import app
-from app.models.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
-import redis.asyncio as aioredis
+
+from app.api import app
+from app.models import KnowledgeResult
+from app.models.database import get_db
+from app.services.knowledge import HybridKnowledgeV7
 
 
 @pytest.fixture
@@ -205,9 +203,9 @@ async def test_knowledge_layer_rule_match_limit_5():
 @pytest.mark.asyncio
 async def test_knowledge_base_keywords_is_postgresql_array():
     """KnowledgeBase.keywords is PostgreSQL TEXT[] (ARRAY type), not JSONB"""
-    from app.models.database import KnowledgeBase
     from sqlalchemy.dialects.postgresql import ARRAY
-    from sqlalchemy import Text
+
+    from app.models.database import KnowledgeBase
 
     keywords_col = KnowledgeBase.__table__.columns.get('keywords')
     assert keywords_col is not None, "keywords column must exist"
@@ -261,6 +259,7 @@ async def test_knowledge_soft_delete_for_rollback():
     mock_db.execute.return_value = mock_result
 
     from sqlalchemy import select
+
     from app.models.database import KnowledgeBase
 
     # Execute the select query (this is what the DELETE endpoint does first)
@@ -297,7 +296,6 @@ async def test_knowledge_base_embeddings_vector_384():
     # The actual dimension is validated at INSERT time
     # We verify the model allows embedding storage
     from sqlalchemy.dialects.postgresql import JSONB
-    from sqlalchemy import Column
     assert isinstance(embeddings_col.type, JSONB), \
         "embeddings must be JSONB (pgvector storage in SQLAlchemy async)"
 

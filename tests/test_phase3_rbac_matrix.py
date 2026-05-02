@@ -4,7 +4,9 @@ Focus: Exhaustive verification of all 4 roles (admin, editor, agent, auditor)
 across all resources and actions as defined in Spec 25.
 """
 import pytest
+
 from app.security.rbac import RBACEnforcer
+
 
 @pytest.fixture
 def enforcer():
@@ -20,7 +22,7 @@ PERMISSION_MATRIX = [
     ("admin", "escalate", "write", True),
     ("admin", "experiment", "delete", True),
     ("admin", "system", "write", True),
-    
+
     # Editor
     ("editor", "knowledge", "read", True),
     ("editor", "knowledge", "write", True),
@@ -29,7 +31,7 @@ PERMISSION_MATRIX = [
     ("editor", "escalate", "write", False), # Spec: ["read"]
     ("editor", "audit", "read", False), # Spec: []
     ("editor", "experiment", "read", True),
-    
+
     # Agent
     ("agent", "knowledge", "read", True),
     ("agent", "knowledge", "write", False),
@@ -37,7 +39,7 @@ PERMISSION_MATRIX = [
     ("agent", "escalate", "read", False), # Spec: ["write"] only
     ("agent", "conversations", "read", True),
     ("agent", "system", "read", False),
-    
+
     # Auditor
     ("auditor", "knowledge", "read", True),
     ("auditor", "escalate", "read", True),
@@ -95,7 +97,11 @@ def test_experiments_post_requires_rbac_experiment_write():
 
 def test_verifier_registry_includes_messenger_and_whatsapp():
     """VERIFIERS dict must include 'messenger' (Facebook) and 'whatsapp' platforms."""
-    from app.security.webhook_verifier import VERIFIERS, MessengerWebhookVerifier, WhatsAppWebhookVerifier
+    from app.security.webhook_verifier import (
+        VERIFIERS,
+        MessengerWebhookVerifier,
+        WhatsAppWebhookVerifier,
+    )
 
     assert "messenger" in VERIFIERS, "VERIFIERS must include 'messenger'"
     assert "whatsapp" in VERIFIERS, "VERIFIERS must include 'whatsapp'"
