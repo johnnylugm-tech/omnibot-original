@@ -1,8 +1,9 @@
 """
 Atomic TDD Tests for Phase 2: PII Precision & False Positive Defense (#16)
-Focus: Amex (15-digit) support, Luhn validation for multiple card lengths, 
+Focus: Amex (15-digit) support, Luhn validation for multiple card lengths,
 and preventing false positives for non-card numbers.
 """
+
 import pytest
 
 from app.security.pii_masking import PIIMasking
@@ -11,6 +12,7 @@ from app.security.pii_masking import PIIMasking
 @pytest.fixture
 def masker():
     return PIIMasking()
+
 
 def test_id_16_01_amex_15_digit_support(masker):
     """Amex 15-digit card (passes Luhn) -> masked"""
@@ -24,6 +26,7 @@ def test_id_16_01_amex_15_digit_support(masker):
     result2 = masker.mask(text2)
     assert "[credit_card_masked]" in result2.masked_text
 
+
 def test_id_16_02_luhn_failure_no_mask(masker):
     """Valid length but fails Luhn -> NOT masked"""
     # 16 digits, fails Luhn: 4111111111111112
@@ -31,6 +34,7 @@ def test_id_16_02_luhn_failure_no_mask(masker):
     result = masker.mask(text)
     assert "4111111111111112" in result.masked_text
     assert "[credit_card_masked]" not in result.masked_text
+
 
 def test_id_16_03_various_card_lengths(masker):
     """Support 13 to 19 digit cards (Visa, Mastercard, etc.)"""
@@ -41,6 +45,7 @@ def test_id_16_03_various_card_lengths(masker):
     # 19 digits (UnionPay etc.) - 6221261234567890129 (valid)
     text19 = "UnionPay 19: 6221261234567890129"
     assert "[credit_card_masked]" in masker.mask(text19).masked_text
+
 
 def test_id_16_04_overlapping_pii_types(masker):
     """Ensure card-like phone numbers or ID numbers don't conflict"""
@@ -89,9 +94,11 @@ def test_id_16_08_mask_result_pii_types_contains_credit_card(masker):
 # Section 44 G-08: PII Audit Log action field enum validation
 # =============================================================================
 
+
 def test_pii_audit_action_enum_mask_unmask_restore():
-    """PII audit log action field must only accept 'mask', 'unmask', 'restore'. RED-phase test.
-    
+    """PII audit log action field must only accept 'mask', 'unmask', 'restore'.
+    RED-phase test.
+
     Spec: The pii_audit_log.action column must be an ENUM with exactly
     three allowed values: 'mask', 'unmask', 'restore'. Any other value
     should be rejected by the database.
@@ -103,7 +110,7 @@ def test_pii_audit_action_enum_mask_unmask_restore():
     from app.models.database import PIIAuditLog
 
     # Verify the action column exists
-    action_col = PIIAuditLog.__table__.columns.get('action')
+    action_col = PIIAuditLog.__table__.columns.get("action")
     assert action_col is not None, "action column must exist on PIIAuditLog"
 
     # Check for a CheckConstraint on the action column
@@ -113,72 +120,90 @@ def test_pii_audit_action_enum_mask_unmask_restore():
     for constraint in constraints:
         if isinstance(constraint, CheckConstraint):
             constraint_str = str(constraint.sqltext).lower()
-            if 'mask' in constraint_str and 'unmask' in constraint_str and 'restore' in constraint_str:
+            if (
+                "mask" in constraint_str
+                and "unmask" in constraint_str
+                and "restore" in constraint_str
+            ):
                 has_enum_constraint = True
                 break
 
     # Also check model-level validation (if any)
-    # The model should either have DB-level CHECK constraint or application-level validation
+    # The model should either have DB-level CHECK constraint or application-level
+    # validation
     pii_masking_source = inspect.getsource(PIIMasking)
 
     # Verify action validation exists
     # This could be via SQLAlchemy enum type or CheckConstraint
     has_action_validation = (
-        has_enum_constraint or
-        'action' in pii_masking_source or
-        hasattr(PIIAuditLog, 'action')
+        has_enum_constraint
+        or "action" in pii_masking_source
+        or hasattr(PIIAuditLog, "action")
     )
 
-    assert has_action_validation, \
-        "PIIAuditLog.action must have validation for 'mask'/'unmask'/'restore' values only. " \
-        f"Found constraints: {[c for c in table_args if isinstance(c, CheckConstraint)]}"
+    constraints_list = [
+        c for c in PIIAuditLog.__table_args__ if isinstance(c, CheckConstraint)
+    ]
+    assert has_action_validation, (
+        "PIIAuditLog.action must have validation for 'mask'/'unmask'/'restore' values. "
+        f"Found constraints: {constraints_list}"
+    )
 
 
 # =============================================================================
 # Section 44 G-09/10/11: Address & Credit Card Masking
 # =============================================================================
 
-def test_pii_mask_address_台北市(masker):
+
+def test_pii_mask_address_taipei(masker):
     """Address masking: 台北市 addresses must be masked. RED-phase test.
-    
+
     Spec: Taiwan address patterns (e.g., 台北市, 高雄市, 新北市) should be
     detected and masked to [address_masked].
     """
     text = "我的地址是台北市大安區忠孝東路四段100號"
     result = masker.mask(text)
-    assert "[address_masked]" in result.masked_text or "台北市" not in result.masked_text, \
-        "Taipei address should be masked"
+    assert (
+        "[address_masked]" in result.masked_text or "台北市" not in result.masked_text
+    ), "Taipei address should be masked"
     # Verify the original address is not visible
-    assert "忠孝東路" not in result.masked_text, "Detailed address should not be visible after masking"
+    assert "忠孝東路" not in result.masked_text, (
+        "Detailed address should not be visible after masking"
+    )
 
 
-def test_pii_mask_address_高雄市(masker):
+def test_pii_mask_address_kaohsiung(masker):
     """Address masking: 高雄市 addresses must be masked. RED-phase test.
-    
+
     Spec: Kaohsiung city addresses should be detected and masked.
     """
     text = "高雄市前鎮區一心一路243號"
     result = masker.mask(text)
-    assert "[address_masked]" in result.masked_text or "高雄市" not in result.masked_text, \
-        "Kaohsiung address should be masked"
+    assert (
+        "[address_masked]" in result.masked_text or "高雄市" not in result.masked_text
+    ), "Kaohsiung address should be masked"
     # Verify detailed address is not visible
-    assert "一心一路" not in result.masked_text, "Detailed address should not be visible after masking"
+    assert "一心一路" not in result.masked_text, (
+        "Detailed address should not be visible after masking"
+    )
 
 
 def test_pii_mask_credit_card_valid_16digits(masker):
     """16-digit valid credit card must be masked. RED-phase test.
-    
+
     Spec: A valid 16-digit credit card number (passing Luhn check) must be
     masked to [credit_card_masked].
     """
     # Valid Visa test card: 4111111111111111 (passes Luhn)
     text = "請刷卡 我的卡號是 4111111111111111"
     result = masker.mask(text)
-    assert "[credit_card_masked]" in result.masked_text, \
+    assert "[credit_card_masked]" in result.masked_text, (
         "Valid 16-digit credit card number must be masked"
+    )
     # Verify original card number is not visible
-    assert "4111111111111111" not in result.masked_text, \
+    assert "4111111111111111" not in result.masked_text, (
         "Full credit card number should not appear in masked text"
+    )
 
 
 def test_pii_mask_credit_card_with_spaces(masker):
@@ -189,10 +214,12 @@ def test_pii_mask_credit_card_with_spaces(masker):
     """
     text = "請刷卡 卡號是 4111 1111 1111 1111"
     result = masker.mask(text)
-    assert "[credit_card_masked]" in result.masked_text, \
+    assert "[credit_card_masked]" in result.masked_text, (
         "Credit card with spaces must be masked"
-    assert "4111" not in result.masked_text, \
+    )
+    assert "4111" not in result.masked_text, (
         "Full credit card number should not appear in masked text"
+    )
 
 
 def test_pii_mask_credit_card_with_dashes(masker):
@@ -202,7 +229,9 @@ def test_pii_mask_credit_card_with_dashes(masker):
     """
     text = "請刷卡 卡號是 4111-1111-1111-1111"
     result = masker.mask(text)
-    assert "[credit_card_masked]" in result.masked_text, \
+    assert "[credit_card_masked]" in result.masked_text, (
         "Credit card with dashes must be masked"
-    assert "4111" not in result.masked_text, \
+    )
+    assert "4111" not in result.masked_text, (
         "Full credit card number should not appear in masked text"
+    )

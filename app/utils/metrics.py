@@ -4,8 +4,7 @@ from prometheus_client import Counter, Histogram, Summary, start_http_server
 
 # Metrics definitions
 REQUEST_COUNT = Counter(
-    "omnibot_requests_total", "Total request count", [
-        "method", "endpoint", "platform"]
+    "omnibot_requests_total", "Total request count", ["method", "endpoint", "platform"]
 )
 
 REQUEST_LATENCY = Histogram(
@@ -21,7 +20,9 @@ LLM_TOKEN_USAGE = Counter(
 )
 
 FCR_TOTAL = Counter(
-    "omnibot_fcr_total", "Total First Contact Resolution count", ["platform", "tier", "channel"]
+    "omnibot_fcr_total",
+    "Total First Contact Resolution count",
+    ["platform", "tier", "channel"],
 )
 
 KNOWLEDGE_HIT_TOTAL = Counter(
@@ -33,7 +34,9 @@ PII_MASKED_TOTAL = Counter(
 )
 
 EMOTION_ESCALATION_TOTAL = Counter(
-    "omnibot_emotion_escalation_total", "Total escalations triggered by emotion", ["emotion_type"]
+    "omnibot_emotion_escalation_total",
+    "Total escalations triggered by emotion",
+    ["emotion_type"],
 )
 
 

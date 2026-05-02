@@ -1,13 +1,17 @@
 """LLM Service - Phase 3"""
+
 import os
 from typing import Optional
 
 
 class LLMService:
     """Mockable LLM service for testing and production"""
+
     def __init__(self, model_name: Optional[str] = None):
         # Env-aware model name
-        self.model_name = model_name or os.getenv("LLM_MODEL_PROD", os.getenv("LLM_MODEL", "gpt-4"))
+        self.model_name = model_name or os.getenv(
+            "LLM_MODEL_PROD", os.getenv("LLM_MODEL", "gpt-4")
+        )
         self.base_prompt = self._load_base_prompt()
 
     def _load_base_prompt(self) -> str:

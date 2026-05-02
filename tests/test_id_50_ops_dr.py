@@ -37,12 +37,13 @@ async def test_id_50_disaster_recovery_workflow():
     # The newly created one should stay, the very old one should be gone
     # (if it exceeds retention days, which 2000-01-01 definitely does)
     assert os.path.exists(backup_path)
-    # Note: cleanup_old_backups uses mtime, so we might need to manually set mtime to be sure
+    # Note: cleanup_old_backups uses mtime, so we might need to manually set mtime to be sure  # noqa: E501
 
     # Clean up test dir
     for f in os.listdir(backup_dir):
         os.remove(os.path.join(backup_dir, f))
     os.rmdir(backup_dir)
+
 
 @pytest.mark.asyncio
 async def test_id_50_restore_script_exists():
@@ -59,8 +60,9 @@ async def test_id_50_restore_script_exists():
 # S50 – k8s deployment config
 # =============================================================================
 
+
 def test_id_50_k8s_deployment_config_exists():
-    """k8s Deployment must have RollingUpdate strategy with maxUnavailable + maxSurge."""
+    """k8s Deployment must have RollingUpdate strategy with maxUnavailable + maxSurge."""  # noqa: E501
     import yaml
 
     deployment_files = [
@@ -74,16 +76,16 @@ def test_id_50_k8s_deployment_config_exists():
             found = path
             break
 
-    assert found is not None, \
-        f"k8s deployment config not found in {deployment_files}"
+    assert found is not None, f"k8s deployment config not found in {deployment_files}"
 
     with open(found) as f:
         doc = yaml.safe_load(f)
 
     spec = doc.get("spec", {})
     strategy = spec.get("strategy", {})
-    assert strategy.get("type") == "RollingUpdate", \
+    assert strategy.get("type") == "RollingUpdate", (
         f"Deployment strategy must be RollingUpdate, got {strategy.get('type')}"
+    )
 
     rolling = strategy.get("rollingUpdate", {})
     assert "maxUnavailable" in rolling, "RollingUpdate must set maxUnavailable"
@@ -105,15 +107,15 @@ def test_id_50_k8s_pod_disruption_budget_exists():
             found = path
             break
 
-    assert found is not None, \
-        f"PodDisruptionBudget config not found in {pdb_files}"
+    assert found is not None, f"PodDisruptionBudget config not found in {pdb_files}"
 
     with open(found) as f:
         doc = yaml.safe_load(f)
 
     spec = doc.get("spec", {})
-    assert "minAvailable" in spec or "maxUnavailable" in spec, \
+    assert "minAvailable" in spec or "maxUnavailable" in spec, (
         "PDB must specify minAvailable or maxUnavailable"
+    )
 
 
 def test_id_50_k8s_health_endpoints_configured():
@@ -136,7 +138,9 @@ def test_id_50_k8s_health_endpoints_configured():
     with open(found) as f:
         doc = yaml.safe_load(f)
 
-    containers = doc.get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+    containers = (
+        doc.get("spec", {}).get("template", {}).get("spec", {}).get("containers", [])
+    )
     assert len(containers) > 0, "At least one container must be defined"
 
     container = containers[0]
@@ -147,6 +151,7 @@ def test_id_50_k8s_health_endpoints_configured():
 # =============================================================================
 # S50 – Graceful shutdown
 # =============================================================================
+
 
 def test_id_50_graceful_shutdown_sigterm_handler():
     """main.py must register a SIGTERM handler for graceful shutdown."""
@@ -169,13 +174,15 @@ def test_id_50_graceful_shutdown_sigterm_handler():
         "SIGTERM",
     ]
     has_sigterm = any(p in content for p in sigterm_patterns)
-    assert has_sigterm, \
+    assert has_sigterm, (
         f"main.py ({found}) must register a SIGTERM handler for graceful shutdown"
+    )
 
 
 # =============================================================================
 # S50 – Backup CronJob schedule
 # =============================================================================
+
 
 def test_id_50_backup_cronjob_schedule_exists():
     """k8s CronJob for backup must have a valid cron schedule expression."""
@@ -192,8 +199,7 @@ def test_id_50_backup_cronjob_schedule_exists():
             found = path
             break
 
-    assert found is not None, \
-        f"Backup CronJob config not found in {cronjob_files}"
+    assert found is not None, f"Backup CronJob config not found in {cronjob_files}"
 
     with open(found) as f:
         doc = yaml.safe_load(f)
@@ -203,8 +209,7 @@ def test_id_50_backup_cronjob_schedule_exists():
     assert schedule is not None, "CronJob must have a schedule field"
     assert isinstance(schedule, str), "Schedule must be a cron expression string"
     # Basic sanity: non-empty and contains at least one '*'
-    assert len(schedule) > 0 and "*" in schedule, \
-        f"Invalid cron schedule: {schedule}"
+    assert len(schedule) > 0 and "*" in schedule, f"Invalid cron schedule: {schedule}"
 
 
 def test_id_50_backup_script_runs_successfully():
@@ -213,6 +218,7 @@ def test_id_50_backup_script_runs_successfully():
     assert os.path.exists(script_path), f"Backup script not found: {script_path}"
 
     import subprocess
+
     result = subprocess.run(
         ["bash", script_path],
         capture_output=True,
@@ -223,7 +229,8 @@ def test_id_50_backup_script_runs_successfully():
 
     # Fail if Python Traceback appears in stderr
     traceback_markers = ["traceback", "error:", "exception"]
-    errors = [m for m in traceback_markers if m in stderr_lower]
+    [m for m in traceback_markers if m in stderr_lower]
 
-    assert "traceback" not in stderr_lower, \
+    assert "traceback" not in stderr_lower, (
         f"backup.sh produced a Python Traceback:\n{result.stderr[:500]}"
+    )

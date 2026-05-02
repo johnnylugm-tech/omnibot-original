@@ -1,4 +1,5 @@
 """Escalation Manager tests - SLA tracking and User Feedback."""
+
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
@@ -10,6 +11,7 @@ from app.services.escalation import EscalationManager, FeedbackManager, Validati
 # =============================================================================
 # Escalation Manager SLA Tests (5 tests)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_escalation_manager():
@@ -27,6 +29,7 @@ async def test_escalation_manager():
 
     async def side_effect(obj):
         obj.id = 1
+
     mock_db.refresh.side_effect = side_effect
 
     res_id = await manager.create(req)
@@ -53,13 +56,14 @@ async def test_escalation_assign_on_resolved_returns_zero_affected():
 
     manager = EscalationManager(db=mock_db)
 
-    result = await manager.assign(escalation_id=1, agent_id="agent_xyz")
+    await manager.assign(escalation_id=1, agent_id="agent_xyz")
 
     # Verify rowcount is 0 (no rows affected because ticket already resolved)
     assert mock_db.execute.called, "assign() should attempt execution"
     executed_result = mock_db.execute.return_value
-    assert executed_result.rowcount == 0, \
+    assert executed_result.rowcount == 0, (
         "assign() on resolved ticket should return 0 rowcount"
+    )
 
 
 @pytest.mark.asyncio
@@ -74,7 +78,9 @@ async def test_escalation_assign_on_resolved_does_not_update_picked_at():
 
     mock_ticket = MagicMock()
     mock_ticket.id = 1
-    mock_ticket.resolved_at = datetime.utcnow() - timedelta(minutes=5)  # Already resolved
+    mock_ticket.resolved_at = datetime.utcnow() - timedelta(
+        minutes=5
+    )  # Already resolved
     mock_ticket.picked_at = None  # Never picked (because already resolved)
 
     mock_db.add = MagicMock()
@@ -96,8 +102,9 @@ async def test_escalation_assign_on_resolved_does_not_update_picked_at():
         stmt = str(call_args[0][0])
         # If a WHERE clause exists, it should include resolved_at IS NOT NULL
         # as a condition that prevents the update
-        assert "resolved" in stmt.lower() or mock_result.rowcount == 0, \
+        assert "resolved" in stmt.lower() or mock_result.rowcount == 0, (
             "assign() on resolved ticket should not update picked_at"
+        )
 
 
 # --- test_escalation_manager_get_sla_breaches ---
@@ -129,26 +136,32 @@ async def test_escalation_manager_get_sla_breaches():
     mock_resolved = MagicMock(spec=EscalationQueue)
     mock_resolved.id = 3
     mock_resolved.sla_deadline = breach_time
-    mock_resolved.resolved_at = datetime.utcnow()  # Already resolved → should be excluded
+    mock_resolved.resolved_at = (
+        datetime.utcnow()
+    )  # Already resolved → should be excluded
 
     mock_scalars = MagicMock()
-    mock_scalars.all.return_value = [mock_breach]  # Only unresolved + breached ticket returned
+    mock_scalars.all.return_value = [
+        mock_breach
+    ]  # Only unresolved + breached ticket returned
 
     mock_result = MagicMock()
     mock_result.scalars.return_value = mock_scalars
     mock_db.execute.return_value = mock_result
 
     manager = EscalationManager(db=mock_db)
-    breaches = await manager.get_sla_breaches()
+    await manager.get_sla_breaches()
 
     assert mock_db.execute.called, "get_sla_breaches() should call execute()"
     call_args = mock_db.execute.call_args[0][0]
     stmt_str = str(call_args)
     # Verify WHERE clause includes sla_deadline < now and resolved_at == None
-    assert "sla_deadline" in stmt_str.lower(), \
+    assert "sla_deadline" in stmt_str.lower(), (
         f"SQL should filter by sla_deadline: {stmt_str}"
-    assert "resolved" in stmt_str.lower(), \
+    )
+    assert "resolved" in stmt_str.lower(), (
         f"SQL should filter by resolved_at: {stmt_str}"
+    )
 
 
 # --- test_escalation_manager_get_sla_breaches_ordered_by_priority ---
@@ -162,8 +175,8 @@ async def test_escalation_manager_get_sla_breaches_ordered_by_priority():
     mock_db = AsyncMock()
 
     now = datetime.utcnow()
-    old = now - timedelta(minutes=60)
-    newer = now - timedelta(minutes=30)
+    now - timedelta(minutes=60)
+    now - timedelta(minutes=30)
 
     mock_high_pri = MagicMock()
     mock_high_pri.id = 1
@@ -192,16 +205,16 @@ async def test_escalation_manager_get_sla_breaches_ordered_by_priority():
     mock_db.execute.return_value = mock_result
 
     manager = EscalationManager(db=mock_db)
-    breaches = await manager.get_sla_breaches()
+    await manager.get_sla_breaches()
 
     call_args = mock_db.execute.call_args[0][0]
     stmt_str = str(call_args)
     # Verify ORDER BY includes priority DESC and queued_at ASC
-    assert "priority" in stmt_str.lower(), \
-        f"SQL should order by priority: {stmt_str}"
+    assert "priority" in stmt_str.lower(), f"SQL should order by priority: {stmt_str}"
     # DESC for priority (higher priority first)
-    assert "desc" in stmt_str.lower() and "priority" in stmt_str.lower(), \
+    assert "desc" in stmt_str.lower() and "priority" in stmt_str.lower(), (
         f"SQL should order by priority DESC: {stmt_str}"
+    )
 
 
 # --- test_escalation_manager_sla_normal_30_minutes ---
@@ -223,11 +236,12 @@ async def test_escalation_manager_sla_normal_30_minutes():
     manager = EscalationManager(db=mock_db)
     req = EscalationRequest(conversation_id=1, reason="normal issue")
 
-    ticket_id = await manager.create(req, priority=0)
+    await manager.create(req, priority=0)
 
     # Verify SLA_MINUTES for priority 0 is 30
-    assert manager.SLA_MINUTES[0] == 30, \
+    assert manager.SLA_MINUTES[0] == 30, (
         f"NORMAL priority (0) SLA should be 30 minutes, got {manager.SLA_MINUTES[0]}"
+    )
 
     # Check that ticket was created with correct deadline
     call_args = mock_db.add.call_args[0][0]
@@ -236,8 +250,7 @@ async def test_escalation_manager_sla_normal_30_minutes():
 
     # Allow 5 second tolerance
     diff = abs((deadline - expected_deadline).total_seconds())
-    assert diff < 5, \
-        f"Expected deadline ~30min from now, got {deadline}"
+    assert diff < 5, f"Expected deadline ~30min from now, got {deadline}"
 
 
 # --- test_escalation_manager_sla_high_15_minutes ---
@@ -259,11 +272,12 @@ async def test_escalation_manager_sla_high_15_minutes():
     manager = EscalationManager(db=mock_db)
     req = EscalationRequest(conversation_id=2, reason="high priority issue")
 
-    ticket_id = await manager.create(req, priority=1)
+    await manager.create(req, priority=1)
 
     # Verify SLA_MINUTES for priority 1 is 15
-    assert manager.SLA_MINUTES[1] == 15, \
+    assert manager.SLA_MINUTES[1] == 15, (
         f"HIGH priority (1) SLA should be 15 minutes, got {manager.SLA_MINUTES[1]}"
+    )
 
     # Check that ticket was created with correct deadline
     call_args = mock_db.add.call_args[0][0]
@@ -272,8 +286,7 @@ async def test_escalation_manager_sla_high_15_minutes():
 
     # Allow 5 second tolerance
     diff = abs((deadline - expected_deadline).total_seconds())
-    assert diff < 5, \
-        f"Expected deadline ~15min from now, got {deadline}"
+    assert diff < 5, f"Expected deadline ~15min from now, got {deadline}"
 
 
 # --- test_escalation_manager_sla_urgent_5_minutes ---
@@ -281,7 +294,8 @@ async def test_escalation_manager_sla_high_15_minutes():
 async def test_escalation_manager_sla_urgent_5_minutes():
     """URGENT priority (2) escalation SLA = 5 minutes.
 
-    Spec: Priority 2 (URGENT / emotion_trigger) has SLA of 5 minutes (SLA_MINUTES[2] = 5).
+    Spec: Priority 2 (URGENT / emotion_trigger) has SLA of 5 minutes
+    (SLA_MINUTES[2] = 5).
     """
 
     mock_db = AsyncMock()
@@ -296,24 +310,25 @@ async def test_escalation_manager_sla_urgent_5_minutes():
     manager = EscalationManager(db=mock_db)
     req = EscalationRequest(conversation_id=3, reason="urgent issue")
 
-    ticket_id = await manager.create(req, priority=2)
+    await manager.create(req, priority=2)
 
     # Verify SLA_MINUTES for priority 2 is 5
-    assert manager.SLA_MINUTES[2] == 5, \
+    assert manager.SLA_MINUTES[2] == 5, (
         f"URGENT priority (2) SLA should be 5 minutes, got {manager.SLA_MINUTES[2]}"
+    )
 
     call_args = mock_db.add.call_args[0][0]
     deadline = call_args.sla_deadline
     expected_deadline = datetime.utcnow() + timedelta(minutes=5)
 
     diff = abs((deadline - expected_deadline).total_seconds())
-    assert diff < 5, \
-        f"Expected deadline ~5min from now, got {deadline}"
+    assert diff < 5, f"Expected deadline ~5min from now, got {deadline}"
 
 
 # =============================================================================
 # User Feedback Tests (4 tests)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_feedback_thumbs_up_accepted():
@@ -329,9 +344,7 @@ async def test_feedback_thumbs_up_accepted():
 
     manager = FeedbackManager(db=mock_db)
     result = await manager.submit_feedback(
-        conversation_id=1,
-        rating="thumbs_up",
-        comment=None
+        conversation_id=1, rating="thumbs_up", comment=None
     )
 
     assert result is not None, "thumbs_up feedback should be accepted"
@@ -353,9 +366,7 @@ async def test_feedback_thumbs_down_accepted():
 
     manager = FeedbackManager(db=mock_db)
     result = await manager.submit_feedback(
-        conversation_id=1,
-        rating="thumbs_down",
-        comment="Agent was slow"
+        conversation_id=1, rating="thumbs_down", comment="Agent was slow"
     )
 
     assert result is not None, "thumbs_down feedback should be accepted"
@@ -381,9 +392,7 @@ async def test_feedback_invalid_value_rejected():
     for invalid_rating in invalid_ratings:
         with pytest.raises(ValidationError):
             await manager.submit_feedback(
-                conversation_id=1,
-                rating=invalid_rating,
-                comment=None
+                conversation_id=1, rating=invalid_rating, comment=None
             )
 
 
@@ -403,9 +412,7 @@ async def test_feedback_optional_comment():
 
     # Submit with comment=None
     result = await manager.submit_feedback(
-        conversation_id=1,
-        rating="thumbs_up",
-        comment=None
+        conversation_id=1, rating="thumbs_up", comment=None
     )
 
     assert result is not None, "feedback with comment=None should be accepted"

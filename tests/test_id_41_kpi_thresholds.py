@@ -5,10 +5,12 @@ These are RED-phase tests asserting KPI thresholds for all 3 phases.
 Each test checks a specific threshold and will fail until implemented.
 
 Missing tests (14):
-  Phase 1: FCR >= 50%, CSAT +15%, p95 < 3s, telegram+line platform, security >= 95%, cost < $500, availability >= 99%
+  Phase 1: FCR >= 50%, CSAT +15%, p95 < 3s, telegram+line platform,
+           security >= 95%, cost < $500, availability >= 99%
   Phase 2: FCR >= 80%, p95 < 1.5s, 4 platforms, CSAT +35%, disaster_recovery < 5min
   Phase 3: FCR >= 90%, p95 < 1s
 """
+
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -36,6 +38,7 @@ def _build_result(mapping: dict):
 # =============================================================================
 # FCR Threshold Tests (First Contact Resolution)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_kpi_fcr_phase1_target_50_percent(odd_manager, mock_db):
@@ -74,6 +77,7 @@ async def test_kpi_fcr_phase3_target_90_percent(odd_manager, mock_db):
 # p95 Latency Tests
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_kpi_p95_latency_phase1_under_3s(odd_manager, mock_db):
     """Phase 1 p95 latency must be < 3 seconds (3000 ms)"""
@@ -87,7 +91,9 @@ async def test_kpi_p95_latency_phase1_under_3s(odd_manager, mock_db):
     rows = await odd_manager.get_latency_p95_by_platform()
     for row in rows:
         p95 = row["p95_latency"]
-        assert p95 < 3000, f"Phase 1 p95 latency must be < 3000ms, got {p95}ms for platform {row['platform']}"
+        assert p95 < 3000, (
+            f"Phase 1 p95 latency must be < 3000ms, got {p95}ms for platform {row['platform']}"  # noqa: E501
+        )
 
 
 @pytest.mark.asyncio
@@ -106,7 +112,9 @@ async def test_kpi_p95_latency_phase2_under_1(odd_manager, mock_db):
     for row in rows:
         p95 = row["p95_latency"]
         # Actual threshold is 1.5s (1500ms) for Phase 2
-        assert p95 < 1500, f"Phase 2 p95 latency must be < 1500ms, got {p95}ms for platform {row['platform']}"
+        assert p95 < 1500, (
+            f"Phase 2 p95 latency must be < 1500ms, got {p95}ms for platform {row['platform']}"  # noqa: E501
+        )
 
 
 @pytest.mark.asyncio
@@ -122,12 +130,15 @@ async def test_kpi_p95_latency_phase3_under_1s(odd_manager, mock_db):
     rows = await odd_manager.get_latency_p95_by_platform()
     for row in rows:
         p95 = row["p95_latency"]
-        assert p95 < 1000, f"Phase 3 p95 latency must be < 1000ms, got {p95}ms for platform {row['platform']}"
+        assert p95 < 1000, (
+            f"Phase 3 p95 latency must be < 1000ms, got {p95}ms for platform {row['platform']}"  # noqa: E501
+        )
 
 
 # =============================================================================
 # Platform Support Tests
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_kpi_platform_support_telegram_and_line(odd_manager, mock_db):
@@ -160,13 +171,15 @@ async def test_kpi_platform_support_4_platforms(odd_manager, mock_db):
     rows = await odd_manager.get_latency_p95_by_platform()
     platforms = {row["platform"] for row in rows}
     expected = {"telegram", "line", "messenger", "whatsapp"}
-    assert platforms == expected, \
+    assert platforms == expected, (
         f"Phase 2 must support 4 platforms {expected}, got {platforms}"
+    )
 
 
 # =============================================================================
 # Security Block Rate Test
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_kpi_security_block_rate_above_95_percent(odd_manager, mock_db):
@@ -176,19 +189,21 @@ async def test_kpi_security_block_rate_above_95_percent(odd_manager, mock_db):
     mock_db.execute.return_value = mock_result
 
     rate = await odd_manager.get_security_block_rate()
-    assert rate >= 95.0, \
-        f"Security block rate must be >= 95%, got {rate}%"
+    assert rate >= 95.0, f"Security block rate must be >= 95%, got {rate}%"
 
 
 # =============================================================================
 # CSAT Improvement Tests
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_kpi_csat_phase1_baseline_improvement_15_percent(odd_manager, mock_db):
     """Phase 1 CSAT improvement over baseline: >= 15%"""
     mock_result = MagicMock()
-    mock_result.fetchall.return_value = [_build_result({"avg_csat": 0.72, "baseline_csat": 0.60})]
+    mock_result.fetchall.return_value = [
+        _build_result({"avg_csat": 0.72, "baseline_csat": 0.60})
+    ]
     mock_db.execute.return_value = mock_result
 
     stats = await odd_manager.get_csat_stats()
@@ -196,15 +211,18 @@ async def test_kpi_csat_phase1_baseline_improvement_15_percent(odd_manager, mock
     current = stats.get("avg_csat", 0)
     improvement_pct = ((current - baseline) / baseline * 100) if baseline > 0 else 0
 
-    assert improvement_pct >= 15.0, \
+    assert improvement_pct >= 15.0, (
         f"Phase 1 CSAT improvement must be >= 15%, got {improvement_pct:.2f}%"
+    )
 
 
 @pytest.mark.asyncio
 async def test_kpi_csat_phase2_improvement_35_percent(odd_manager, mock_db):
     """Phase 2 CSAT improvement over baseline: >= 35%"""
     mock_result = MagicMock()
-    mock_result.fetchall.return_value = [_build_result({"avg_csat": 0.82, "baseline_csat": 0.60})]
+    mock_result.fetchall.return_value = [
+        _build_result({"avg_csat": 0.82, "baseline_csat": 0.60})
+    ]
     mock_db.execute.return_value = mock_result
 
     stats = await odd_manager.get_csat_stats()
@@ -212,13 +230,15 @@ async def test_kpi_csat_phase2_improvement_35_percent(odd_manager, mock_db):
     current = stats.get("avg_csat", 0)
     improvement_pct = ((current - baseline) / baseline * 100) if baseline > 0 else 0
 
-    assert improvement_pct >= 35.0, \
+    assert improvement_pct >= 35.0, (
         f"Phase 2 CSAT improvement must be >= 35%, got {improvement_pct:.2f}%"
+    )
 
 
 # =============================================================================
 # Cost Test
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_kpi_monthly_cost_under_500_usd(odd_manager, mock_db):
@@ -234,13 +254,13 @@ async def test_kpi_monthly_cost_under_500_usd(odd_manager, mock_db):
     rows = await odd_manager.get_knowledge_source_cost()
     total_cost = sum(row["total_cost"] for row in rows)
 
-    assert total_cost < 500.0, \
-        f"Monthly cost must be < $500 USD, got ${total_cost:.2f}"
+    assert total_cost < 500.0, f"Monthly cost must be < $500 USD, got ${total_cost:.2f}"
 
 
 # =============================================================================
 # Availability Test
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_kpi_availability_99(odd_manager, mock_db):
@@ -250,13 +270,15 @@ async def test_kpi_availability_99(odd_manager, mock_db):
     mock_db.execute.return_value = mock_result
 
     availability = await odd_manager.get_system_availability()
-    assert availability >= 99.0, \
+    assert availability >= 99.0, (
         f"System availability must be >= 99%, got {availability}%"
+    )
 
 
 # =============================================================================
 # Disaster Recovery Test
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_kpi_disaster_recovery_under_5_minutes(odd_manager, mock_db):
@@ -275,9 +297,11 @@ async def test_kpi_disaster_recovery_under_5_minutes(odd_manager, mock_db):
     mock_db.execute.return_value = mock_result
 
     rows = await odd_manager.execute_query(sql)
-    assert len(rows) > 0, \
+    assert len(rows) > 0, (
         "Disaster recovery metric must be recorded in system_metrics table"
+    )
 
     recovery_time = rows[0]["recovery_time_seconds"]
-    assert recovery_time < 300, \
+    assert recovery_time < 300, (
         f"Disaster recovery time must be < 300 seconds, got {recovery_time}s"
+    )

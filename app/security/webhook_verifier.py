@@ -1,4 +1,5 @@
 """Security layer for OmniBot Phase 1 - Webhook verification"""
+
 import base64
 import hashlib
 import hmac
@@ -19,9 +20,7 @@ class LineWebhookVerifier(WebhookVerifier):
         self.channel_secret = channel_secret.encode("utf-8")
 
     def verify(self, body: bytes, signature: str) -> bool:
-        digest = hmac.new(
-            self.channel_secret, body, hashlib.sha256
-        ).digest()
+        digest = hmac.new(self.channel_secret, body, hashlib.sha256).digest()
         expected = base64.b64encode(digest).decode("utf-8")
         return hmac.compare_digest(expected, signature)
 
@@ -33,7 +32,7 @@ class TelegramWebhookVerifier(WebhookVerifier):
         self.bot_token = bot_token
 
     def verify(self, body: bytes, signature: str) -> bool:
-        # Telegram sends the secret token as-is in the X-Telegram-Bot-Api-Secret-Token header.
+        # Telegram sends the secret token as-is in the X-Telegram-Bot-Api-Secret-Token header.  # noqa: E501
         # It's not a signature of the body, just a shared secret.
         return hmac.compare_digest(self.bot_token, signature)
 
@@ -46,9 +45,7 @@ class MessengerWebhookVerifier(WebhookVerifier):
 
     def verify(self, body: bytes, signature: str) -> bool:
         # Messenger uses sha1 (historical)
-        expected = "sha1=" + hmac.new(
-            self.app_secret, body, hashlib.sha1
-        ).hexdigest()
+        expected = "sha1=" + hmac.new(self.app_secret, body, hashlib.sha1).hexdigest()
         return hmac.compare_digest(expected, signature)
 
 
@@ -60,9 +57,9 @@ class WhatsAppWebhookVerifier(WebhookVerifier):
 
     def verify(self, body: bytes, signature: str) -> bool:
         # WhatsApp uses sha256
-        expected = "sha256=" + hmac.new(
-            self.app_secret, body, hashlib.sha256
-        ).hexdigest()
+        expected = (
+            "sha256=" + hmac.new(self.app_secret, body, hashlib.sha256).hexdigest()
+        )
         return hmac.compare_digest(expected, signature)
 
 

@@ -10,15 +10,21 @@ def run_tests():
     result = subprocess.run(
         ["pytest", "--json-report", "--json-report-file=report.json", "--tb=short"],
         capture_output=True,
-        text=True
+        text=True,
     )
     return result
 
+
 def get_git_revision():
     try:
-        return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("ascii").strip()[:7]
-    except:
+        return (
+            subprocess.check_output(["git", "rev-parse", "HEAD"])
+            .decode("ascii")
+            .strip()[:7]
+        )
+    except Exception:
         return "unknown"
+
 
 def update_report(report_data):
     report_path = "SPEC/omnibot-tdd-verification-report.md"
@@ -36,7 +42,11 @@ def update_report(report_data):
         content = f.read()
 
     # Update metadata
-    content = re.sub(r"\*\*Repo:\*\*.*", f"**Repo:** `johnnylugm-tech/omnibot-original` (master branch, commit `{commit}`)", content)
+    content = re.sub(
+        r"\*\*Repo:\*\*.*",
+        f"**Repo:** `johnnylugm-tech/omnibot-original` (master branch, commit `{commit}`)",  # noqa: E501
+        content,
+    )
     content = re.sub(r"\*\*報告產生時間:\*\*.*", f"**報告產生時間:** {now}", content)
 
     # Update test results block
@@ -46,12 +56,17 @@ def update_report(report_data):
 {passed} passed | {failed} failed | {skipped} skipped
 執行時間: {duration} 秒
 ```"""
-    content = re.sub(r"## 測試收集結果\n\n```[\s\S]*?```", f"## 測試收集結果\n\n{new_results}", content)
+    content = re.sub(
+        r"## 測試收集結果\n\n```[\s\S]*?```",
+        f"## 測試收集結果\n\n{new_results}",
+        content,
+    )
 
     with open(report_path, "w") as f:
         f.write(content)
 
     print(f"✅ Report updated: {passed}/{total} passed (Commit {commit})")
+
 
 if __name__ == "__main__":
     if not os.path.exists("SPEC"):

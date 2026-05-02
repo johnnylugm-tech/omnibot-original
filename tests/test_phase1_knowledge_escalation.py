@@ -1,4 +1,5 @@
 """Phase 1 Knowledge Layer + Escalation unit tests"""
+
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
@@ -13,6 +14,7 @@ from app.services.knowledge import HybridKnowledgeV7
 # =============================================================================
 # Knowledge Layer Phase 1 Rule Matching (#7)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_knowledge_layer_rule_match_exact_question():
@@ -111,7 +113,11 @@ async def test_knowledge_layer_rule_match_orders_by_version_desc():
     mock_row_v3.version = 3
 
     mock_execute_result = MagicMock()
-    mock_execute_result.scalars.return_value.all.return_value = [mock_row_v3, mock_row_v2, mock_row_v1]
+    mock_execute_result.scalars.return_value.all.return_value = [
+        mock_row_v3,
+        mock_row_v2,
+        mock_row_v1,
+    ]
     mock_db.execute.return_value = mock_execute_result
 
     layer = HybridKnowledgeV7(db=mock_db)
@@ -138,7 +144,9 @@ async def test_knowledge_layer_rule_match_limit_5():
         mock_rows.append(mock_row)
 
     mock_execute_result = MagicMock()
-    mock_execute_result.scalars.return_value.all.return_value = mock_rows[:5]  # Simulate limit
+    mock_execute_result.scalars.return_value.all.return_value = mock_rows[
+        :5
+    ]  # Simulate limit
     mock_db.execute.return_value = mock_execute_result
 
     layer = HybridKnowledgeV7(db=mock_db)
@@ -199,6 +207,7 @@ async def test_knowledge_layer_no_match_confidence_below_0_7():
 # Basic Escalation No SLA (#8)
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_basic_escalation_create_inserts_row():
     """create() returns new escalation_queue id"""
@@ -209,6 +218,7 @@ async def test_basic_escalation_create_inserts_row():
     # Mock refresh to set id on the object
     async def mock_refresh(obj):
         obj.id = 42
+
     mock_db.refresh = AsyncMock(side_effect=mock_refresh)
 
     manager = EscalationManager(db=mock_db)
@@ -237,7 +247,7 @@ async def test_basic_escalation_assign_sets_agent_and_picked_at():
 
     # Check the call arguments
     call_args = mock_db.execute.call_args
-    stmt = call_args[0][0]
+    call_args[0][0]
     # The statement should be an update with assigned_agent and picked_at
 
 
@@ -272,12 +282,13 @@ async def test_basic_escalation_resolve_sets_resolved_at():
 
     # Verify the update statement sets resolved_at
     call_args = mock_db.execute.call_args
-    stmt = call_args[0][0]
+    call_args[0][0]
 
 
 # =============================================================================
 # DST Dialogue State Machine (#18)
 # =============================================================================
+
 
 def test_dialogue_state_idle_to_intent_detected():
     """IDLE + intent → INTENT_DETECTED (or PROCESSING if no slots needed)"""
@@ -288,10 +299,13 @@ def test_dialogue_state_idle_to_intent_detected():
 
     new_state = manager.process_turn(conversation_id=1, intent="預約掛號", slots={})
 
-    # Since no slots are defined, missing_slots() returns [] and transition goes to PROCESSING
+    # Since no slots are defined, missing_slots() returns [] and transition goes to PROCESSING  # noqa: E501
     # This is the actual implementation behavior
     assert new_state.primary_intent == "預約掛號"
-    assert new_state.current_state in [ConversationState.INTENT_DETECTED, ConversationState.PROCESSING]
+    assert new_state.current_state in [
+        ConversationState.INTENT_DETECTED,
+        ConversationState.PROCESSING,
+    ]
 
 
 def test_dialogue_state_intent_detected_all_slots_filled_to_processing():
@@ -303,14 +317,16 @@ def test_dialogue_state_intent_detected_all_slots_filled_to_processing():
     state.current_state = ConversationState.INTENT_DETECTED
 
     # Add required slots
-    state.slots["order_id"] = DialogueSlot(name="order_id", value="ORD123", required=True)
+    state.slots["order_id"] = DialogueSlot(
+        name="order_id", value="ORD123", required=True
+    )
     manager.update_state(state)
 
     # Process turn with all slots filled
     new_state = manager.process_turn(conversation_id=2, intent=None, slots={})
 
     # Should transition to PROCESSING when all required slots are filled
-    # Note: process_turn logic checks missing_slots when state is INTENT_DETECTED or SLOT_FILLING
+    # Note: process_turn logic checks missing_slots when state is INTENT_DETECTED or SLOT_FILLING  # noqa: E501
     assert new_state.current_state == ConversationState.PROCESSING
 
 
@@ -336,13 +352,17 @@ def test_dialogue_state_slot_filling_complete_to_awaiting_confirmation():
     manager = DSTManager()
 
     # Setup state in SLOT_FILLING with all slots filled
-    state = DialogueState(conversation_id=4, current_state=ConversationState.SLOT_FILLING)
+    state = DialogueState(
+        conversation_id=4, current_state=ConversationState.SLOT_FILLING
+    )
     state.slots["date"] = DialogueSlot(name="date", value="2024-01-15", required=True)
     state.slots["time"] = DialogueSlot(name="time", value="14:00", required=True)
     manager.update_state(state)
 
     # Process with all slots filled
-    new_state = manager.process_turn(conversation_id=4, intent=None, slots={"date": "2024-01-15", "time": "14:00"})
+    new_state = manager.process_turn(
+        conversation_id=4, intent=None, slots={"date": "2024-01-15", "time": "14:00"}
+    )
 
     # When slots are filled in SLOT_FILLING, it goes to PROCESSING
     # Then awaiting confirmation would be a separate transition
@@ -350,11 +370,13 @@ def test_dialogue_state_slot_filling_complete_to_awaiting_confirmation():
 
 
 def test_dialogue_state_slot_filling_3_turns_exceeded_to_escalated():
-    """ >3 turns in SLOT_FILLING → ESCALATED"""
+    """>3 turns in SLOT_FILLING → ESCALATED"""
     manager = DSTManager()
 
     # Start in SLOT_FILLING with turn_count at 3
-    state = DialogueState(conversation_id=5, current_state=ConversationState.SLOT_FILLING)
+    state = DialogueState(
+        conversation_id=5, current_state=ConversationState.SLOT_FILLING
+    )
     state.turn_count = 3
     state.slots["name"] = DialogueSlot(name="name", required=True)
     manager.update_state(state)
@@ -370,7 +392,9 @@ def test_dialogue_state_processing_success_to_resolved():
     manager = DSTManager()
 
     state = DialogueState(conversation_id=6, current_state=ConversationState.PROCESSING)
-    state.slots["order_id"] = DialogueSlot(name="order_id", value="ORD999", required=True)
+    state.slots["order_id"] = DialogueSlot(
+        name="order_id", value="ORD999", required=True
+    )
     manager.update_state(state)
 
     # Note: The current implementation transitions to PROCESSING when slots filled
@@ -380,7 +404,10 @@ def test_dialogue_state_processing_success_to_resolved():
 
     # Current implementation doesn't auto-transition from PROCESSING to RESOLVED
     # This test documents the expected behavior
-    assert new_state.current_state in [ConversationState.PROCESSING, ConversationState.RESOLVED]
+    assert new_state.current_state in [
+        ConversationState.PROCESSING,
+        ConversationState.RESOLVED,
+    ]
 
 
 def test_dialogue_state_processing_low_confidence_to_escalated():
@@ -388,7 +415,9 @@ def test_dialogue_state_processing_low_confidence_to_escalated():
     manager = DSTManager()
 
     state = DialogueState(conversation_id=7, current_state=ConversationState.PROCESSING)
-    state.slots["order_id"] = DialogueSlot(name="order_id", value="ORD123", required=True)
+    state.slots["order_id"] = DialogueSlot(
+        name="order_id", value="ORD123", required=True
+    )
     manager.update_state(state)
 
     # Process turn - in current implementation, this stays in PROCESSING
@@ -434,7 +463,9 @@ def test_dialogue_state_immutable_transition():
 
 def test_dialogue_state_turn_count_increments_on_transition():
     """Each transition increments turn_count"""
-    state = DialogueState(conversation_id=10, current_state=ConversationState.IDLE, turn_count=0)
+    state = DialogueState(
+        conversation_id=10, current_state=ConversationState.IDLE, turn_count=0
+    )
 
     state1 = state.transition(ConversationState.INTENT_DETECTED)
     assert state1.turn_count == 1
@@ -473,6 +504,7 @@ def test_dialogue_state_missing_slots_returns_unfilled_required():
 # Emotion Tracker (#19)
 # =============================================================================
 
+
 def test_emotion_tracker_add_score():
     """add() appends EmotionScore to history"""
     tracker = EmotionTracker()
@@ -493,21 +525,19 @@ def test_emotion_tracker_weighted_score_positive_decay():
     old_score = EmotionScore(
         category=EmotionCategory.POSITIVE,
         intensity=1.0,
-        timestamp=datetime.utcnow() - timedelta(hours=12)
+        timestamp=datetime.utcnow() - timedelta(hours=12),
     )
     tracker.add(old_score)
 
     # New positive
     new_score = EmotionScore(
-        category=EmotionCategory.POSITIVE,
-        intensity=1.0,
-        timestamp=datetime.utcnow()
+        category=EmotionCategory.POSITIVE, intensity=1.0, timestamp=datetime.utcnow()
     )
     tracker.add(new_score)
 
     weighted = tracker.current_weighted_score()
 
-    # Newer score should have more weight, but both are positive so we get positive value
+    # Newer score should have more weight, but both are positive so we get positive value  # noqa: E501
     assert weighted > 0
 
 
@@ -519,7 +549,7 @@ def test_emotion_tracker_weighted_score_negative_decay():
     old_score = EmotionScore(
         category=EmotionCategory.NEGATIVE,
         intensity=1.0,
-        timestamp=datetime.utcnow() - timedelta(hours=24)
+        timestamp=datetime.utcnow() - timedelta(hours=24),
     )
     tracker.add(old_score)
 
@@ -538,7 +568,7 @@ def test_emotion_tracker_half_life_24h():
     old_score = EmotionScore(
         category=EmotionCategory.POSITIVE,
         intensity=1.0,
-        timestamp=datetime.utcnow() - timedelta(hours=24)
+        timestamp=datetime.utcnow() - timedelta(hours=24),
     )
     tracker.history = [old_score]
 
@@ -570,7 +600,9 @@ def test_emotion_tracker_consecutive_negative_resets_on_positive():
     tracker.add(EmotionScore(category=EmotionCategory.NEGATIVE, intensity=0.5))
     tracker.add(EmotionScore(category=EmotionCategory.NEGATIVE, intensity=0.6))
     tracker.add(EmotionScore(category=EmotionCategory.POSITIVE, intensity=0.8))  # Reset
-    tracker.add(EmotionScore(category=EmotionCategory.NEGATIVE, intensity=0.4))  # Count starts again
+    tracker.add(
+        EmotionScore(category=EmotionCategory.NEGATIVE, intensity=0.4)
+    )  # Count starts again
 
     count = tracker.consecutive_negative_count()
 

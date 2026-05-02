@@ -1,7 +1,9 @@
 """
 Atomic TDD Tests for Phase 3: Deployment, DR, Encryption & Ops (#50)
-Covers: Deployment verification, Backup/DR, Encryption config, PostgreSQL/Redis security settings
+Covers: Deployment verification, Backup/DR, Encryption config,
+PostgreSQL/Redis security settings
 """
+
 import os
 
 import pytest
@@ -14,13 +16,16 @@ import pytest
 def test_all_message_type_enum_values_valid():
     """
     Section 50: message_type 枚舉值皆合法。
-    Verify MessageType enum has all expected values: text, image, sticker, location, file.
+    Verify MessageType enum has all expected values:
+    text, image, sticker, location, file.
     """
     from app.models import MessageType
 
     valid_values = {e.value for e in MessageType}
     expected = {"text", "image", "sticker", "location", "file"}
-    assert expected.issubset(valid_values), f"Missing message_type values: {expected - valid_values}"
+    assert expected.issubset(valid_values), (
+        f"Missing message_type values: {expected - valid_values}"
+    )
     assert len(valid_values) >= len(expected)
 
 
@@ -33,7 +38,9 @@ def test_all_platform_enum_values_valid():
 
     valid_values = {e.value for e in Platform}
     expected = {"telegram", "line", "messenger", "whatsapp"}
-    assert expected.issubset(valid_values), f"Missing platform values: {expected - valid_values}"
+    assert expected.issubset(valid_values), (
+        f"Missing platform values: {expected - valid_values}"
+    )
     # telegram and line are Phase 1, messenger and whatsapp are Phase 2
 
 
@@ -56,7 +63,6 @@ async def test_backup_knowledge_soft_delete_rollback():
         result = await db.execute(stmt)
         entry = result.scalar_one_or_none()
         if entry:
-            original_active = entry.is_active
             entry.is_active = False
             await db.commit()
 
@@ -77,7 +83,7 @@ async def test_backup_knowledge_soft_delete_rollback():
 @pytest.mark.docker
 @pytest.mark.skipif(
     not os.path.exists("/private/tmp/omnibot-repo/docker-compose.yml"),
-    reason="docker-compose.yml not found"
+    reason="docker-compose.yml not found",
 )
 def test_deploy_docker_compose_all_services_healthy():
     """
@@ -114,7 +120,9 @@ def test_deploy_health_endpoint_returns_200_after_startup():
 
     # In real deployment test, after docker-compose up and waiting for readiness:
     response = requests.get(health_url, timeout=5)
-    assert response.status_code == 200, f"Health endpoint failed: {response.status_code}"
+    assert response.status_code == 200, (
+        f"Health endpoint failed: {response.status_code}"
+    )
     data = response.json()
     assert data.get("status") in ["healthy", "degraded"]
 
@@ -130,8 +138,17 @@ def test_deploy_k8s_replicas_count_3():
 
     # Query current deployment
     result = subprocess.run(
-        ["kubectl", "get", "deployment", "omnibot-api", "-o", "jsonpath={.spec.replicas}"],
-        capture_output=True, text=True, cwd="/private/tmp/omnibot-repo"
+        [
+            "kubectl",
+            "get",
+            "deployment",
+            "omnibot-api",
+            "-o",
+            "jsonpath={.spec.replicas}",
+        ],
+        capture_output=True,
+        text=True,
+        cwd="/private/tmp/omnibot-repo",
     )
     replicas = int(result.stdout.strip())
     assert replicas == 3, f"Expected 3 replicas, got {replicas}"
@@ -149,13 +166,21 @@ def test_deploy_k8s_rolling_update_completes_without_downtime():
     # Get current deployment strategy
     result = subprocess.run(
         [
-            "kubectl", "get", "deployment", "omnibot-api", "-o",
-            "jsonpath={.spec.strategy.type}"
+            "kubectl",
+            "get",
+            "deployment",
+            "omnibot-api",
+            "-o",
+            "jsonpath={.spec.strategy.type}",
         ],
-        capture_output=True, text=True, cwd="/private/tmp/omnibot-repo"
+        capture_output=True,
+        text=True,
+        cwd="/private/tmp/omnibot-repo",
     )
     strategy = result.stdout.strip()
-    assert strategy == "RollingUpdate", f"Expected RollingUpdate strategy, got {strategy}"
+    assert strategy == "RollingUpdate", (
+        f"Expected RollingUpdate strategy, got {strategy}"
+    )
 
     pytest.skip("Full rolling update test requires triggering actual deployment")
 
@@ -171,10 +196,16 @@ def test_deploy_k8s_rolling_update_max_surge_1():
 
     result = subprocess.run(
         [
-            "kubectl", "get", "deployment", "omnibot-api", "-o",
-            "jsonpath={.spec.strategy.rollingUpdate.maxSurge}"
+            "kubectl",
+            "get",
+            "deployment",
+            "omnibot-api",
+            "-o",
+            "jsonpath={.spec.strategy.rollingUpdate.maxSurge}",
         ],
-        capture_output=True, text=True, cwd="/private/tmp/omnibot-repo"
+        capture_output=True,
+        text=True,
+        cwd="/private/tmp/omnibot-repo",
     )
     max_surge = result.stdout.strip()
     assert max_surge in ["1", "25%"], f"Expected maxSurge=1 or 25%, got {max_surge}"
@@ -191,13 +222,21 @@ def test_deploy_k8s_rolling_update_max_unavailable_1():
 
     result = subprocess.run(
         [
-            "kubectl", "get", "deployment", "omnibot-api", "-o",
-            "jsonpath={.spec.strategy.rollingUpdate.maxUnavailable}"
+            "kubectl",
+            "get",
+            "deployment",
+            "omnibot-api",
+            "-o",
+            "jsonpath={.spec.strategy.rollingUpdate.maxUnavailable}",
         ],
-        capture_output=True, text=True, cwd="/private/tmp/omnibot-repo"
+        capture_output=True,
+        text=True,
+        cwd="/private/tmp/omnibot-repo",
     )
     max_unavail = result.stdout.strip()
-    assert max_unavail in ["1", "25%"], f"Expected maxUnavailable=1 or 25%, got {max_unavail}"
+    assert max_unavail in ["1", "25%"], (
+        f"Expected maxUnavailable=1 or 25%, got {max_unavail}"
+    )
 
 
 @pytest.mark.skip("Requires running PostgreSQL")
@@ -220,7 +259,7 @@ def test_encryption_config_table_schema():
         "encryption": {
             "type": "AES-256-GCM",
             "key_id": "master_key_v1",
-            "encrypt_at_rest": True
+            "encrypt_at_rest": True,
         }
     }
     assert isinstance(test_config, dict)
@@ -237,16 +276,17 @@ def test_postgresql_tde_enabled():
     import subprocess
 
     # Check if PostgreSQL is running with encryption settings
-    result = subprocess.run(
-        ["psql", os.getenv("DATABASE_URL", ""), "-c",
-         "SHOW ssl;"],
-        capture_output=True, text=True
+    subprocess.run(
+        ["psql", os.getenv("DATABASE_URL", ""), "-c", "SHOW ssl;"],
+        capture_output=True,
+        text=True,
     )
     # TDE is at storage layer; we verify via encryption_service presence
     from app.security.encryption import EncryptionService
+
     svc = EncryptionService()
     assert svc is not None
-    # If encryption_service can perform encrypt/decrypt, TDE layer integration is verified
+    # If encryption_service can perform encrypt/decrypt, TDE layer integration is verified  # noqa: E501
     pytest.skip("Full TDE verification requires infrastructure access")
 
 
@@ -259,13 +299,13 @@ def test_redis_acl_enabled():
     import subprocess
 
     # Check Redis ACL config
-    result = subprocess.run(
-        ["redis-cli", "CONFIG", "GET", "aclfile"],
-        capture_output=True, text=True
+    subprocess.run(
+        ["redis-cli", "CONFIG", "GET", "aclfile"], capture_output=True, text=True
     )
     # In production, Redis should have ACL file configured
     # For unit test, verify the import works
     from app.security.rate_limiter import RateLimiter
+
     limiter = RateLimiter()
     assert limiter is not None
     pytest.skip("Full ACL verification requires running Redis server")
@@ -280,9 +320,8 @@ def test_redis_default_user_disabled():
     import subprocess
 
     # Check that default user does not have general access
-    result = subprocess.run(
-        ["redis-cli", "ACL", "GETUSER", "default"],
-        capture_output=True, text=True
+    subprocess.run(
+        ["redis-cli", "ACL", "GETUSER", "default"], capture_output=True, text=True
     )
     # If default user exists, it should be in disabled state
     # In real environment: assert "off" in result.stdout
@@ -296,10 +335,11 @@ def test_redis_requirepass_auth():
     Verify Redis requirepass authentication is functioning correctly.
     """
 
-    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    os.getenv("REDIS_URL", "redis://localhost:6379/0")
     # Verify Redis can be pinged with auth
     # In real environment: redis-cli -a <password> ping
     from app.security.rate_limiter import RateLimiter
+
     limiter = RateLimiter()
     assert limiter is not None
     pytest.skip("Requires Redis with requirepass configured")
@@ -314,9 +354,8 @@ def test_redis_tls_enabled():
     import subprocess
 
     # Check TLS config
-    result = subprocess.run(
-        ["redis-cli", "CONFIG", "GET", "tls-port"],
-        capture_output=True, text=True
+    subprocess.run(
+        ["redis-cli", "CONFIG", "GET", "tls-port"], capture_output=True, text=True
     )
     # In production, Redis should listen on TLS port
     pytest.skip("Requires Redis with TLS certificate configured")
@@ -333,8 +372,9 @@ def test_ssl_mode_verify_full():
     db_url = os.getenv("DATABASE_URL", "")
     # PostgreSQL SSL modes: disable, allow, prefer, require, verify-ca, verify-full
     if "sslmode" in db_url:
-        assert "sslmode=verify-full" in db_url or "sslmode=verify-ca" in db_url, \
+        assert "sslmode=verify-full" in db_url or "sslmode=verify-ca" in db_url, (
             "DATABASE_URL must use sslmode=verify-full for production"
+        )
     else:
         # If sslmode not in URL, connection will default to prefer
         # For production, must be explicitly set
@@ -357,7 +397,9 @@ def test_backup_pg_basebackup_and_restore():
     # 2. Verify backup file exists
     # 3. Simulate restore by extracting and verifying consistency
 
-    pytest.skip("Full backup/restore test requires running PostgreSQL and backup infrastructure")
+    pytest.skip(
+        "Full backup/restore test requires running PostgreSQL and backup infrastructure"
+    )
 
 
 @pytest.mark.skip("Requires running Redis with RDB and AOF configured")
@@ -371,19 +413,19 @@ def test_backup_redis_rdb_and_aof_restore():
 
     # Check Redis persistence config
     result = subprocess.run(
-        ["redis-cli", "CONFIG", "GET", "save"],
-        capture_output=True, text=True
+        ["redis-cli", "CONFIG", "GET", "save"], capture_output=True, text=True
     )
     # Should have rdb save config (e.g., "save 900 1 300 10 60 10000")
     assert len(result.stdout.strip()) > 0
 
     result_aof = subprocess.run(
-        ["redis-cli", "CONFIG", "GET", "appendonly"],
-        capture_output=True, text=True
+        ["redis-cli", "CONFIG", "GET", "appendonly"], capture_output=True, text=True
     )
     # AOF should be yes
     assert "yes" in result_aof.stdout.lower()
 
     # In real environment, would trigger BGSAVE and verify .rdb file
     # Then verify AOF rewrite works correctly
-    pytest.skip("Full RDB/AOF restore test requires running Redis with persistence configured")
+    pytest.skip(
+        "Full RDB/AOF restore test requires running Redis with persistence configured"
+    )

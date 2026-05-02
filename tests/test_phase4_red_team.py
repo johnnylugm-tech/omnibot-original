@@ -9,7 +9,7 @@ class TestPhase4RedTeam:
         self.masker = PIIMasking()
         try:
             self.detector = PromptInjectionDefense()
-        except:
+        except Exception:
             self.detector = None
 
     def test_pii_masking_international_phone_variations(self):
@@ -27,10 +27,10 @@ class TestPhase4RedTeam:
 
     def test_pii_masking_luhn_validation(self):
         """test_id_41_02: Mask ONLY valid credit card numbers (Luhn check)"""
-        valid_card = "4111 1111 1111 1111" # Valid Visa (Luhn pass)
-        invalid_card = "4111 1111 1111 1112" # Invalid (Luhn fail)
+        valid_card = "4111 1111 1111 1111"  # Valid Visa (Luhn pass)
+        invalid_card = "4111 1111 1111 1112"  # Invalid (Luhn fail)
 
-        # Note: PIIMasking current regex handles spaces, but we need to ensure luhn_check is called
+        # Note: PIIMasking current regex handles spaces, but we need to ensure luhn_check is called  # noqa: E501
         res_valid = self.masker.mask(valid_card)
         assert "[credit_card_masked]" in res_valid.masked_text
 

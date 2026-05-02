@@ -1,4 +1,5 @@
 """Data models for OmniBot Phase 1"""
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -25,6 +26,7 @@ class MessageType(Enum):
 @dataclass(frozen=True)
 class UnifiedMessage:
     """Cross-platform unified message format (immutable)"""
+
     platform: Platform
     platform_user_id: str
     unified_user_id: Optional[str]
@@ -38,12 +40,13 @@ class UnifiedMessage:
         """Perform platform-specific cleanup"""
         if self.platform == Platform.TELEGRAM:
             # Force reply_token to None for Telegram
-            object.__setattr__(self, 'reply_token', None)
+            object.__setattr__(self, "reply_token", None)
 
 
 @dataclass(frozen=True)
 class UnifiedResponse:
     """Unified response format"""
+
     content: str
     source: str  # rule | rag | wiki | escalate
     confidence: float

@@ -1,4 +1,5 @@
 """Phase 2 Tests: Retry + Redis Streams (Issues #23, #24, #31, #32)"""
+
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -10,6 +11,7 @@ from app.utils.retry import RetryStrategy
 # ==============================================================================
 # Redis Streams Async Processing Tests (#23, #31)
 # ==============================================================================
+
 
 @pytest.mark.asyncio
 async def test_async_message_processor_ensure_group_creates_group():
@@ -87,8 +89,12 @@ async def test_async_message_processor_classmethod_factory_creates_instance():
     mock_redis_instance = AsyncMock()
     mock_redis_instance.xgroup_create = AsyncMock()
 
-    with patch("app.services.worker.aioredis.from_url", return_value=mock_redis_instance):
-        processor = await AsyncMessageProcessor.create("redis://localhost", group="factory_test")
+    with patch(
+        "app.services.worker.aioredis.from_url", return_value=mock_redis_instance
+    ):
+        processor = await AsyncMessageProcessor.create(
+            "redis://localhost", group="factory_test"
+        )
 
         assert isinstance(processor, AsyncMessageProcessor)
         assert processor.group == "factory_test"
@@ -134,6 +140,7 @@ async def test_async_message_processor_xreadgroup_reads_from_stream():
 # Exponential Backoff Retry Tests (#24, #32)
 # ==============================================================================
 
+
 @pytest.mark.asyncio
 async def test_retry_exponential_backoff_doubles():
     """2nd retry delay ≈ base_delay * 2"""
@@ -170,10 +177,7 @@ async def test_retry_exponential_backoff_doubles():
 async def test_retry_exponential_backoff_capped_at_max_delay():
     """max delay never exceeds max_delay"""
     strategy = RetryStrategy(
-        max_retries=5,
-        base_delay=10.0,
-        max_delay=15.0,
-        jitter=False
+        max_retries=5, base_delay=10.0, max_delay=15.0, jitter=False
     )
 
     sleep_delays = []
@@ -277,7 +281,9 @@ async def test_retry_returns_result_on_success():
 @pytest.mark.asyncio
 async def test_retry_respects_max_delay():
     """delay capped at max_delay"""
-    strategy = RetryStrategy(max_retries=10, base_delay=100.0, max_delay=30.0, jitter=False)
+    strategy = RetryStrategy(
+        max_retries=10, base_delay=100.0, max_delay=30.0, jitter=False
+    )
 
     sleep_delays = []
 
@@ -318,5 +324,6 @@ async def test_retry_jitter_half_to_full_range():
     actual_delay = sleep_delays[0]
 
     # With jitter (0.5 + random * 1.0), range is [0.5*base, 1.5*base]
-    assert 0.5 * base_expected <= actual_delay <= 1.5 * base_expected, \
+    assert 0.5 * base_expected <= actual_delay <= 1.5 * base_expected, (
         f"Delay {actual_delay} not in expected range [0.5, 1.5]"
+    )

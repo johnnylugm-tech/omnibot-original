@@ -1,0 +1,2216 @@
+[
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 104,
+      "row": 51
+    },
+    "filename": "/Users/johnny/omnibot-original/app/security/ip_whitelist.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 51
+    },
+    "message": "Line too long (103 > 88)",
+    "noqa_row": 56,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 91,
+      "row": 78
+    },
+    "filename": "/Users/johnny/omnibot-original/app/services/kpi.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 78
+    },
+    "message": "Line too long (90 > 88)",
+    "noqa_row": 78,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 91,
+      "row": 33
+    },
+    "filename": "/Users/johnny/omnibot-original/app/services/odd_queries.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 33
+    },
+    "message": "Line too long (90 > 88)",
+    "noqa_row": 37,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 93,
+      "row": 47
+    },
+    "filename": "/Users/johnny/omnibot-original/app/services/odd_queries.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 47
+    },
+    "message": "Line too long (92 > 88)",
+    "noqa_row": 50,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 92,
+      "row": 69
+    },
+    "filename": "/Users/johnny/omnibot-original/app/services/odd_queries.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 69
+    },
+    "message": "Line too long (91 > 88)",
+    "noqa_row": 72,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 97,
+      "row": 82
+    },
+    "filename": "/Users/johnny/omnibot-original/app/services/odd_queries.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 82
+    },
+    "message": "Line too long (96 > 88)",
+    "noqa_row": 86,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 94,
+      "row": 104
+    },
+    "filename": "/Users/johnny/omnibot-original/app/services/odd_queries.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 104
+    },
+    "message": "Line too long (93 > 88)",
+    "noqa_row": 109,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 94,
+      "row": 126
+    },
+    "filename": "/Users/johnny/omnibot-original/app/services/odd_queries.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 126
+    },
+    "message": "Line too long (93 > 88)",
+    "noqa_row": 131,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 59,
+      "row": 28
+    },
+    "filename": "/Users/johnny/omnibot-original/app/utils/i18n.py",
+    "fix": null,
+    "location": {
+      "column": 54,
+      "row": 28
+    },
+    "message": "Line too long (96 > 88)",
+    "noqa_row": 28,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 91,
+      "row": 40
+    },
+    "filename": "/Users/johnny/omnibot-original/app/utils/retry.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 40
+    },
+    "message": "Line too long (90 > 88)",
+    "noqa_row": 40,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 37,
+      "row": 17
+    },
+    "filename": "/Users/johnny/omnibot-original/migrations/env.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 17
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 17,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E722",
+    "end_location": {
+      "column": 11,
+      "row": 25
+    },
+    "filename": "/Users/johnny/omnibot-original/scripts/verify_tdd.py",
+    "fix": null,
+    "location": {
+      "column": 5,
+      "row": 25
+    },
+    "message": "Do not use bare `except`",
+    "noqa_row": 25,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/bare-except"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 92,
+      "row": 47
+    },
+    "filename": "/Users/johnny/omnibot-original/scripts/verify_tdd.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 47
+    },
+    "message": "Line too long (91 > 88)",
+    "noqa_row": 47,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 101,
+      "row": 110
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/conftest.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 110
+    },
+    "message": "Line too long (100 > 88)",
+    "noqa_row": 110,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 95,
+      "row": 58
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_api.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 58
+    },
+    "message": "Line too long (94 > 88)",
+    "noqa_row": 58,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 127,
+      "row": 184
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_api.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 184
+    },
+    "message": "Line too long (126 > 88)",
+    "noqa_row": 184,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 127,
+      "row": 192
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_api.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 192
+    },
+    "message": "Line too long (126 > 88)",
+    "noqa_row": 192,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 130,
+      "row": 200
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_api.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 200
+    },
+    "message": "Line too long (129 > 88)",
+    "noqa_row": 200,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 91,
+      "row": 297
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_escalation.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 297
+    },
+    "message": "Line too long (90 > 88)",
+    "noqa_row": 298,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 94,
+      "row": 18
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_id_36_degradation_integration.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 18
+    },
+    "message": "Line too long (93 > 88)",
+    "noqa_row": 18,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "N806",
+    "end_location": {
+      "column": 61,
+      "row": 21
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_id_36_degradation_integration.py",
+    "fix": null,
+    "location": {
+      "column": 48,
+      "row": 21
+    },
+    "message": "Variable `MockKnowledge` in function should be lowercase",
+    "noqa_row": 21,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 118,
+      "row": 8
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_id_41_kpi_thresholds.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 8
+    },
+    "message": "Line too long (117 > 88)",
+    "noqa_row": 11,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 96,
+      "row": 94
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_id_41_kpi_thresholds.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 94
+    },
+    "message": "Line too long (95 > 88)",
+    "noqa_row": 94,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 96,
+      "row": 115
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_id_41_kpi_thresholds.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 115
+    },
+    "message": "Line too long (95 > 88)",
+    "noqa_row": 115,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 96,
+      "row": 133
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_id_41_kpi_thresholds.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 133
+    },
+    "message": "Line too long (95 > 88)",
+    "noqa_row": 133,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 90,
+      "row": 18
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_id_48_rbac_redteam.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 18
+    },
+    "message": "Line too long (89 > 88)",
+    "noqa_row": 18,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 94,
+      "row": 40
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_id_50_ops_dr.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 40
+    },
+    "message": "Line too long (93 > 88)",
+    "noqa_row": 40,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 90,
+      "row": 65
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_id_50_ops_dr.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 65
+    },
+    "message": "Line too long (89 > 88)",
+    "noqa_row": 65,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 54,
+      "row": 4
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_api_db.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 4
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 4,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 14,
+      "row": 6
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_api_db.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 6
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 6,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 42,
+      "row": 7
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_api_db.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 7
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 7,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 24,
+      "row": 9
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_api_db.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 9
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 9,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E402",
+    "end_location": {
+      "column": 2,
+      "row": 19
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_api_db.py",
+    "fix": null,
+    "location": {
+      "column": 1,
+      "row": 10
+    },
+    "message": "Module level import not at top of file",
+    "noqa_row": 10,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/module-import-not-at-top-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 90,
+      "row": 375
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_api_db.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 375
+    },
+    "message": "Line too long (89 > 88)",
+    "noqa_row": 375,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 91,
+      "row": 386
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_api_db.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 386
+    },
+    "message": "Line too long (90 > 88)",
+    "noqa_row": 386,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 93,
+      "row": 489
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_api_db.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 489
+    },
+    "message": "Line too long (92 > 88)",
+    "noqa_row": 489,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 93,
+      "row": 493
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_api_db.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 493
+    },
+    "message": "Line too long (92 > 88)",
+    "noqa_row": 493,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 90,
+      "row": 564
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_api_db.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 564
+    },
+    "message": "Line too long (89 > 88)",
+    "noqa_row": 564,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "N802",
+    "end_location": {
+      "column": 42,
+      "row": 55
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 5,
+      "row": 55
+    },
+    "message": "Function name `test_error_AUTH_INVALID_SIGNATURE_401` should be lowercase",
+    "noqa_row": 55,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/invalid-function-name"
+  },
+  {
+    "cell": null,
+    "code": "N802",
+    "end_location": {
+      "column": 39,
+      "row": 73
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 5,
+      "row": 73
+    },
+    "message": "Function name `test_error_KNOWLEDGE_NOT_FOUND_404` should be lowercase",
+    "noqa_row": 73,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/invalid-function-name"
+  },
+  {
+    "cell": null,
+    "code": "N802",
+    "end_location": {
+      "column": 39,
+      "row": 102
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 5,
+      "row": 102
+    },
+    "message": "Function name `test_error_RATE_LIMIT_EXCEEDED_429` should be lowercase",
+    "noqa_row": 102,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/invalid-function-name"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 116,
+      "row": 110
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 110
+    },
+    "message": "Line too long (115 > 88)",
+    "noqa_row": 110,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "N802",
+    "end_location": {
+      "column": 36,
+      "row": 142
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 5,
+      "row": 142
+    },
+    "message": "Function name `test_error_VALIDATION_ERROR_422` should be lowercase",
+    "noqa_row": 142,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/invalid-function-name"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 94,
+      "row": 159
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 159
+    },
+    "message": "Line too long (93 > 88)",
+    "noqa_row": 159,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "N802",
+    "end_location": {
+      "column": 34,
+      "row": 167
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 5,
+      "row": 167
+    },
+    "message": "Function name `test_error_INTERNAL_ERROR_500` should be lowercase",
+    "noqa_row": 167,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/invalid-function-name"
+  },
+  {
+    "cell": null,
+    "code": "N802",
+    "end_location": {
+      "column": 43,
+      "row": 193
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 5,
+      "row": 193
+    },
+    "message": "Function name `test_error_AUTHZ_INSUFFICIENT_ROLE_403` should be lowercase",
+    "noqa_row": 193,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/invalid-function-name"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 105,
+      "row": 520
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 520
+    },
+    "message": "Line too long (104 > 88)",
+    "noqa_row": 520,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 111,
+      "row": 548
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 548
+    },
+    "message": "Line too long (110 > 88)",
+    "noqa_row": 548,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 105,
+      "row": 578
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 578
+    },
+    "message": "Line too long (104 > 88)",
+    "noqa_row": 578,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 105,
+      "row": 655
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 655
+    },
+    "message": "Line too long (104 > 88)",
+    "noqa_row": 655,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 682
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 682
+    },
+    "message": "Line too long (102 > 88)",
+    "noqa_row": 682,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 110,
+      "row": 710
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 710
+    },
+    "message": "Line too long (109 > 88)",
+    "noqa_row": 710,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 100,
+      "row": 816
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 816
+    },
+    "message": "Line too long (99 > 88)",
+    "noqa_row": 816,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 90,
+      "row": 864
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 864
+    },
+    "message": "Line too long (89 > 88)",
+    "noqa_row": 864,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 96,
+      "row": 869
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 869
+    },
+    "message": "Line too long (95 > 88)",
+    "noqa_row": 869,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 105,
+      "row": 874
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 874
+    },
+    "message": "Line too long (104 > 88)",
+    "noqa_row": 874,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 102,
+      "row": 879
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_extra.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 879
+    },
+    "message": "Line too long (101 > 88)",
+    "noqa_row": 879,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 95,
+      "row": 302
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_knowledge_escalation.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 302
+    },
+    "message": "Line too long (94 > 88)",
+    "noqa_row": 302,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 98,
+      "row": 329
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_knowledge_escalation.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 329
+    },
+    "message": "Line too long (97 > 88)",
+    "noqa_row": 329,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 90,
+      "row": 540
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_knowledge_escalation.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 540
+    },
+    "message": "Line too long (89 > 88)",
+    "noqa_row": 540,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 131,
+      "row": 1
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_red_gaps.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 1
+    },
+    "message": "Line too long (130 > 88)",
+    "noqa_row": 1,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 92,
+      "row": 83
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_red_gaps.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 83
+    },
+    "message": "Line too long (91 > 88)",
+    "noqa_row": 86,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "N802",
+    "end_location": {
+      "column": 62,
+      "row": 177
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_red_gaps.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 177
+    },
+    "message": "Function name `test_structured_logger_info_alias_calls_log_with_INFO` should be lowercase",
+    "noqa_row": 177,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/invalid-function-name"
+  },
+  {
+    "cell": null,
+    "code": "N802",
+    "end_location": {
+      "column": 64,
+      "row": 215
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_red_gaps.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 215
+    },
+    "message": "Function name `test_structured_logger_error_alias_calls_log_with_ERROR` should be lowercase",
+    "noqa_row": 215,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/invalid-function-name"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 91,
+      "row": 258
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_red_gaps.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 258
+    },
+    "message": "Line too long (90 > 88)",
+    "noqa_row": 259,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 92,
+      "row": 276
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_red_gaps.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 276
+    },
+    "message": "Line too long (91 > 88)",
+    "noqa_row": 276,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 98,
+      "row": 298
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_red_gaps.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 298
+    },
+    "message": "Line too long (97 > 88)",
+    "noqa_row": 301,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 93,
+      "row": 304
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_red_gaps.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 304
+    },
+    "message": "Line too long (92 > 88)",
+    "noqa_row": 304,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 135,
+      "row": 331
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_red_gaps.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 331
+    },
+    "message": "Line too long (134 > 88)",
+    "noqa_row": 331,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 119,
+      "row": 138
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_unit.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 138
+    },
+    "message": "Line too long (118 > 88)",
+    "noqa_row": 138,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "N802",
+    "end_location": {
+      "column": 48,
+      "row": 149
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase1_unit.py",
+    "fix": null,
+    "location": {
+      "column": 9,
+      "row": 149
+    },
+    "message": "Function name `test_sanitizer_nfkc_normalization_全形轉半形` should be lowercase",
+    "noqa_row": 149,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/invalid-function-name"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 91,
+      "row": 38
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_hybrid_confidence_gates.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 38
+    },
+    "message": "Line too long (90 > 88)",
+    "noqa_row": 40,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "N806",
+    "end_location": {
+      "column": 25,
+      "row": 41
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_hybrid_confidence_gates.py",
+    "fix": null,
+    "location": {
+      "column": 5,
+      "row": 41
+    },
+    "message": "Variable `HybridKnowledgeLayer` in function should be lowercase",
+    "noqa_row": 41,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function"
+  },
+  {
+    "cell": null,
+    "code": "N806",
+    "end_location": {
+      "column": 20,
+      "row": 42
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_hybrid_confidence_gates.py",
+    "fix": null,
+    "location": {
+      "column": 5,
+      "row": 42
+    },
+    "message": "Variable `KnowledgeResult` in function should be lowercase",
+    "noqa_row": 42,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function"
+  },
+  {
+    "cell": null,
+    "code": "N806",
+    "end_location": {
+      "column": 25,
+      "row": 83
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_hybrid_confidence_gates.py",
+    "fix": null,
+    "location": {
+      "column": 5,
+      "row": 83
+    },
+    "message": "Variable `HybridKnowledgeLayer` in function should be lowercase",
+    "noqa_row": 83,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function"
+  },
+  {
+    "cell": null,
+    "code": "N806",
+    "end_location": {
+      "column": 20,
+      "row": 84
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_hybrid_confidence_gates.py",
+    "fix": null,
+    "location": {
+      "column": 5,
+      "row": 84
+    },
+    "message": "Variable `KnowledgeResult` in function should be lowercase",
+    "noqa_row": 84,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/non-lowercase-variable-in-function"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 90,
+      "row": 161
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_hybrid_confidence_gates.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 161
+    },
+    "message": "Line too long (89 > 88)",
+    "noqa_row": 161,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 91,
+      "row": 168
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_hybrid_confidence_gates.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 168
+    },
+    "message": "Line too long (90 > 88)",
+    "noqa_row": 168,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 96,
+      "row": 170
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_hybrid_confidence_gates.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 170
+    },
+    "message": "Line too long (95 > 88)",
+    "noqa_row": 170,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 96,
+      "row": 110
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_hybrid_rrf.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 110
+    },
+    "message": "Line too long (95 > 88)",
+    "noqa_row": 110,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 92,
+      "row": 239
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_hybrid_rrf.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 239
+    },
+    "message": "Line too long (91 > 88)",
+    "noqa_row": 239,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 112,
+      "row": 476
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_hybrid_rrf.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 476
+    },
+    "message": "Line too long (111 > 88)",
+    "noqa_row": 476,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 112,
+      "row": 513
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_hybrid_rrf.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 513
+    },
+    "message": "Line too long (111 > 88)",
+    "noqa_row": 513,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 101,
+      "row": 573
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_hybrid_rrf.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 573
+    },
+    "message": "Line too long (100 > 88)",
+    "noqa_row": 573,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 105,
+      "row": 600
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_hybrid_rrf.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 600
+    },
+    "message": "Line too long (104 > 88)",
+    "noqa_row": 600,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 111,
+      "row": 169
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_odd_sql.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 169
+    },
+    "message": "Line too long (110 > 88)",
+    "noqa_row": 169,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 90,
+      "row": 259
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_odd_sql.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 259
+    },
+    "message": "Line too long (89 > 88)",
+    "noqa_row": 259,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 97,
+      "row": 3
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_redis_integrity.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 3
+    },
+    "message": "Line too long (96 > 88)",
+    "noqa_row": 4,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 126,
+      "row": 19
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_redis_integrity.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 19
+    },
+    "message": "Line too long (125 > 88)",
+    "noqa_row": 19,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 121,
+      "row": 107
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_redis_integrity.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 107
+    },
+    "message": "Line too long (120 > 88)",
+    "noqa_row": 107,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 119,
+      "row": 136
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_redis_integrity.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 136
+    },
+    "message": "Line too long (118 > 88)",
+    "noqa_row": 136,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 105,
+      "row": 158
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_redis_integrity.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 158
+    },
+    "message": "Line too long (104 > 88)",
+    "noqa_row": 158,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 94,
+      "row": 182
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_redis_integrity.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 182
+    },
+    "message": "Line too long (93 > 88)",
+    "noqa_row": 182,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 101,
+      "row": 187
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_redis_integrity.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 187
+    },
+    "message": "Line too long (100 > 88)",
+    "noqa_row": 187,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 92,
+      "row": 196
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_redis_integrity.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 196
+    },
+    "message": "Line too long (91 > 88)",
+    "noqa_row": 196,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 94,
+      "row": 295
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_redis_integrity.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 295
+    },
+    "message": "Line too long (93 > 88)",
+    "noqa_row": 299,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 95,
+      "row": 297
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_redis_integrity.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 297
+    },
+    "message": "Line too long (94 > 88)",
+    "noqa_row": 299,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 107,
+      "row": 352
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_redis_integrity.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 352
+    },
+    "message": "Line too long (106 > 88)",
+    "noqa_row": 352,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 90,
+      "row": 400
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_redis_integrity.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 400
+    },
+    "message": "Line too long (89 > 88)",
+    "noqa_row": 405,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 109,
+      "row": 1
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_security.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 1
+    },
+    "message": "Line too long (108 > 88)",
+    "noqa_row": 1,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "F401",
+    "end_location": {
+      "column": 41,
+      "row": 126
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_security.py",
+    "fix": null,
+    "location": {
+      "column": 20,
+      "row": 126
+    },
+    "message": "`sentence_transformers` imported but unused; consider using `importlib.util.find_spec` to test for availability",
+    "noqa_row": 126,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/unused-import"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 97,
+      "row": 160
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_security.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 160
+    },
+    "message": "Line too long (96 > 88)",
+    "noqa_row": 160,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 98,
+      "row": 205
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase2_security.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 205
+    },
+    "message": "Line too long (97 > 88)",
+    "noqa_row": 205,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 95,
+      "row": 54
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 54
+    },
+    "message": "Line too long (94 > 88)",
+    "noqa_row": 54,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 92,
+      "row": 121
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_degradation.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 121
+    },
+    "message": "Line too long (91 > 88)",
+    "noqa_row": 121,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 98,
+      "row": 3
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_deployment.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 3
+    },
+    "message": "Line too long (97 > 88)",
+    "noqa_row": 4,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 91,
+      "row": 18
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_deployment.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 18
+    },
+    "message": "Line too long (90 > 88)",
+    "noqa_row": 19,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 91,
+      "row": 287
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_deployment.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 287
+    },
+    "message": "Line too long (90 > 88)",
+    "noqa_row": 287,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 3
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_extra.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 3
+    },
+    "message": "Line too long (102 > 88)",
+    "noqa_row": 4,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 93,
+      "row": 16
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_extra.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 16
+    },
+    "message": "Line too long (92 > 88)",
+    "noqa_row": 18,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 95,
+      "row": 30
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_ip_whitelist.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 30
+    },
+    "message": "Line too long (94 > 88)",
+    "noqa_row": 30,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 91,
+      "row": 114
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_ip_whitelist.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 114
+    },
+    "message": "Line too long (90 > 88)",
+    "noqa_row": 114,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 96,
+      "row": 173
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_ip_whitelist.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 173
+    },
+    "message": "Line too long (95 > 88)",
+    "noqa_row": 173,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 98,
+      "row": 189
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_ip_whitelist.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 189
+    },
+    "message": "Line too long (97 > 88)",
+    "noqa_row": 189,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 96,
+      "row": 1
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_observability.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 1
+    },
+    "message": "Line too long (95 > 88)",
+    "noqa_row": 1,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 90,
+      "row": 692
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_observability.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 692
+    },
+    "message": "Line too long (89 > 88)",
+    "noqa_row": 692,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 99,
+      "row": 927
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_observability.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 927
+    },
+    "message": "Line too long (98 > 88)",
+    "noqa_row": 927,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 109,
+      "row": 43
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_rbac_ab.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 43
+    },
+    "message": "Line too long (108 > 88)",
+    "noqa_row": 43,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 96,
+      "row": 57
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_rbac_ab.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 57
+    },
+    "message": "Line too long (95 > 88)",
+    "noqa_row": 57,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 91,
+      "row": 346
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_rbac_ab.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 346
+    },
+    "message": "Line too long (90 > 88)",
+    "noqa_row": 346,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 108,
+      "row": 542
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_rbac_ab.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 542
+    },
+    "message": "Line too long (107 > 88)",
+    "noqa_row": 547,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 91,
+      "row": 545
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase3_rbac_ab.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 545
+    },
+    "message": "Line too long (90 > 88)",
+    "noqa_row": 547,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 100,
+      "row": 33
+    },
+    "filename": "/Users/johnny/omnibot-original/tests/test_phase4_red_team.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 33
+    },
+    "message": "Line too long (99 > 88)",
+    "noqa_row": 33,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  }
+]

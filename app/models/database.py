@@ -1,4 +1,5 @@
 """SQLAlchemy models and database schema"""
+
 import os
 from datetime import datetime
 from typing import Any, AsyncGenerator
@@ -21,7 +22,8 @@ from sqlalchemy.orm import DeclarativeBase, relationship
 
 # Database setup
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql+asyncpg://omnibot:password@localhost:5432/omnibot")
+    "DATABASE_URL", "postgresql+asyncpg://omnibot:password@localhost:5432/omnibot"
+)
 engine = create_async_engine(DATABASE_URL, pool_pre_ping=True)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
@@ -38,41 +40,44 @@ class Base(DeclarativeBase):
 
 class User(Base):
     """Cross-platform user table"""
+
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
-    unified_user_id = Column(UUID(as_uuid=True), unique=True,
-                             nullable=False, default=lambda: __import__('uuid').uuid4())
+    unified_user_id = Column(
+        UUID(as_uuid=True),
+        unique=True,
+        nullable=False,
+        default=lambda: __import__("uuid").uuid4(),
+    )
     platform = Column(String(20), nullable=False)
     platform_user_id = Column(String(100), nullable=False)
     profile = Column(JSONB)
     preference_tags: Any = Column(ARRAY(Text))
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow,
-                        onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     __table_args__ = (
-        UniqueConstraint('platform', 'platform_user_id',
-                         name='uq_platform_user'),
+        UniqueConstraint("platform", "platform_user_id", name="uq_platform_user"),
     )
 
 
 class Conversation(Base):
     """Conversation history"""
+
     __tablename__ = "conversations"
 
     id = Column(Integer, primary_key=True)
-    unified_user_id = Column(
-        UUID(as_uuid=True), ForeignKey('users.unified_user_id'))
+    unified_user_id = Column(UUID(as_uuid=True), ForeignKey("users.unified_user_id"))
     platform = Column(String(20), nullable=False)
     started_at = Column(DateTime, default=datetime.utcnow)
     ended_at = Column(DateTime)
-    status = Column(String(20), default='active')
+    status = Column(String(20), default="active")
     satisfaction_score = Column(Float)
     first_contact_resolution = Column(Boolean)
     resolution_cost = Column(Float)
     response_time_ms = Column(Integer)
-    scope_type = Column(String(20), default='in_scope')
+    scope_type = Column(String(20), default="in_scope")
     dst_state = Column(JSONB)
 
     messages = relationship("Message", back_populates="conversation")
@@ -80,10 +85,11 @@ class Conversation(Base):
 
 class Message(Base):
     """Message records"""
+
     __tablename__ = "messages"
 
     id = Column(Integer, primary_key=True)
-    conversation_id = Column(Integer, ForeignKey('conversations.id'))
+    conversation_id = Column(Integer, ForeignKey("conversations.id"))
     role = Column(String(20), nullable=False)  # user | assistant | system
     content = Column(Text, nullable=False)
     intent_detected = Column(String(50))
@@ -100,6 +106,7 @@ class Message(Base):
 
 class KnowledgeBase(Base):
     """Knowledge base with vector support (Phase 2)"""
+
     __tablename__ = "knowledge_base"
 
     id = Column(Integer, primary_key=True)
@@ -109,17 +116,18 @@ class KnowledgeBase(Base):
     keywords: Any = Column(ARRAY(Text))  # type: ignore
     embeddings = Column(JSONB)  # vector(384) - Phase 2 with pgvector
     embedding_model = Column(
-        String(100), default='paraphrase-multilingual-MiniLM-L12-v2')
+        String(100), default="paraphrase-multilingual-MiniLM-L12-v2"
+    )
     version = Column(Integer, default=1)
     contains_pii = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow,
-                        onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class PlatformConfig(Base):
     """Platform adapter configuration"""
+
     __tablename__ = "platform_configs"
 
     platform = Column(String(20), primary_key=True)
@@ -133,15 +141,14 @@ class PlatformConfig(Base):
 
 class EscalationQueue(Base):
     """Human escalation queue (Phase 1 no SLA)"""
+
     __tablename__ = "escalation_queue"
 
     id = Column(Integer, primary_key=True)
-    conversation_id = Column(Integer, ForeignKey(
-        'conversations.id'), unique=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), unique=True)
     reason = Column(String(50), nullable=False)
     priority = Column(Integer, default=0)
-    assigned_agent = Column(
-        UUID(as_uuid=True), ForeignKey('users.unified_user_id'))
+    assigned_agent = Column(UUID(as_uuid=True), ForeignKey("users.unified_user_id"))
     queued_at = Column(DateTime, default=datetime.utcnow)
     picked_at = Column(DateTime)
     resolved_at = Column(DateTime)
@@ -150,27 +157,30 @@ class EscalationQueue(Base):
 
 class UserFeedback(Base):
     """User feedback collection"""
+
     __tablename__ = "user_feedback"
 
     id = Column(Integer, primary_key=True)
-    conversation_id = Column(Integer, ForeignKey('conversations.id'))
-    message_id = Column(Integer, ForeignKey('messages.id'))
+    conversation_id = Column(Integer, ForeignKey("conversations.id"))
+    message_id = Column(Integer, ForeignKey("messages.id"))
     feedback = Column(String(20), nullable=False)
     comment = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (
-        CheckConstraint("feedback IN ('thumbs_up', 'thumbs_down')",
-                        name="check_feedback_values"),
+        CheckConstraint(
+            "feedback IN ('thumbs_up', 'thumbs_down')", name="check_feedback_values"
+        ),
     )
 
 
 class SecurityLog(Base):
     """Security event logs"""
+
     __tablename__ = "security_logs"
 
     id = Column(Integer, primary_key=True)
-    conversation_id = Column(Integer, ForeignKey('conversations.id'))
+    conversation_id = Column(Integer, ForeignKey("conversations.id"))
     layer = Column(String(10), nullable=False)
     blocked = Column(Boolean, default=False)
     block_reason = Column(Text)
@@ -181,11 +191,11 @@ class SecurityLog(Base):
 
 class EmotionHistory(Base):
     """Historical emotion scores for decay calculation (Phase 2)"""
+
     __tablename__ = "emotion_history"
 
     id = Column(Integer, primary_key=True)
-    conversation_id = Column(Integer, ForeignKey(
-        'conversations.id'), nullable=False)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False)
     category = Column(String(20), nullable=False)
     intensity = Column(Float, nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
@@ -193,11 +203,12 @@ class EmotionHistory(Base):
 
 class EdgeCase(Base):
     """Tracking for grounding failures and unusual inputs (Phase 2)"""
+
     __tablename__ = "edge_cases"
 
     id = Column(Integer, primary_key=True)
-    conversation_id = Column(Integer, ForeignKey('conversations.id'))
-    message_id = Column(Integer, ForeignKey('messages.id'))
+    conversation_id = Column(Integer, ForeignKey("conversations.id"))
+    message_id = Column(Integer, ForeignKey("messages.id"))
     # grounding_fail | unusual_input
     case_type = Column(String(50), nullable=False)
     raw_content = Column(Text)
@@ -207,6 +218,7 @@ class EdgeCase(Base):
 
 class SchemaMigration(Base):
     """Tracking schema versions (Phase 3)"""
+
     __tablename__ = "schema_migrations"
 
     version = Column(String(20), primary_key=True)
@@ -217,6 +229,7 @@ class SchemaMigration(Base):
 
 class Role(Base):
     """RBAC Role definitions"""
+
     __tablename__ = "roles"
 
     id = Column(Integer, primary_key=True)
@@ -228,40 +241,41 @@ class Role(Base):
 
 class RoleAssignment(Base):
     """User-to-Role assignments"""
+
     __tablename__ = "role_assignments"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.unified_user_id'))
-    role_id = Column(Integer, ForeignKey('roles.id'))
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.unified_user_id"))
+    role_id = Column(Integer, ForeignKey("roles.id"))
     assigned_at = Column(DateTime, default=datetime.utcnow)
-    assigned_by = Column(UUID(as_uuid=True),
-                         ForeignKey('users.unified_user_id'))
+    assigned_by = Column(UUID(as_uuid=True), ForeignKey("users.unified_user_id"))
 
-    __table_args__ = (
-        UniqueConstraint('user_id', 'role_id', name='uq_user_role'),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "role_id", name="uq_user_role"),)
 
 
 class PIIAuditLog(Base):
     """Audit logs for PII masking actions"""
+
     __tablename__ = "pii_audit_log"
 
     id = Column(Integer, primary_key=True)
-    conversation_id = Column(Integer, ForeignKey('conversations.id'))
+    conversation_id = Column(Integer, ForeignKey("conversations.id"))
     mask_count = Column(Integer, nullable=False)
     pii_types: Any = Column(ARRAY(Text))
     action = Column(String(20), nullable=False)
-    performed_by = Column(UUID(as_uuid=True),
-                          ForeignKey('users.unified_user_id'))
+    performed_by = Column(UUID(as_uuid=True), ForeignKey("users.unified_user_id"))
     created_at = Column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (
-        CheckConstraint(action.in_(['mask', 'unmask', 'restore']), name='ck_pii_action'),
+        CheckConstraint(
+            action.in_(["mask", "unmask", "restore"]), name="ck_pii_action"
+        ),
     )
 
 
 class Experiment(Base):
     """A/B Testing experiments"""
+
     __tablename__ = "experiments"
 
     id = Column(Integer, primary_key=True)
@@ -270,17 +284,18 @@ class Experiment(Base):
     variants = Column(JSONB, nullable=False)  # Variant config
     traffic_split = Column(JSONB, nullable=False)  # Split percentages
     # draft | running | completed | aborted
-    status = Column(String(20), default='draft')
+    status = Column(String(20), default="draft")
     started_at = Column(DateTime)
     ended_at = Column(DateTime)
 
 
 class ExperimentResult(Base):
     """A/B Testing results"""
+
     __tablename__ = "experiment_results"
 
     id = Column(Integer, primary_key=True)
-    experiment_id = Column(Integer, ForeignKey('experiments.id'))
+    experiment_id = Column(Integer, ForeignKey("experiments.id"))
     variant = Column(String(50), nullable=False)
     metric_name = Column(String(50), nullable=False)
     metric_value = Column(Float, nullable=False)
@@ -290,6 +305,7 @@ class ExperimentResult(Base):
 
 class RetryLog(Base):
     """Log of retried operations"""
+
     __tablename__ = "retry_log"
 
     id = Column(Integer, primary_key=True)
@@ -336,7 +352,9 @@ CREATE TABLE IF NOT EXISTS conversations (
 
 CREATE INDEX IF NOT EXISTS idx_conversations_started ON conversations (started_at);
 CREATE INDEX IF NOT EXISTS idx_conversations_user ON conversations (unified_user_id);
-CREATE INDEX IF NOT EXISTS idx_conversations_platform ON conversations (platform, started_at);
+CREATE INDEX IF NOT EXISTS idx_conversations_platform ON conversations (
+    platform, started_at
+);
 
 -- Messages
 CREATE TABLE IF NOT EXISTS messages (
@@ -399,7 +417,9 @@ CREATE TABLE IF NOT EXISTS escalation_queue (
     sla_deadline TIMESTAMPTZ
 );
 
-CREATE INDEX IF NOT EXISTS idx_escalation_pending ON escalation_queue (queued_at) WHERE resolved_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_escalation_pending ON escalation_queue (queued_at)
+WHERE
+    resolved_at IS NULL;
 
 -- User feedback
 CREATE TABLE IF NOT EXISTS user_feedback (
@@ -494,6 +514,7 @@ CREATE TABLE IF NOT EXISTS retry_log (
 );
 """
 
+
 class KnowledgeVersion(Base):
     __tablename__ = "knowledge_versions"
     id = Column(Integer, primary_key=True)
@@ -502,6 +523,7 @@ class KnowledgeVersion(Base):
     content = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
 class UserSession(Base):
     __tablename__ = "user_sessions"
     id = Column(Integer, primary_key=True)
@@ -509,4 +531,3 @@ class UserSession(Base):
     session_token = Column(String(255), unique=True)
     expires_at = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)
-

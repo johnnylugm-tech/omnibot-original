@@ -1,4 +1,5 @@
 """Exponential Backoff Retry Strategy - Phase 3"""
+
 import asyncio
 import logging
 import secrets
@@ -23,7 +24,9 @@ class RetryStrategy:
         self.max_delay = max_delay
         self.jitter = jitter
 
-    async def execute(self, func: Callable[..., Coroutine[Any, Any, T]], *args: Any, **kwargs: Any) -> T:
+    async def execute(
+        self, func: Callable[..., Coroutine[Any, Any, T]], *args: Any, **kwargs: Any
+    ) -> T:
         """Execute a coroutine with retry logic"""
         last_exception = None
 
@@ -34,18 +37,21 @@ class RetryStrategy:
                 last_exception = e
                 if attempt == self.max_retries:
                     logger.error(
-                        f"Max retries ({self.max_retries}) reached. Operation failed: {e}")
+                        f"Max retries ({self.max_retries}) reached. "
+                        f"Operation failed: {e}"
+                    )
                     raise
 
                 # Calculate delay: base * 2^attempt
-                delay = min(self.base_delay * (2 ** attempt), self.max_delay)
+                delay = min(self.base_delay * (2**attempt), self.max_delay)
 
                 # Apply jitter (0.5 to 1.5 of calculated delay)
                 if self.jitter:
                     delay *= 0.5 + secrets.SystemRandom().random()
 
                 logger.warning(
-                    f"Attempt {attempt + 1} failed: {e}. Retrying in {delay:.2f}s...")
+                    f"Attempt {attempt + 1} failed: {e}. Retrying in {delay:.2f}s..."
+                )
                 await asyncio.sleep(delay)
 
         if last_exception:

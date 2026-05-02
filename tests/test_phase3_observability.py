@@ -1,4 +1,5 @@
-"""Phase 3 Observability Tests - Alerts, Schema Migration, Backup, Degradation, Load Testing"""
+"""Phase 3 Observability Tests - Alerts, Schema Migration, Backup, Degradation, Load Testing"""  # noqa: E501
+
 import asyncio
 import time
 import tracemalloc
@@ -11,6 +12,7 @@ from prometheus_client import Gauge
 # Prometheus Metrics Tests (#29)
 # =============================================================================
 
+
 class TestPrometheusMetrics:
     """Tests for Prometheus metrics collection"""
 
@@ -19,12 +21,20 @@ class TestPrometheusMetrics:
         from app.utils.metrics import REQUEST_COUNT
 
         # Capture initial value
-        initial_value = self._get_counter_value(REQUEST_COUNT, {"method": "GET", "endpoint": "/api/v1/knowledge", "platform": "test"})
+        initial_value = self._get_counter_value(
+            REQUEST_COUNT,
+            {"method": "GET", "endpoint": "/api/v1/knowledge", "platform": "test"},
+        )
 
         # Simulate API call metric increment
-        REQUEST_COUNT.labels(method="GET", endpoint="/api/v1/knowledge", platform="test").inc()
+        REQUEST_COUNT.labels(
+            method="GET", endpoint="/api/v1/knowledge", platform="test"
+        ).inc()
 
-        after_value = self._get_counter_value(REQUEST_COUNT, {"method": "GET", "endpoint": "/api/v1/knowledge", "platform": "test"})
+        after_value = self._get_counter_value(
+            REQUEST_COUNT,
+            {"method": "GET", "endpoint": "/api/v1/knowledge", "platform": "test"},
+        )
         assert after_value == initial_value + 1, "Counter should increment by 1"
 
     def test_metrics_record_knowledge_query_latency(self):
@@ -42,7 +52,9 @@ class TestPrometheusMetrics:
         """Active conversations gauge incremented"""
 
         # Using a gauge-like pattern for active conversations
-        active_gauge = Gauge("omnibot_active_conversations", "Active conversations", ["platform"])
+        active_gauge = Gauge(
+            "omnibot_active_conversations", "Active conversations", ["platform"]
+        )
 
         initial = active_gauge.labels(platform="slack")._value.get()
         active_gauge.labels(platform="slack").inc()
@@ -54,7 +66,9 @@ class TestPrometheusMetrics:
         """Active conversations gauge decremented on end"""
         # Use a separate gauge name to avoid CollectorRegistry conflict
         # when tests run in different order / processes
-        active_gauge2 = Gauge("omnibot_conversations_ended", "Conversations ended", ["platform"])
+        active_gauge2 = Gauge(
+            "omnibot_conversations_ended", "Conversations ended", ["platform"]
+        )
 
         # First increment then decrement
         active_gauge2.labels(platform="slack").inc()
@@ -72,20 +86,22 @@ class TestPrometheusMetrics:
 
         # Record with all labels
         REQUEST_COUNT.labels(
-            method="POST",
-            endpoint="/api/v1/knowledge",
-            platform="slack"
+            method="POST", endpoint="/api/v1/knowledge", platform="slack"
         ).inc()
 
         REQUEST_COUNT.labels(
-            method="GET",
-            endpoint="/api/v1/knowledge",
-            platform="discord"
+            method="GET", endpoint="/api/v1/knowledge", platform="discord"
         ).inc()
 
         # Verify different platforms are tracked separately
-        slack_count = self._get_counter_value(REQUEST_COUNT, {"method": "POST", "endpoint": "/api/v1/knowledge", "platform": "slack"})
-        discord_count = self._get_counter_value(REQUEST_COUNT, {"method": "GET", "endpoint": "/api/v1/knowledge", "platform": "discord"})
+        slack_count = self._get_counter_value(
+            REQUEST_COUNT,
+            {"method": "POST", "endpoint": "/api/v1/knowledge", "platform": "slack"},
+        )
+        discord_count = self._get_counter_value(
+            REQUEST_COUNT,
+            {"method": "GET", "endpoint": "/api/v1/knowledge", "platform": "discord"},
+        )
 
         assert slack_count >= 1, "Slack platform should be tracked"
         assert discord_count >= 1, "Discord platform should be tracked"
@@ -99,9 +115,10 @@ class TestPrometheusMetrics:
 # Alert Rules Tests (#30)
 # =============================================================================
 
+
 class TestAlertRules:
     """Tests for alert condition detection and webhook firing.
-    
+
     Verifies the AlertManager correctly identifies threshold breaches
     and triggers alerts.
     """
@@ -110,20 +127,28 @@ class TestAlertRules:
     async def test_alert_condition_high_error_rate_triggers(self):
         """error_rate > 0.05 → alert triggered"""
         from app.utils.alerts import AlertManager
+
         manager = AlertManager()
 
-        with patch.object(manager, "_trigger_alert", new_callable=AsyncMock) as mock_trigger:
+        with patch.object(
+            manager, "_trigger_alert", new_callable=AsyncMock
+        ) as mock_trigger:
             result = await manager.check_error_rate(0.06)
             assert result is True
-            mock_trigger.assert_called_once_with("high_error_rate", {"current_rate": 0.06})
+            mock_trigger.assert_called_once_with(
+                "high_error_rate", {"current_rate": 0.06}
+            )
 
     @pytest.mark.asyncio
     async def test_alert_condition_high_error_rate_recovers(self):
         """error_rate <= 0.05 → no alert triggered"""
         from app.utils.alerts import AlertManager
+
         manager = AlertManager()
 
-        with patch.object(manager, "_trigger_alert", new_callable=AsyncMock) as mock_trigger:
+        with patch.object(
+            manager, "_trigger_alert", new_callable=AsyncMock
+        ) as mock_trigger:
             result = await manager.check_error_rate(0.05)
             assert result is False
             mock_trigger.assert_not_called()
@@ -132,9 +157,12 @@ class TestAlertRules:
     async def test_alert_condition_sla_breach_triggers(self):
         """Any SLA breach → alert triggered"""
         from app.utils.alerts import AlertManager
+
         manager = AlertManager()
 
-        with patch.object(manager, "_trigger_alert", new_callable=AsyncMock) as mock_trigger:
+        with patch.object(
+            manager, "_trigger_alert", new_callable=AsyncMock
+        ) as mock_trigger:
             result = await manager.check_sla_breach(1)
             assert result is True
             mock_trigger.assert_called_once_with("sla_breach", {"breach_count": 1})
@@ -143,20 +171,28 @@ class TestAlertRules:
     async def test_alert_condition_low_grounding_rate_triggers(self):
         """grounding_rate < 0.7 → alert triggered"""
         from app.utils.alerts import AlertManager
+
         manager = AlertManager()
 
-        with patch.object(manager, "_trigger_alert", new_callable=AsyncMock) as mock_trigger:
+        with patch.object(
+            manager, "_trigger_alert", new_callable=AsyncMock
+        ) as mock_trigger:
             result = await manager.check_grounding_rate(0.65)
             assert result is True
-            mock_trigger.assert_called_once_with("low_grounding_rate", {"grounding_rate": 0.65})
+            mock_trigger.assert_called_once_with(
+                "low_grounding_rate", {"grounding_rate": 0.65}
+            )
 
     @pytest.mark.asyncio
     async def test_alert_rule_fires_webhook(self):
         """Alert fires → webhook called when URL is set"""
         from app.utils.alerts import AlertManager
+
         manager = AlertManager(webhook_url="https://example.com/hook")
 
-        with patch.object(manager, "fire_webhook", new_callable=AsyncMock) as mock_webhook:
+        with patch.object(
+            manager, "fire_webhook", new_callable=AsyncMock
+        ) as mock_webhook:
             await manager._trigger_alert("test_alert", {"info": "test"})
             mock_webhook.assert_called_once_with("test_alert", {"info": "test"})
 
@@ -164,17 +200,19 @@ class TestAlertRules:
     async def test_alert_rule_fires_webhook_with_correct_payload(self):
         """fire_webhook uses correct payload structure (internal check)"""
         from app.utils.alerts import AlertManager
+
         manager = AlertManager(webhook_url="https://example.com/hook")
 
         # We verify that fire_webhook can be called without error
         # and it logs errors if httpx fails
         await manager.fire_webhook("alert_type", {"data": 1})
-        assert True # Should not raise
+        assert True  # Should not raise
 
     @pytest.mark.asyncio
     async def test_alert_condition_recovers_after_breach(self):
         """Verify check_error_rate returns False when below threshold after a breach"""
         from app.utils.alerts import AlertManager
+
         manager = AlertManager()
 
         assert await manager.check_error_rate(0.01) is False
@@ -183,6 +221,7 @@ class TestAlertRules:
     async def test_alert_webhook_timeout_handled(self):
         """Alert system doesn't crash on internal errors during webhook firing"""
         from app.utils.alerts import AlertManager
+
         manager = AlertManager(webhook_url="https://example.com/hook")
 
         with patch("httpx.AsyncClient.post", side_effect=Exception("Timeout")):
@@ -194,6 +233,7 @@ class TestAlertRules:
 # =============================================================================
 # Backup System Tests (#31)
 # =============================================================================
+
 
 class TestBackupSystem:
     """Tests for backup creation, scheduling, and cleanup"""
@@ -237,6 +277,7 @@ class TestBackupSystem:
 # Graceful Degradation Tests (#35)
 # =============================================================================
 
+
 class TestGracefulDegradation:
     """Tests for degradation detection and circuit breaker pattern"""
 
@@ -244,7 +285,8 @@ class TestGracefulDegradation:
     async def test_degradation_detects_llm_timeout(self):
         """LLM timeout → degraded mode activated"""
         from app.services.degradation import DegradationManager
-        manager = DegradationManager()
+
+        DegradationManager()
 
         # Simulate LLM timeout
         async def mock_llm_call():
@@ -262,11 +304,13 @@ class TestGracefulDegradation:
     async def test_degradation_falls_back_to_knowledge(self):
         """Degraded → falls back to knowledge base"""
         from app.services.degradation import DegradationManager
+
         manager = DegradationManager()
-        manager.current_level = 2 # LEVEL_2 is degraded
+        manager.current_level = 2  # LEVEL_2 is degraded
 
         # Mock knowledge base fallback
         fallback_used = False
+
         async def mock_knowledge_fallback(query):
             nonlocal fallback_used
             fallback_used = True
@@ -282,18 +326,22 @@ class TestGracefulDegradation:
     async def test_degradation_circuit_breaker_opens_on_consecutive_failures(self):
         """consecutive failures → level increases"""
         from app.services.degradation import DegradationManager
+
         manager = DegradationManager()
 
         # Trigger 5 failures
         for _ in range(5):
             manager.update_metrics(llm_success=False)
 
-        assert manager.current_level >= 1, "Level should increase after consecutive failures"
+        assert manager.current_level >= 1, (
+            "Level should increase after consecutive failures"
+        )
 
 
 # =============================================================================
 # Load Testing (#36)
 # =============================================================================
+
 
 class TestLoadTesting:
     """Tests for system behavior under concurrent load"""
@@ -305,7 +353,9 @@ class TestLoadTesting:
 
         async def simulate_request(request_id):
             await asyncio.sleep(0.01)
-            REQUEST_COUNT.labels(method="GET", endpoint="/api/v1/knowledge", platform="test").inc()
+            REQUEST_COUNT.labels(
+                method="GET", endpoint="/api/v1/knowledge", platform="test"
+            ).inc()
             return request_id
 
         tasks = [simulate_request(i) for i in range(50)]
@@ -328,12 +378,13 @@ class TestLoadTesting:
 
         current, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
-        assert peak < 10 * 1024 * 1024 # Should be under 10MB peak for this test
+        assert peak < 10 * 1024 * 1024  # Should be under 10MB peak for this test
 
 
 # =============================================================================
 # Additional Integration Tests
 # =============================================================================
+
 
 class TestObservabilityIntegration:
     """Integration tests combining multiple observability components"""
@@ -349,7 +400,9 @@ class TestObservabilityIntegration:
         for i in range(total_requests):
             if i < 6:  # 6% error rate
                 error_count += 1
-            REQUEST_COUNT.labels(method="GET", endpoint="/api/v1/test", platform="test").inc()
+            REQUEST_COUNT.labels(
+                method="GET", endpoint="/api/v1/test", platform="test"
+            ).inc()
 
         error_rate = error_count / total_requests
         assert error_rate > 0.05
@@ -358,6 +411,7 @@ class TestObservabilityIntegration:
 # =============================================================================
 # Section 29 G-05/06: Missing Prometheus Metrics Label Tests
 # =============================================================================
+
 
 class TestPrometheusMetricsLabels:
     """Verify all metrics have correct labels per spec"""
@@ -370,7 +424,9 @@ class TestPrometheusMetricsLabels:
         FCR_TOTAL.labels(platform="slack", tier="premium", channel="web").inc()
 
         # Verify the metric was recorded with correct labels
-        val = FCR_TOTAL.labels(platform="slack", tier="premium", channel="web")._value.get()
+        val = FCR_TOTAL.labels(
+            platform="slack", tier="premium", channel="web"
+        )._value.get()
         assert val >= 1, "FCR_TOTAL should accept platform/tier/channel labels"
 
     def test_metric_knowledge_hit_total_labels(self):
@@ -401,8 +457,12 @@ class TestPrometheusMetricsLabels:
         """requests_total must have labels: method, endpoint, platform"""
         from app.utils.metrics import REQUEST_COUNT
 
-        REQUEST_COUNT.labels(method="POST", endpoint="/api/v1/chat", platform="discord").inc()
-        val = REQUEST_COUNT.labels(method="POST", endpoint="/api/v1/chat", platform="discord")._value.get()
+        REQUEST_COUNT.labels(
+            method="POST", endpoint="/api/v1/chat", platform="discord"
+        ).inc()
+        val = REQUEST_COUNT.labels(
+            method="POST", endpoint="/api/v1/chat", platform="discord"
+        )._value.get()
         assert val >= 1, "REQUEST_COUNT should accept method/endpoint/platform labels"
 
     def test_metric_response_duration_histogram_labels(self):
@@ -430,6 +490,7 @@ class TestPrometheusMetricsLabels:
 # Section 36 G-01/02/03/04: Load Testing
 # =============================================================================
 
+
 class TestLoadScenarios:
     """Load testing scenarios for performance validation"""
 
@@ -446,9 +507,7 @@ class TestLoadScenarios:
             for _ in range(6):  # 10 VUs * 6 iterations ~= 1 minute of requests
                 try:
                     REQUEST_COUNT.labels(
-                        method="GET",
-                        endpoint="/api/v1/knowledge",
-                        platform="test"
+                        method="GET", endpoint="/api/v1/knowledge", platform="test"
                     ).inc()
                     total_requests += 1
                     await asyncio.sleep(0.1)
@@ -464,10 +523,10 @@ class TestLoadScenarios:
     @pytest.mark.asyncio
     async def test_load_normal_200_vus_p95_under_1s(self):
         """200 VUs normal load: p95 latency < 1s"""
-        latencies = []
 
         async def simulate_request():
             import random
+
             latency = random.gauss(0.3, 0.1)  # mean=300ms, std=100ms
             await asyncio.sleep(min(max(latency, 0.05), 2.0))
             return latency
@@ -494,14 +553,20 @@ class TestLoadScenarios:
 
         # Phase 1: normal load
         for _ in range(100):
-            REQUEST_COUNT.labels(method="GET", endpoint="/api/v1/chat", platform="test").inc()
+            REQUEST_COUNT.labels(
+                method="GET", endpoint="/api/v1/chat", platform="test"
+            ).inc()
 
         # Phase 2: spike
         spike_tasks = []
         for _ in range(3000):
+
             async def spike_req():
-                REQUEST_COUNT.labels(method="POST", endpoint="/api/v1/chat", platform="test").inc()
+                REQUEST_COUNT.labels(
+                    method="POST", endpoint="/api/v1/chat", platform="test"
+                ).inc()
                 await asyncio.sleep(0.001)
+
             spike_tasks.append(spike_req())
 
         await asyncio.gather(*spike_tasks)
@@ -510,7 +575,9 @@ class TestLoadScenarios:
         recovery_success = True
         try:
             for _ in range(100):
-                REQUEST_COUNT.labels(method="GET", endpoint="/api/v1/knowledge", platform="test").inc()
+                REQUEST_COUNT.labels(
+                    method="GET", endpoint="/api/v1/knowledge", platform="test"
+                ).inc()
                 await asyncio.sleep(0.001)
         except Exception:
             recovery_success = False
@@ -528,7 +595,9 @@ class TestLoadScenarios:
         async def stress_worker():
             nonlocal request_count
             while time.time() - start_time < 30:
-                REQUEST_COUNT.labels(method="POST", endpoint="/api/v1/chat", platform="stress").inc()
+                REQUEST_COUNT.labels(
+                    method="POST", endpoint="/api/v1/chat", platform="stress"
+                ).inc()
                 request_count += 1
                 await asyncio.sleep(0.001)
 
@@ -537,12 +606,15 @@ class TestLoadScenarios:
         await asyncio.gather(*tasks)
 
         actual_tps = request_count / 30
-        assert actual_tps >= 1000, f"TPS {actual_tps:.0f} is below target (expected ~2000, acceptable >= 1000)"
+        assert actual_tps >= 1000, (
+            f"TPS {actual_tps:.0f} is below target (expected ~2000, acceptable >= 1000)"
+        )
 
 
 # =============================================================================
 # Section 41 G-01/02/03/04: Environment Test Matrix
 # =============================================================================
+
 
 class TestEnvironmentMatrix:
     """Verify correct behavior per deployment environment"""
@@ -557,7 +629,7 @@ class TestEnvironmentMatrix:
         from app.services.llm import LLMService
 
         # Check that the unit test config sets environment to testing
-        env = os.environ.get("APP_ENV", "")
+        os.environ.get("APP_ENV", "")
 
         # Verify services have mock-able interfaces
         llm_source = inspect.getsource(LLMService)
@@ -565,29 +637,38 @@ class TestEnvironmentMatrix:
         cache_source = inspect.getsource(CacheService)
 
         # All services should be mockable (have methods that can be patched)
-        assert "async def" in llm_source or "def" in llm_source, "LLMService should have callable methods"
-        assert "async def" in db_source or "def" in db_source, "DatabaseService should have callable methods"
-        assert "async def" in cache_source or "def" in cache_source, "CacheService should have callable methods"
+        assert "async def" in llm_source or "def" in llm_source, (
+            "LLMService should have callable methods"
+        )
+        assert "async def" in db_source or "def" in db_source, (
+            "DatabaseService should have callable methods"
+        )
+        assert "async def" in cache_source or "def" in cache_source, (
+            "CacheService should have callable methods"
+        )
 
     def test_env_integration_uses_test_db_with_seed(self):
         """Integration tests: must use test database with seeded data"""
         import os
 
-
         # Check test db config
         db_url = os.environ.get("DATABASE_URL", "")
 
         # Integration test DB should be separate from production
-        is_test_env = "test" in db_url.lower() or os.environ.get("APP_ENV") == "testing"
+        "test" in db_url.lower() or os.environ.get("APP_ENV") == "testing"
 
         # Verify tables exist (seeded data should include test records)
         from app.models.database import Conversation, KnowledgeBase, Message
 
         # Check that test records exist
         # This verifies seed data was loaded
-        assert hasattr(Conversation, "__table__"), "Conversation model should have __table__"
+        assert hasattr(Conversation, "__table__"), (
+            "Conversation model should have __table__"
+        )
         assert hasattr(Message, "__table__"), "Message model should have __table__"
-        assert hasattr(KnowledgeBase, "__table__"), "KnowledgeBase model should have __table__"
+        assert hasattr(KnowledgeBase, "__table__"), (
+            "KnowledgeBase model should have __table__"
+        )
 
     def test_env_staging_uses_same_llm_as_prod(self):
         """Staging must use identical LLM configuration as production"""
@@ -597,19 +678,22 @@ class TestEnvironmentMatrix:
         from app.services.llm import LLMService
 
         # Read LLM config for staging and production
-        staging_model = os.environ.get("LLM_MODEL_STAGING", os.environ.get("LLM_MODEL", ""))
+        staging_model = os.environ.get(
+            "LLM_MODEL_STAGING", os.environ.get("LLM_MODEL", "")
+        )
         prod_model = os.environ.get("LLM_MODEL_PROD", os.environ.get("LLM_MODEL", ""))
 
         # Staging should not have a different (cheaper/worse) model
         # Both should reference the same model
-        llm_source = inspect.getsource(LLMService)
+        inspect.getsource(LLMService)
 
         # Verify model configuration is consistent
         assert prod_model != "", "Production LLM model must be configured"
-        # Staging model should match production (or be explicitly configured identically)
+        # Staging model should match production (or be explicitly configured identically)  # noqa: E501
         if os.environ.get("APP_ENV") == "staging":
-            assert staging_model == prod_model or staging_model == "", \
+            assert staging_model == prod_model or staging_model == "", (
                 "Staging must use same LLM model as production"
+            )
 
     def test_env_staging_data_is_anonymized_prod_subset(self):
         """Staging data must be anonymized subset of production data"""
@@ -621,19 +705,23 @@ class TestEnvironmentMatrix:
             "user_name": "John Doe",
             "email": "john.doe@example.com",
             "phone": "+886912345678",
-            "conversation_text": "My credit card is 4111111111111111"
+            "conversation_text": "My credit card is 4111111111111111",
         }
 
         masker = PIIMasking()
         masked = masker.mask(sample_prod_data["conversation_text"])
 
         # Verify PII masking works (staging should have same masking)
-        assert "[credit_card_masked]" in masked.masked_text or "+" not in masked.masked_text, \
-            "PII in staging data should be masked like production"
+        assert (
+            "[credit_card_masked]" in masked.masked_text
+            or "+" not in masked.masked_text
+        ), "PII in staging data should be masked like production"
 
         # Staging should not contain real PII
-        assert "john.doe@example.com" not in masked.masked_text or "[email_masked]" in masked.masked_text, \
-            "Email should be masked in staging"
+        assert (
+            "john.doe@example.com" not in masked.masked_text
+            or "[email_masked]" in masked.masked_text
+        ), "Email should be masked in staging"
 
     def test_env_integration_llm_can_use_mock_or_cheap(self):
         """Integration tests can use mock LLM or cheaper model"""
@@ -644,7 +732,7 @@ class TestEnvironmentMatrix:
 
         # Check that integration test configuration allows mock/cheap LLM
         app_env = os.environ.get("APP_ENV", "")
-        llm_model = os.environ.get("LLM_MODEL", "")
+        os.environ.get("LLM_MODEL", "")
 
         # When APP_ENV is testing/integration, cheaper options should be available
         is_integration = app_env in ["testing", "integration"]
@@ -653,7 +741,9 @@ class TestEnvironmentMatrix:
         llm_source = inspect.getsource(LLMService)
         supports_model_config = "model" in llm_source or "LLM_MODEL" in llm_source
 
-        assert supports_model_config, "LLMService should support model configuration for integration tests"
+        assert supports_model_config, (
+            "LLMService should support model configuration for integration tests"
+        )
 
         if is_integration:
             # Integration tests can use mock or cheap model
@@ -664,14 +754,14 @@ class TestEnvironmentMatrix:
         """Production must use real model and real (non-masked) data"""
         import os
 
-
         app_env = os.environ.get("APP_ENV", "")
         llm_model = os.environ.get("LLM_MODEL", "")
 
         if app_env == "production":
             # Production must have real model configured
-            assert llm_model not in ["", "mock", "test", "fake"], \
+            assert llm_model not in ["", "mock", "test", "fake"], (
                 "Production LLM model must be a real model identifier"
+            )
 
             # Production should have real data connections
             db_url = os.environ.get("DATABASE_URL", "")
@@ -682,6 +772,7 @@ class TestEnvironmentMatrix:
 # Section 30 G-03/04: Alert Threshold Tests
 # =============================================================================
 
+
 class TestAlertThresholds:
     """Verify alert triggers fire at correct threshold values"""
 
@@ -689,33 +780,43 @@ class TestAlertThresholds:
     async def test_alert_high_error_rate_triggers_at_5_percent(self):
         """Error rate > 5% must trigger high_error_rate alert"""
         from app.utils.alerts import AlertManager
+
         manager = AlertManager()
 
-        with patch.object(manager, "_trigger_alert", new_callable=AsyncMock) as mock_trigger:
+        with patch.object(
+            manager, "_trigger_alert", new_callable=AsyncMock
+        ) as mock_trigger:
             # Just above 5%
             result = await manager.check_error_rate(0.051)
             assert result is True, "5.1% error rate should trigger alert"
-            mock_trigger.assert_called_once_with("high_error_rate", {"current_rate": 0.051})
+            mock_trigger.assert_called_once_with(
+                "high_error_rate", {"current_rate": 0.051}
+            )
 
     @pytest.mark.asyncio
     async def test_alert_high_latency_triggers_at_p95_1s(self):
         """p95 latency > 1s must trigger high_latency alert"""
         from app.utils.alerts import AlertManager
+
         manager = AlertManager()
 
-        with patch.object(manager, "_trigger_alert", new_callable=AsyncMock) as mock_trigger:
+        with patch.object(
+            manager, "_trigger_alert", new_callable=AsyncMock
+        ) as mock_trigger:
             result = await manager.check_p95_latency(1.1)
             assert result is True, "p95 1.1s should trigger high_latency alert"
             mock_trigger.assert_called_once_with("high_latency", {"p95_latency": 1.1})
-
 
     @pytest.mark.asyncio
     async def test_alert_sla_breach_triggers_at_5_per_hour(self):
         """SLA breach > 5 per hour must trigger sla_breach alert"""
         from app.utils.alerts import AlertManager
+
         manager = AlertManager()
 
-        with patch.object(manager, "_trigger_alert", new_callable=AsyncMock) as mock_trigger:
+        with patch.object(
+            manager, "_trigger_alert", new_callable=AsyncMock
+        ) as mock_trigger:
             # 6 breaches in an hour
             result = await manager.check_sla_breach(6)
             assert result is True, "6 SLA breaches/hour should trigger alert"
@@ -725,17 +826,23 @@ class TestAlertThresholds:
     async def test_alert_escalation_queue_backlog_triggers_at_50(self):
         """Escalation queue > 50 pending must trigger backlog alert"""
         from app.utils.alerts import AlertManager
+
         manager = AlertManager()
 
-        with patch.object(manager, "_trigger_alert", new_callable=AsyncMock) as mock_trigger:
+        with patch.object(
+            manager, "_trigger_alert", new_callable=AsyncMock
+        ) as mock_trigger:
             result = await manager.check_escalation_queue(51)
             assert result is True, "51 queued escalations should trigger backlog alert"
-            mock_trigger.assert_called_once_with("escalation_queue_backlog", {"queue_depth": 51})
+            mock_trigger.assert_called_once_with(
+                "escalation_queue_backlog", {"queue_depth": 51}
+            )
 
 
 # =============================================================================
 # Misc: i18n, PII Patterns, Schema Consistency
 # =============================================================================
+
 
 class TestExpansionRoadmap:
     """Verify i18n and expansion roadmap is defined"""
@@ -744,8 +851,9 @@ class TestExpansionRoadmap:
         """i18n roadmap must define supported languages and priority"""
         from app.i18n.expansion import EXPANSION_ROADMAP
 
-        assert hasattr(EXPANSION_ROADMAP, "languages") or hasattr(EXPANSION_ROADMAP, "supported_languages"), \
-            "EXPANSION_ROADMAP must define supported languages"
+        assert hasattr(EXPANSION_ROADMAP, "languages") or hasattr(
+            EXPANSION_ROADMAP, "supported_languages"
+        ), "EXPANSION_ROADMAP must define supported languages"
 
         # Verify at least one target language beyond English is defined
         roadmap_keys = dir(EXPANSION_ROADMAP)
@@ -753,7 +861,9 @@ class TestExpansionRoadmap:
             key in roadmap_keys
             for key in ["languages", "supported_languages", "deployed_languages"]
         )
-        assert has_language_plan, "EXPANSION_ROADMAP must include language expansion plan"
+        assert has_language_plan, (
+            "EXPANSION_ROADMAP must include language expansion plan"
+        )
 
     def test_current_scope_zh_tw_pii_patterns(self):
         """Traditional Chinese PII patterns must be defined in current scope"""
@@ -764,12 +874,16 @@ class TestExpansionRoadmap:
         pii_source = inspect.getsource(PIIMasking)
 
         # Chinese phone patterns
-        assert "886" in pii_source or "\u00986" in pii_source or "tw" in pii_source.lower(), \
-            "Taiwan phone pattern (886) must be defined in PIIMasking"
+        assert (
+            "886" in pii_source or "\u00986" in pii_source or "tw" in pii_source.lower()
+        ), "Taiwan phone pattern (886) must be defined in PIIMasking"
 
         # Chinese ID pattern
-        assert "identity" in pii_source.lower() or "national_id" in pii_source.lower() or "\u8eab" in pii_source, \
-            "Taiwan national ID pattern must be defined in PIIMasking"
+        assert (
+            "identity" in pii_source.lower()
+            or "national_id" in pii_source.lower()
+            or "\u8eab" in pii_source
+        ), "Taiwan national ID pattern must be defined in PIIMasking"
 
     def test_version_consistency_schema_tables_p3(self):
         """Phase 3 schema must have correct number of tables"""
@@ -798,22 +912,26 @@ class TestExpansionRoadmap:
             "pii_audit_log",
             "escalation_queue",
             "knowledge_versions",
-            "user_sessions"
+            "user_sessions",
         ]
 
         # Verify all expected Phase 3 tables exist
         existing_tables = list(Base.metadata.tables.keys())
 
         for table in phase3_tables:
-            assert table in existing_tables, f"Phase 3 table '{table}' must exist in schema"
+            assert table in existing_tables, (
+                f"Phase 3 table '{table}' must exist in schema"
+            )
 
-        assert len(existing_tables) >= len(phase3_tables), \
-            f"Expected at least {len(phase3_tables)} Phase 3 tables, found {len(existing_tables)}"
+        assert len(existing_tables) >= len(phase3_tables), (
+            f"Expected at least {len(phase3_tables)} Phase 3 tables, found {len(existing_tables)}"  # noqa: E501
+        )
 
 
 # =============================================================================
 # Escalation Queue Gauge Metric Tests (Batch A)
 # =============================================================================
+
 
 class TestEscalationQueueGauge:
     """Tests for escalation queue size Prometheus Gauge metric"""
@@ -824,7 +942,7 @@ class TestEscalationQueueGauge:
         escalation_queue_gauge = Gauge(
             "omnibot_escalation_queue_size",
             "Current size of the escalation queue",
-            ["priority"]
+            ["priority"],
         )
 
         # Simulate queue states: high priority has 10, medium has 25, low has 5
@@ -837,25 +955,29 @@ class TestEscalationQueueGauge:
         medium_size = escalation_queue_gauge.labels(priority="medium")._value.get()
         low_size = escalation_queue_gauge.labels(priority="low")._value.get()
 
-        assert high_size == 10, \
+        assert high_size == 10, (
             f"High priority escalation queue size should be 10, got {high_size}"
-        assert medium_size == 25, \
+        )
+        assert medium_size == 25, (
             f"Medium priority escalation queue size should be 25, got {medium_size}"
-        assert low_size == 5, \
+        )
+        assert low_size == 5, (
             f"Low priority escalation queue size should be 5, got {low_size}"
+        )
 
         # Total queue size
         total = high_size + medium_size + low_size
-        assert total == 40, \
-            f"Total escalation queue size should be 40, got {total}"
+        assert total == 40, f"Total escalation queue size should be 40, got {total}"
 
         # Verify gauge can be incremented/decremented (dynamic queue behavior)
         escalation_queue_gauge.labels(priority="high").inc(3)  # 10 → 13
         updated_high = escalation_queue_gauge.labels(priority="high")._value.get()
-        assert updated_high == 13, \
+        assert updated_high == 13, (
             f"After inc(3), high priority queue should be 13, got {updated_high}"
+        )
 
         escalation_queue_gauge.labels(priority="medium").dec(5)  # 25 → 20
         updated_medium = escalation_queue_gauge.labels(priority="medium")._value.get()
-        assert updated_medium == 20, \
+        assert updated_medium == 20, (
             f"After dec(5), medium priority queue should be 20, got {updated_medium}"
+        )

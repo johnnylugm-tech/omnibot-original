@@ -12,12 +12,13 @@ from app.utils.retry import RetryStrategy
 def test_rbac_check():
     permissions = {
         "admin": {"knowledge": ["read", "write"]},
-        "user": {"knowledge": ["read"]}
+        "user": {"knowledge": ["read"]},
     }
     enforcer = RBACEnforcer(permissions)
     assert enforcer.check("admin", "knowledge", "write") is True
     assert enforcer.check("user", "knowledge", "write") is False
     assert enforcer.check("user", "knowledge", "read") is True
+
 
 @pytest.mark.asyncio
 async def test_rbac_dependency():
@@ -38,6 +39,7 @@ async def test_rbac_dependency():
         await dependency(mock_request_fail)
     assert exc.value.status_code == 403
 
+
 # 2. A/B Testing Tests
 @pytest.mark.asyncio
 async def test_ab_test_deterministic_variant():
@@ -49,7 +51,7 @@ async def test_ab_test_deterministic_variant():
     mock_exp.status = "running"
     mock_exp.traffic_split = {"control": 50, "variant_a": 50}
 
-    # Chain: await db.execute() -> mock_result -> mock_result.scalar_one_or_none() -> mock_exp
+    # Chain: await db.execute() -> mock_result -> mock_result.scalar_one_or_none() -> mock_exp  # noqa: E501
     mock_db.execute.return_value = mock_result
     mock_result.scalar_one_or_none.return_value = mock_exp
 
@@ -61,6 +63,7 @@ async def test_ab_test_deterministic_variant():
     assert v1 == v2
     assert v1 in ["control", "variant_a"]
 
+
 # 3. Retry Strategy Tests
 @pytest.mark.asyncio
 async def test_retry_strategy_success():
@@ -71,6 +74,7 @@ async def test_retry_strategy_success():
     assert result == "done"
     assert mock_func.call_count == 1
 
+
 @pytest.mark.asyncio
 async def test_retry_strategy_failure():
     strategy = RetryStrategy(max_retries=2, base_delay=0.01)
@@ -79,4 +83,4 @@ async def test_retry_strategy_failure():
     with pytest.raises(Exception):
         await strategy.execute(mock_func)
 
-    assert mock_func.call_count == 3 # 1 initial + 2 retries
+    assert mock_func.call_count == 3  # 1 initial + 2 retries

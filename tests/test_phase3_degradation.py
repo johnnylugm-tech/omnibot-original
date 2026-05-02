@@ -2,6 +2,7 @@
 Atomic TDD Tests for Phase 3: Degradation Strategy (#36)
 Focus: Latency-based and Failure-based service level switching.
 """
+
 import pytest
 
 from app.services.degradation import DegradationLevel, DegradationManager
@@ -11,6 +12,7 @@ from app.services.degradation import DegradationLevel, DegradationManager
 def manager():
     return DegradationManager()
 
+
 def test_id_36_01_llm_latency_triggers_level_1(manager):
     """LLM p95 > 3s -> Level 1 (RAG Only)"""
     manager.update_metrics(llm_latency=3.5)
@@ -19,6 +21,7 @@ def test_id_36_01_llm_latency_triggers_level_1(manager):
     assert layers["rule"] is True
     assert layers["rag"] is True
     assert layers["llm"] is False
+
 
 def test_id_36_02_llm_failure_triggers_level_2(manager):
     """LLM failure > 3 times -> Level 2 (Rule Only)"""
@@ -31,12 +34,14 @@ def test_id_36_02_llm_failure_triggers_level_2(manager):
     assert layers["rag"] is False
     assert layers["llm"] is False
 
+
 def test_id_36_03_db_latency_triggers_level_3(manager):
     """DB p95 > 2s -> Level 3 (Read-only Cache)"""
     manager.update_metrics(db_latency=2.5)
     assert manager.current_level == DegradationLevel.LEVEL_3
     layers = manager.get_allowed_layers()
     assert layers.get("cache_only") is True
+
 
 def test_id_36_04_recovery_on_success(manager):
     """Success after failure resets to Level 0"""
@@ -52,9 +57,10 @@ def test_id_36_04_recovery_on_success(manager):
 # Section 44 G-07: Degradation Strategy Level 1-4 expanded tests
 # =============================================================================
 
+
 def test_degradation_l1_triggers_on_llm_p95_above_3s():
     """LLM p95 > 3s triggers Level 1 degradation. RED-phase test.
-    
+
     Spec: When LLM latency p95 exceeds 3.0 seconds, Level 1 degradation
     is activated. This disables LLM generation and uses RAG-only mode.
     """
@@ -63,8 +69,9 @@ def test_degradation_l1_triggers_on_llm_p95_above_3s():
     # Trigger Level 1 by setting LLM latency p95 > 3s
     manager.update_metrics(llm_latency=3.1)
 
-    assert manager.current_level == DegradationLevel.LEVEL_1, \
+    assert manager.current_level == DegradationLevel.LEVEL_1, (
         f"LLM p95 > 3s should trigger Level 1, got {manager.current_level}"
+    )
 
     layers = manager.get_allowed_layers()
     assert layers.get("llm") is False, "Level 1 should disable LLM"
@@ -74,7 +81,7 @@ def test_degradation_l1_triggers_on_llm_p95_above_3s():
 
 def test_degradation_l1_caches_responses_for_5_minutes():
     """Level 1 caches identical queries for 5 minutes. RED-phase test.
-    
+
     Spec: When Level 1 degradation is active, identical queries within
     5 minutes should return cached responses instead of hitting RAG.
     """
@@ -86,19 +93,21 @@ def test_degradation_l1_caches_responses_for_5_minutes():
 
     # Check if caching mechanism exists
     import inspect
+
     update_metrics_source = inspect.getsource(manager.update_metrics)
 
     # The implementation should have a cache with 5-minute TTL
     # This test verifies the cache behavior is specified
     has_cache = "cache" in update_metrics_source.lower() or hasattr(manager, "_cache")
 
-    assert has_cache or "5" in update_metrics_source, \
+    assert has_cache or "5" in update_metrics_source, (
         "Level 1 implementation should include 5-minute response caching"
+    )
 
 
 def test_degradation_l2_triggers_on_llm_consecutive_failures_3():
     """LLM consecutive failures > 3 triggers Level 2. RED-phase test.
-    
+
     Spec: When LLM has more than 3 consecutive failures, Level 2
     degradation is activated, using Rule-only mode.
     """
@@ -108,8 +117,9 @@ def test_degradation_l2_triggers_on_llm_consecutive_failures_3():
     for i in range(4):
         manager.update_metrics(llm_success=False)
 
-    assert manager.current_level == DegradationLevel.LEVEL_2, \
-        f"> 3 consecutive LLM failures should trigger Level 2, got {manager.current_level}"
+    assert manager.current_level == DegradationLevel.LEVEL_2, (
+        f"> 3 consecutive LLM failures should trigger Level 2, got {manager.current_level}"  # noqa: E501
+    )
 
     layers = manager.get_allowed_layers()
     assert layers.get("rule") is True, "Level 2 should keep Rule enabled"
@@ -119,7 +129,7 @@ def test_degradation_l2_triggers_on_llm_consecutive_failures_3():
 
 def test_degradation_l2_unmatched_automatically_escalates():
     """Level 2 with no rule match automatically escalates. RED-phase test.
-    
+
     Spec: When Level 2 is active and no rule matches the query,
     the system should automatically escalate to human agent
     instead of returning a low-quality response.
@@ -138,7 +148,8 @@ def test_degradation_l2_unmatched_automatically_escalates():
     # Verify escalation logic is triggered for unmatched queries in Level 2
     # This would be implemented in the knowledge/query layer
     import inspect
-    get_allowed_layers_source = inspect.getsource(manager.get_allowed_layers)
+
+    inspect.getsource(manager.get_allowed_layers)
 
     # Level 2 should indicate that unmatched queries escalate
     # The actual implementation is in the knowledge layer, not here
@@ -148,7 +159,7 @@ def test_degradation_l2_unmatched_automatically_escalates():
 
 def test_degradation_l3_triggers_on_db_p95_above_2s():
     """DB p95 > 2s triggers Level 3 degradation. RED-phase test.
-    
+
     Spec: When database p95 latency exceeds 2.0 seconds, Level 3
     degradation is activated, making the system read-only with cached data.
     """
@@ -157,8 +168,9 @@ def test_degradation_l3_triggers_on_db_p95_above_2s():
     # Trigger Level 3 by setting DB latency p95 > 2s
     manager.update_metrics(db_latency=2.1)
 
-    assert manager.current_level == DegradationLevel.LEVEL_3, \
+    assert manager.current_level == DegradationLevel.LEVEL_3, (
         f"DB p95 > 2s should trigger Level 3, got {manager.current_level}"
+    )
 
     layers = manager.get_allowed_layers()
     assert layers.get("cache_only") is True, "Level 3 should enable cache-only mode"
@@ -166,7 +178,7 @@ def test_degradation_l3_triggers_on_db_p95_above_2s():
 
 def test_degradation_l3_pauses_noncritical_writes():
     """Level 3 pauses non-critical database writes. RED-phase test.
-    
+
     Spec: When Level 3 is active, non-critical writes (analytics, metrics,
     optional logging) should be paused to reduce DB load.
     """
@@ -181,7 +193,7 @@ def test_degradation_l3_pauses_noncritical_writes():
     import inspect
 
     # Check if there's a method to get allowed operations
-    has_write_control = any(
+    any(
         "write" in name.lower() or "noncritical" in name.lower()
         for name in dir(manager)
     )
@@ -192,12 +204,14 @@ def test_degradation_l3_pauses_noncritical_writes():
 
     # Verify the update_metrics logic handles db_latency
     update_src = inspect.getsource(manager.update_metrics)
-    assert "db_latency" in update_src, "update_metrics should handle db_latency parameter"
+    assert "db_latency" in update_src, (
+        "update_metrics should handle db_latency parameter"
+    )
 
 
 def test_degradation_l4_triggers_on_full_outage():
     """Core service full outage triggers Level 4. RED-phase test.
-    
+
     Spec: When all core services (LLM + DB + RAG) are down or unresponsive,
     Level 4 degradation is activated, returning a static maintenance message.
     """
@@ -231,7 +245,7 @@ def test_degradation_l4_triggers_on_full_outage():
 
 def test_degradation_l4_logs_requests_to_local_file():
     """Level 4 logs all requests to local file. RED-phase test.
-    
+
     Spec: When Level 4 (maintenance mode) is active, all incoming requests
     should be logged to a local file for later replay/replay.
     """
@@ -245,20 +259,25 @@ def test_degradation_l4_logs_requests_to_local_file():
 
     # Verify logging behavior is implemented
     import inspect
+
     get_allowed_layers_source = inspect.getsource(manager.get_allowed_layers)
 
     # Level 4 should return maintenance mode indicator
     # The actual file logging would be in the request handler
-    assert "maintenance" in get_allowed_layers_source.lower() or "level_4" in get_allowed_layers_source.lower()
+    assert (
+        "maintenance" in get_allowed_layers_source.lower()
+        or "level_4" in get_allowed_layers_source.lower()
+    )
 
 
 # =============================================================================
 # Section 44 G-12/13/14/15: Degradation Level Mapping Tests
 # =============================================================================
 
+
 def test_degradation_level_1_rag_only():
     """Level 1 = RAG only (LLM disabled). RED-phase test.
-    
+
     Spec: When Level 1 degradation is triggered, LLM calls are disabled,
     RAG remains enabled, and rule-based responses are used.
     """
@@ -277,7 +296,7 @@ def test_degradation_level_1_rag_only():
 
 def test_degradation_level_2_rule_only():
     """Level 2 = Rule only (RAG disabled). RED-phase test.
-    
+
     Spec: When Level 2 degradation is triggered (consecutive LLM failures > 3),
     both LLM and RAG are disabled, only rule-based responses are used.
     Unmatched queries should auto-escalate.
@@ -299,7 +318,7 @@ def test_degradation_level_2_rule_only():
 
 def test_degradation_level_3_readonly_cache():
     """Level 3 = Read-only cache (all writes paused). RED-phase test.
-    
+
     Spec: When Level 3 is triggered (DB latency p95 > 2s), system enters
     read-only mode using cached data. Non-critical writes are paused.
     """
@@ -318,7 +337,7 @@ def test_degradation_level_3_readonly_cache():
 
 def test_degradation_level_4_maintenance_message():
     """Level 4 = Maintenance message (system unavailable). RED-phase test.
-    
+
     Spec: When Level 4 is triggered (full outage), system returns a static
     maintenance message. All requests are logged to local file for replay.
     """

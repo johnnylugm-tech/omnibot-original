@@ -2,6 +2,7 @@
 RED Gaps Verification - Phase 3
 Focus: CostModel daily cap and i18n translation completeness.
 """
+
 from app.utils.cost_model import CostModel
 from app.utils.i18n import TRANSLATIONS
 
@@ -20,11 +21,13 @@ def test_cost_model_respects_daily_cap():
     # Case 3: Already at/over cap
     assert model.apply_daily_cap(current_total=50.0, next_cost=5.0, cap=50.0) == 0.0
 
+
 def test_expansion_roadmap_zh_cn_content_exists_and_non_empty():
     """test_id_30_07: TRANSLATIONS 必須包含 zh-CN 簡體中文"""
     assert "zh-CN" in TRANSLATIONS, "TRANSLATIONS missing 'zh-CN' key"
     assert len(TRANSLATIONS["zh-CN"]) > 0
     assert "greeting" in TRANSLATIONS["zh-CN"]
+
 
 def test_expansion_roadmap_ja_content_exists_and_non_empty():
     """test_id_30_08: TRANSLATIONS 必須包含 ja 日文"""

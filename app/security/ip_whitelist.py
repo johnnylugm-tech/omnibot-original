@@ -9,6 +9,7 @@ Security properties:
 - Malformed IPs are denied when enforced (never raise, always deny)
 - X-Forwarded-For header: uses the FIRST (leftmost) IP (original client)
 """
+
 import ipaddress
 import logging
 import os
@@ -19,6 +20,7 @@ logger = logging.getLogger("omnibot.ip_whitelist")
 
 class IPWhitelistError(Exception):
     """Raised when IP whitelist configuration is invalid"""
+
     pass
 
 
@@ -37,12 +39,17 @@ class IPWhitelist:
         Rate Limiting → IP Whitelist → TLS → Platform Adapter → RBAC
     """
 
-    def __init__(self, whitelist_cidrs: Optional[List[str]] = None, enforced: Optional[bool] = None):
+    def __init__(
+        self,
+        whitelist_cidrs: Optional[List[str]] = None,
+        enforced: Optional[bool] = None,
+    ):
         """Initialize IP whitelist.
 
         Args:
             whitelist_cidrs: List of CIDR notation strings (e.g. ["203.0.113.0/24"]).
-                             If None, reads from IP_WHITELIST_CIDRS environment variable.
+                             If None, reads from IP_WHITELIST_CIDRS environment
+                             variable.
             enforced: If True, empty whitelist means deny-all (fail-secure).
                       If False, empty whitelist means bypass (allow all).
                       If None, reads from IP_WHITELIST_ENABLED environment variable,
@@ -64,7 +71,9 @@ class IPWhitelist:
                 # Default: bypass when not explicitly configured
                 self._enforced = False
 
-        cidrs = whitelist_cidrs if whitelist_cidrs is not None else self._load_from_env()
+        cidrs = (
+            whitelist_cidrs if whitelist_cidrs is not None else self._load_from_env()
+        )
         for cidr in cidrs:
             self.add_cidr(cidr)
 
@@ -159,10 +168,14 @@ class IPWhitelist:
 
         for network in self._networks:
             if ip in network:
-                logger.debug("ip_whitelist_allowed ip=%s matched_cidr=%s", ip_str, str(network))
+                logger.debug(
+                    "ip_whitelist_allowed ip=%s matched_cidr=%s", ip_str, str(network)
+                )
                 return True
 
-        logger.debug("ip_whitelist_denied ip=%s whitelist_size=%d", ip_str, len(self._networks))
+        logger.debug(
+            "ip_whitelist_denied ip=%s whitelist_size=%d", ip_str, len(self._networks)
+        )
         return False
 
     def get_client_ip(self, request) -> str:

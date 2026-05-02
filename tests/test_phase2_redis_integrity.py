@@ -1,7 +1,9 @@
 """
 Atomic TDD Tests for Phase 2: Redis Streams Integrity (#23)
-Focus: Consumer Timeout Handling and Block Mode Verification, plus Alembic migration validation.
+Focus: Consumer Timeout Handling and Block Mode Verification,
+plus Alembic migration validation.
 """
+
 import os
 from unittest.mock import AsyncMock
 
@@ -13,39 +15,49 @@ from app.services.worker import AsyncMessageProcessor
 # Alembic / Schema Migration Tests
 # =============================================================================
 
+
 def test_alembic_migration_001_upgrade_creates_phase1_tables():
-    """Migration 001 upgrade creates Phase 1 tables (experiments, knowledge_base, platform_configs, users, conversations)."""
+    """Migration 001 upgrade creates Phase 1 tables (experiments, knowledge_base, platform_configs, users, conversations)."""  # noqa: E501
     import importlib.util
 
     # Load the initial migration
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    migration_path = os.path.join(project_root, "migrations", "versions", "2d2a67f50200_initial_migration.py")
+    migration_path = os.path.join(
+        project_root, "migrations", "versions", "2d2a67f50200_initial_migration.py"
+    )
     if not os.path.exists(migration_path):
         import pytest
+
         pytest.skip("Migration file not found, skipping.")
     spec = importlib.util.spec_from_file_location("initial_migration", migration_path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
 
     # Verify the migration defines Phase 1 tables
-    upgrade_source = mod.upgrade.__doc__
 
     # Phase 1 tables from spec:
     phase1_tables = [
-        "experiments",      # A/B testing
-        "knowledge_base",   # Knowledge management
-        "platform_configs", # Webhook config per platform
-        "users",            # Unified user identity
-        "conversations",    # Conversation records
+        "experiments",  # A/B testing
+        "knowledge_base",  # Knowledge management
+        "platform_configs",  # Webhook config per platform
+        "users",  # Unified user identity
+        "conversations",  # Conversation records
     ]
 
     # Read the actual upgrade() body
     import inspect
+
     upgrade_body = inspect.getsource(mod.upgrade)
 
+    # Normalize body for easier checking
+    upgrade_body_normalized = upgrade_body.replace(
+        " ", ""
+    ).replace("\n", "").replace("'", "\"")
+
     for table in phase1_tables:
-        assert f"create_table('{table}'" in upgrade_body, \
+        assert f'create_table("{table}"' in upgrade_body_normalized, (
             f"Phase 1 table '{table}' missing from migration 001"
+        )
 
 
 def test_alembic_migration_001_downgrade_reverses():
@@ -53,37 +65,61 @@ def test_alembic_migration_001_downgrade_reverses():
     import importlib.util
 
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    migration_path = os.path.join(project_root, "migrations", "versions", "2d2a67f50200_initial_migration.py")
+    migration_path = os.path.join(
+        project_root, "migrations", "versions", "2d2a67f50200_initial_migration.py"
+    )
     if not os.path.exists(migration_path):
         import pytest
+
         pytest.skip("Migration file not found, skipping.")
-    spec = importlib.util.spec_from_file_location("initial_migration_downgrade", migration_path)
+    spec = importlib.util.spec_from_file_location(
+        "initial_migration_downgrade", migration_path
+    )
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
 
     import inspect
+
     downgrade_body = inspect.getsource(mod.downgrade)
 
     # All tables created in upgrade must be dropped in downgrade
     tables_to_drop = [
-        "experiments", "knowledge_base", "platform_configs",
-        "users", "conversations", "messages", "emotion_history",
-        "escalation_queue", "role_assignments", "experiment_results",
-        "security_logs", "pii_audit_log", "retry_log", "schema_migrations",
-        "roles", "edge_cases", "user_feedback",
+        "experiments",
+        "knowledge_base",
+        "platform_configs",
+        "users",
+        "conversations",
+        "messages",
+        "emotion_history",
+        "escalation_queue",
+        "role_assignments",
+        "experiment_results",
+        "security_logs",
+        "pii_audit_log",
+        "retry_log",
+        "schema_migrations",
+        "roles",
+        "edge_cases",
+        "user_feedback",
     ]
 
+    import inspect
+
+    downgrade_body = inspect.getsource(mod.downgrade)
+    downgrade_body_normalized = downgrade_body.replace(" ", "").replace("'", "\"")
+
     for table in tables_to_drop:
-        assert f"drop_table('{table}'" in downgrade_body, \
+        assert f'drop_table("{table}"' in downgrade_body_normalized, (
             f"Table '{table}' not dropped in downgrade"
+        )
 
 
 def test_alembic_migration_002_upgrade_adds_phase2_tables():
-    """Migration 002 (if exists) adds Phase 2 tables. If only one migration exists, verify Phase 1 has enough tables."""
+    """Migration 002 (if exists) adds Phase 2 tables. If only one migration exists, verify Phase 1 has enough tables."""  # noqa: E501
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     migration_dir = os.path.join(project_root, "migrations", "versions")
     if os.path.exists(migration_dir):
-        versions = sorted([f for f in os.listdir(migration_dir) if f.endswith(".py")])
+        sorted([f for f in os.listdir(migration_dir) if f.endswith(".py")])
 
     # If only 2d2a67f50200 exists, Phase 1 initial migration covers Phase 1 scope.
     # Phase 2 additions would be in subsequent migrations.
@@ -95,18 +131,24 @@ def test_alembic_migration_002_upgrade_adds_phase2_tables():
     )
 
     # Verify key tables exist via model inspection
-    assert hasattr(Experiment, "traffic_split"), "Experiment needs traffic_split for A/B"
+    assert hasattr(Experiment, "traffic_split"), (
+        "Experiment needs traffic_split for A/B"
+    )
     assert hasattr(Experiment, "variants"), "Experiment needs variants JSONB"
-    assert hasattr(KnowledgeBase, "embeddings"), "KnowledgeBase needs embeddings for RAG"
-    assert hasattr(PlatformConfig, "webhook_secret_key_ref"), "PlatformConfig needs webhook secret"
+    assert hasattr(KnowledgeBase, "embeddings"), (
+        "KnowledgeBase needs embeddings for RAG"
+    )
+    assert hasattr(PlatformConfig, "webhook_secret_key_ref"), (
+        "PlatformConfig needs webhook secret"
+    )
 
 
 def test_alembic_migration_003_upgrade_adds_phase3_tables():
-    """Migration 003 (if exists) adds Phase 3 tables. If only 2 migrations, verify Phase 1+2 schema covers Phase 3."""
+    """Migration 003 (if exists) adds Phase 3 tables. If only 2 migrations, verify Phase 1+2 schema covers Phase 3."""  # noqa: E501
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     migration_dir = os.path.join(project_root, "migrations", "versions")
     if os.path.exists(migration_dir):
-        versions = sorted([f for f in os.listdir(migration_dir) if f.endswith(".py")])
+        sorted([f for f in os.listdir(migration_dir) if f.endswith(".py")])
 
     # Phase 3 RBAC tables: roles, role_assignments
     from app.models.database import RoleAssignment
@@ -118,44 +160,51 @@ def test_alembic_migration_003_upgrade_adds_phase3_tables():
 
     # Verify schema supports RBAC
     from app.security.rbac import RBACEnforcer
+
     enforcer = RBACEnforcer()
     assert enforcer is not None
 
 
 def test_schema_migrations_version_uniqueness():
-    """schema_migrations table version column must enforce uniqueness (no duplicate version strings)."""
+    """schema_migrations table version column must enforce uniqueness (no duplicate version strings)."""  # noqa: E501
 
     from app.models.database import SchemaMigration
 
     # Check that the SchemaMigration model has a unique constraint on version
     table = SchemaMigration.__table__
-    constraints = [c.name for c in table.constraints]
+    [c.name for c in table.constraints]
 
     # The version column should be primary key or have unique constraint
     version_col = table.columns.get("version")
     assert version_col is not None, "SchemaMigration must have 'version' column"
 
     # Primary key ensures uniqueness
-    pk_constraint_names = [c.name for c in table.constraints if isinstance(c, __import__("sqlalchemy").schema.PrimaryKeyConstraint)]
+    [
+        c.name
+        for c in table.constraints
+        if isinstance(c, __import__("sqlalchemy").schema.PrimaryKeyConstraint)
+    ]
     pk_cols = []
     for c in table.constraints:
-        if hasattr(c, 'columns'):
+        if hasattr(c, "columns"):
             pk_cols.extend([col.name for col in c.columns])
 
-    assert "version" in pk_cols, \
-        "'version' column must be primary key or have unique constraint in schema_migrations"
+    assert "version" in pk_cols, (
+        "'version' column must be primary key or have unique constraint in schema_migrations"  # noqa: E501
+    )
 
 
 def test_backup_knowledge_soft_delete_rollback():
-    """KnowledgeBase is_active=False soft-delete can be rolled back (restored to is_active=True)."""
+    """KnowledgeBase is_active=False soft-delete can be rolled back (restored to is_active=True)."""  # noqa: E501
     from app.models.database import KnowledgeBase
 
     # Verify KnowledgeBase has is_active field
-    assert hasattr(KnowledgeBase, "is_active"), \
+    assert hasattr(KnowledgeBase, "is_active"), (
         "KnowledgeBase must have 'is_active' field for soft-delete"
+    )
 
     # Verify model supports the soft-delete pattern
-    # (In real DB test: create entry, set is_active=False, rollback, verify is_active=True)
+    # (In real DB test: create entry, set is_active=False, rollback, verify is_active=True)  # noqa: E501
     # For unit test: verify the field exists and is Boolean
     is_active_col = KnowledgeBase.__table__.columns.get("is_active")
     assert is_active_col is not None, "is_active column must exist on KnowledgeBase"
@@ -180,13 +229,14 @@ async def test_id_23_01_consume_timeout_empty_return():
     assert result is None
     mock_redis.xreadgroup.assert_called_once()
 
+
 @pytest.mark.asyncio
 async def test_id_23_02_get_pending_messages():
     """Verify retrieval of pending messages from PEL"""
     mock_redis = AsyncMock()
     pending_info = [
         ["msg_id_1", "consumer_1", 1000, 1],
-        ["msg_id_2", "consumer_1", 2000, 1]
+        ["msg_id_2", "consumer_1", 2000, 1],
     ]
     mock_redis.xpending_range = AsyncMock(return_value=pending_info)
 
@@ -198,6 +248,7 @@ async def test_id_23_02_get_pending_messages():
     mock_redis.xpending_range.assert_called_once_with(
         "omnibot:messages", "test_group", "-", "+", 10
     )
+
 
 @pytest.mark.asyncio
 async def test_id_23_03_claim_stale_message():
@@ -212,17 +263,14 @@ async def test_id_23_03_claim_stale_message():
         "omnibot:messages",
         "new_consumer",
         min_idle_time_ms=30000,
-        message_ids=["msg_id_1"]
+        message_ids=["msg_id_1"],
     )
 
     assert result == claimed_msgs
     mock_redis.xclaim.assert_called_once_with(
-        "omnibot:messages",
-        "test_group",
-        "new_consumer",
-        30000,
-        ["msg_id_1"]
+        "omnibot:messages", "test_group", "new_consumer", 30000, ["msg_id_1"]
     )
+
 
 @pytest.mark.asyncio
 async def test_id_23_04_consume_from_pel_first():
@@ -252,19 +300,30 @@ async def test_id_23_04_consume_from_pel_first():
 # Redis Stream Message Format (Section 23) — NEW RED tests
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_redis_stream_message_format_includes_required_fields(mock_redis):
-    """Stream message must contain: conversation_id, platform, user_id, message_id, timestamp
-
-    RED reason: The stream message format is not yet validated to include all required fields.
-    When a message is published to the stream, those 5 fields must be present.
     """
+    Stream message must contain:
+    conversation_id, platform, user_id, message_id, timestamp
+    """
+
+    # RED reason: The stream message format is not yet validated to include all
+    # required fields.
+    # When a message is published to the stream, those 5 fields must be present.
+
     from app.services.worker import AsyncMessageProcessor
 
-    processor = AsyncMessageProcessor(mock_redis, group="test_group")
+    AsyncMessageProcessor(mock_redis, group="test_group")
 
     # Verify required fields are documented/checked in stream message construction
-    required_fields = ["conversation_id", "platform", "user_id", "message_id", "timestamp"]
+    required_fields = [
+        "conversation_id",
+        "platform",
+        "user_id",
+        "message_id",
+        "timestamp",
+    ]
 
     # Simulate a message payload that would be published via xadd
     message_payload = {
@@ -277,8 +336,9 @@ async def test_redis_stream_message_format_includes_required_fields(mock_redis):
 
     # All required fields must be present in the message payload
     for field in required_fields:
-        assert field in message_payload, \
+        assert field in message_payload, (
             f"Stream message missing required field: {field}"
+        )
 
 
 @pytest.mark.asyncio
@@ -304,26 +364,28 @@ async def test_redis_pending_entries_list_no_duplicate_message_ids(mock_redis):
     # get_pending is called with stream name
     result = await processor.get_pending("omnibot:messages", count=10)
 
-    # Extract message_ids from PEL entries (format: [message_id, consumer, last_delivery, num_deliveries])
+    # Extract message_ids from PEL entries (format: [message_id, consumer, last_delivery, num_deliveries])  # noqa: E501
     message_ids = [entry[0] for entry in result]
 
     # Verify no duplicates using set comparison
     unique_ids = set(message_ids)
-    assert len(unique_ids) == len(message_ids), \
+    assert len(unique_ids) == len(message_ids), (
         f"PEL contains duplicate message_ids: {message_ids}"
+    )
 
 
 # =============================================================================
 # Section 44 G-05: Redis Streams message format schema
 # =============================================================================
 
+
 def test_redis_streams_message_schema_defined():
     """Redis streams message schema must be defined. RED-phase test.
-    
+
     Spec: Every message published to Redis streams must follow a defined
     schema with required fields. This test verifies that the message schema
     is documented and enforced.
-    
+
     Required fields for omnibot:messages stream:
     - conversation_id: string identifier
     - platform: string (telegram|line|messenger|whatsapp)
@@ -343,18 +405,22 @@ def test_redis_streams_message_schema_defined():
 
     # Verify that the schema is documented
     # The method should document or enforce required fields
-    assert "conversation_id" in produce_source or "required" in produce_source.lower(), \
-        "produce() method should document/validate required message schema fields"
+    assert (
+        "conversation_id" in produce_source or "required" in produce_source.lower()
+    ), "produce() method should document/validate required message schema fields"
 
 
 @pytest.mark.asyncio
 async def test_redis_streams_consumer_handles_unknown_fields_gracefully(mock_redis):
-    """Consumer must handle unknown fields in stream messages gracefully. RED-phase test.
-    
+    """
+    Consumer must handle unknown fields in stream messages gracefully.
+    RED-phase test.
+
     Spec: When a stream message contains fields that are not defined in the
     expected schema, the consumer must not crash. Unknown fields should be
     ignored or logged but not cause processing failures.
     """
+
     from app.services.worker import AsyncMessageProcessor
 
     processor = AsyncMessageProcessor(mock_redis, group="test_group")
@@ -380,8 +446,9 @@ async def test_redis_streams_consumer_handles_unknown_fields_gracefully(mock_red
 
     # Verify the consumer processed it successfully
     # Even with unknown fields, the message should be returned
-    assert result is not None, \
+    assert result is not None, (
         "Consumer should handle messages with unknown fields gracefully"
+    )
 
     # Verify the known fields are still accessible
     if result and len(result) > 0:

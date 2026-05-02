@@ -1,4 +1,5 @@
 """Phase 1 extra tests: Error codes, Structured Logger, Dialogue State."""
+
 import json
 import logging
 from io import StringIO
@@ -16,10 +17,12 @@ from app.utils.logger import StructuredLogger
 # Section: Error Code Tests (7 tests)
 # =============================================================================
 
+
 @pytest.fixture
 def mock_db_for_error_tests():
     """Shared mock DB for error code tests - mirrors test_api.py pattern."""
     from sqlalchemy.ext.asyncio import AsyncSession
+
     db = AsyncMock(spec=AsyncSession)
     mock_result = MagicMock()
     mock_result.scalars.return_value.all.return_value = []
@@ -28,7 +31,7 @@ def mock_db_for_error_tests():
     db.commit = AsyncMock()
 
     def side_effect_add(obj):
-        if hasattr(obj, 'id') and obj.id is None:
+        if hasattr(obj, "id") and obj.id is None:
             obj.id = 1
 
     db.add = MagicMock(side_effect=side_effect_add)
@@ -49,7 +52,7 @@ def client_with_mock_db(mock_db_for_error_tests):
 
 
 # --- test_error_AUTH_INVALID_SIGNATURE_401 ---
-def test_error_AUTH_INVALID_SIGNATURE_401(client_with_mock_db, mock_db_for_error_tests):
+def test_error_AUTH_INVALID_SIGNATURE_401(client_with_mock_db, mock_db_for_error_tests):  # noqa: N802
     """Invalid Authorization header returns 401.
 
     Spec: When a request carries a malformed/invalid Authorization header,
@@ -61,12 +64,13 @@ def test_error_AUTH_INVALID_SIGNATURE_401(client_with_mock_db, mock_db_for_error
 
     response = client_with_mock_db.get("/api/v1/conversations", headers=headers)
 
-    assert response.status_code == 401, \
+    assert response.status_code == 401, (
         f"Expected 401 for invalid token, got {response.status_code}: {response.json()}"
+    )
 
 
 # --- test_error_KNOWLEDGE_NOT_FOUND_404 ---
-def test_error_KNOWLEDGE_NOT_FOUND_404(client_with_mock_db, mock_db_for_error_tests):
+def test_error_KNOWLEDGE_NOT_FOUND_404(client_with_mock_db, mock_db_for_error_tests):  # noqa: N802
     """Non-existent knowledge ID returns 404.
 
     Spec: PUT /api/v1/knowledge/{id} where id does not exist → 404.
@@ -83,60 +87,59 @@ def test_error_KNOWLEDGE_NOT_FOUND_404(client_with_mock_db, mock_db_for_error_te
 
     # PUT on non-existent knowledge entry returns 404
     response = client_with_mock_db.put(
-        "/api/v1/knowledge/99999",
-        json={"answer": "updated answer"},
-        headers=headers
+        "/api/v1/knowledge/99999", json={"answer": "updated answer"}, headers=headers
     )
 
-    assert response.status_code == 404, \
+    assert response.status_code == 404, (
         f"Expected 404, got {response.status_code}: {response.json()}"
+    )
 
     data = response.json()
-    assert "error" in data or "detail" in data, \
-        f"Expected error field, got: {data}"
+    assert "error" in data or "detail" in data, f"Expected error field, got: {data}"
 
 
 # --- test_error_RATE_LIMIT_EXCEEDED_429 ---
-def test_error_RATE_LIMIT_EXCEEDED_429(client_with_mock_db, mock_db_for_error_tests):
+def test_error_RATE_LIMIT_EXCEEDED_429(client_with_mock_db, mock_db_for_error_tests):  # noqa: N802
     """Rate limit exceeded returns 429.
 
     Spec: When RateLimiter.check() returns False, the webhook must
     return HTTP 429 with detail i18n.translate("rate_limit").
     """
     import os
-    # Keep TELEGRAM_BOT_TOKEN empty so signature check is skipped (only triggered if both header AND token are set)
+
+    # Keep TELEGRAM_BOT_TOKEN empty so signature check is skipped (only triggered if both header AND token are set)  # noqa: E501
     old_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     os.environ["TELEGRAM_BOT_TOKEN"] = ""
 
     try:
-        with patch("app.security.RateLimiter.check", new_callable=AsyncMock) as mock_check:
+        with patch(
+            "app.security.RateLimiter.check", new_callable=AsyncMock
+        ) as mock_check:
             mock_check.return_value = False  # rate limit exceeded
 
-            payload = {
-                "message": {
-                    "from": {"id": 1},
-                    "text": "hi"
-                }
-            }
+            payload = {"message": {"from": {"id": 1}, "text": "hi"}}
             response = client_with_mock_db.post(
                 "/api/v1/webhook/telegram",
                 json=payload,
-                headers={"X-Telegram-Bot-Api-Secret-Token": ""}
+                headers={"X-Telegram-Bot-Api-Secret-Token": ""},
             )
 
-            assert response.status_code == 429, \
+            assert response.status_code == 429, (
                 f"Expected 429, got {response.status_code}: {response.json()}"
+            )
 
             data = response.json()
             # i18n.translate("rate_limit") returns "請求頻率過高" (Chinese)
-            assert "請求頻率過高" in data.get("detail", "") or data.get("detail") == "Rate limit exceeded", \
-                f"Expected rate limit message, got: {data}"
+            assert (
+                "請求頻率過高" in data.get("detail", "")
+                or data.get("detail") == "Rate limit exceeded"
+            ), f"Expected rate limit message, got: {data}"
     finally:
         os.environ["TELEGRAM_BOT_TOKEN"] = old_token
 
 
 # --- test_error_VALIDATION_ERROR_422 ---
-def test_error_VALIDATION_ERROR_422(client_with_mock_db, mock_db_for_error_tests):
+def test_error_VALIDATION_ERROR_422(client_with_mock_db, mock_db_for_error_tests):  # noqa: N802
     """Invalid header value type returns 422 ValidationError.
 
     Spec: FastAPI's Pydantic validation for header types returns HTTP 422
@@ -150,21 +153,18 @@ def test_error_VALIDATION_ERROR_422(client_with_mock_db, mock_db_for_error_tests
     headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
 
     # limit='abc' can't be parsed as int → FastAPI 422
-    response = client_with_mock_db.get(
-        "/api/v1/knowledge?limit=abc",
-        headers=headers
+    response = client_with_mock_db.get("/api/v1/knowledge?limit=abc", headers=headers)
+
+    assert response.status_code == 422, (
+        f"Expected 422 for invalid limit type, got {response.status_code}: {response.json()}"  # noqa: E501
     )
 
-    assert response.status_code == 422, \
-        f"Expected 422 for invalid limit type, got {response.status_code}: {response.json()}"
-
     data = response.json()
-    assert "detail" in data, \
-        f"Expected detail field in validation error, got: {data}"
+    assert "detail" in data, f"Expected detail field in validation error, got: {data}"
 
 
 # --- test_error_INTERNAL_ERROR_500 ---
-def test_error_INTERNAL_ERROR_500(client_with_mock_db, mock_db_for_error_tests):
+def test_error_INTERNAL_ERROR_500(client_with_mock_db, mock_db_for_error_tests):  # noqa: N802
     """Uncaught exception in health check returns 500 INTERNAL_ERROR.
 
 
@@ -190,7 +190,9 @@ def test_error_INTERNAL_ERROR_500(client_with_mock_db, mock_db_for_error_tests):
 
 
 # --- test_error_AUTHZ_INSUFFICIENT_ROLE_403 ---
-def test_error_AUTHZ_INSUFFICIENT_ROLE_403(client_with_mock_db, mock_db_for_error_tests):
+def test_error_AUTHZ_INSUFFICIENT_ROLE_403(  # noqa: N802
+    client_with_mock_db, mock_db_for_error_tests
+):
     """Agent role cannot write knowledge → 403.
 
     Spec: Role 'agent' has only 'read' permission on 'knowledge' resource.
@@ -204,20 +206,21 @@ def test_error_AUTHZ_INSUFFICIENT_ROLE_403(client_with_mock_db, mock_db_for_erro
     response = client_with_mock_db.post(
         "/api/v1/knowledge",
         json={"question": "test", "answer": "test answer"},
-        headers=headers
+        headers=headers,
     )
 
-    assert response.status_code == 403, \
+    assert response.status_code == 403, (
         f"Expected 403, got {response.status_code}: {response.json()}"
+    )
 
     data = response.json()
-    assert "detail" in data, \
-        f"Expected error detail, got: {data}"
+    assert "detail" in data, f"Expected error detail, got: {data}"
 
 
 # =============================================================================
 # Section: Structured Logger Tests (5 tests)
 # =============================================================================
+
 
 def test_structured_logger_includes_level():
     """StructuredLogger JSON output must include 'level' field.
@@ -239,8 +242,9 @@ def test_structured_logger_includes_level():
 
     data = json.loads(output)
     assert "level" in data, f"JSON output missing 'level' field: {data}"
-    assert data["level"] in ("INFO", "DEBUG", "WARN", "ERROR", "CRITICAL"), \
+    assert data["level"] in ("INFO", "DEBUG", "WARN", "ERROR", "CRITICAL"), (
         f"Unexpected level value: {data['level']}"
+    )
 
 
 def test_structured_logger_includes_message():
@@ -262,8 +266,9 @@ def test_structured_logger_includes_message():
     data = json.loads(output)
 
     assert "message" in data, f"JSON output missing 'message' field: {data}"
-    assert data["message"] == "test message", \
+    assert data["message"] == "test message", (
         f"Expected message 'test message', got: {data['message']}"
+    )
 
 
 def test_structured_logger_includes_service_name():
@@ -286,8 +291,9 @@ def test_structured_logger_includes_service_name():
     data = json.loads(output)
 
     assert "service" in data, f"JSON output missing 'service' field: {data}"
-    assert data["service"] == "my-service-name", \
+    assert data["service"] == "my-service-name", (
         f"Expected service 'my-service-name', got: {data['service']}"
+    )
 
 
 def test_structured_logger_includes_timestamp():
@@ -309,8 +315,9 @@ def test_structured_logger_includes_timestamp():
     data = json.loads(output)
 
     assert "timestamp" in data, f"JSON output missing 'timestamp' field: {data}"
-    assert data["timestamp"].endswith("Z"), \
+    assert data["timestamp"].endswith("Z"), (
         f"Timestamp must end with 'Z', got: {data['timestamp']}"
+    )
 
 
 def test_structured_logger_output_is_json():
@@ -334,14 +341,14 @@ def test_structured_logger_output_is_json():
     # Must not raise - validates JSON is well-formed
     parsed = json.loads(output)
 
-    assert isinstance(parsed, dict), \
-        f"Parsed JSON must be a dict, got: {type(parsed)}"
+    assert isinstance(parsed, dict), f"Parsed JSON must be a dict, got: {type(parsed)}"
     assert "message" in parsed, "Parsed JSON must contain 'message' key"
 
 
 # =============================================================================
 # Section: Dialogue State Tests (2 tests)
 # =============================================================================
+
 
 def test_dialogue_state_awaiting_confirmation_confirm_to_processing():
     """When state is AWAITING_CONFIRMATION and user confirms, go to PROCESSING.
@@ -359,8 +366,9 @@ def test_dialogue_state_awaiting_confirmation_confirm_to_processing():
     # Simulate a turn with intent="confirm" (user confirms the booking)
     updated_state = dst.process_turn(1, intent="confirm", slots={"confirm": "yes"})
 
-    assert updated_state.current_state == ConversationState.PROCESSING, \
+    assert updated_state.current_state == ConversationState.PROCESSING, (
         f"Expected PROCESSING after confirm, got: {updated_state.current_state}"
+    )
 
 
 def test_dialogue_state_awaiting_confirmation_deny_to_slot_filling():
@@ -380,7 +388,7 @@ def test_dialogue_state_awaiting_confirmation_deny_to_slot_filling():
             "name": "destination",
             "value": None,
             "required": True,
-            "prompt": "Where do you want to go?"
+            "prompt": "Where do you want to go?",
         }
     }
     dst.update_state(state)
@@ -389,48 +397,55 @@ def test_dialogue_state_awaiting_confirmation_deny_to_slot_filling():
     updated_state = dst.process_turn(2, intent="deny", slots={"deny": "no"})
 
     # Deny should return to slot filling to ask again
-    assert updated_state.current_state == ConversationState.SLOT_FILLING, \
+    assert updated_state.current_state == ConversationState.SLOT_FILLING, (
         f"Expected SLOT_FILLING after deny, got: {updated_state.current_state}"
+    )
 
 
 # =============================================================================
 # Section: InputSanitizer Extra Tests (Batch A)
 # =============================================================================
 
+
 def test_sanitizer_empty_string_returns_empty_string():
     """sanitize(\"\") → \"\" (empty string returns empty string)"""
     from app.security.input_sanitizer import InputSanitizer
+
     sanitizer = InputSanitizer()
     result = sanitizer.sanitize("")
-    assert result == "", \
-        f"Expected empty string, got {repr(result)}"
+    assert result == "", f"Expected empty string, got {repr(result)}"
 
 
 def test_sanitizer_whitespace_only_returns_empty_string():
     """sanitize(\"   \") → \"\" (whitespace-only returns empty string)"""
     from app.security.input_sanitizer import InputSanitizer
+
     sanitizer = InputSanitizer()
     result = sanitizer.sanitize("   ")
-    assert result == "", \
+    assert result == "", (
         f"Expected empty string for whitespace-only input, got {repr(result)}"
+    )
 
 
 # =============================================================================
 # Section: UnifiedMessage Immutable Tests (Batch A)
 # =============================================================================
 
+
 def test_unified_message_immutable():
     """UnifiedMessage is a frozen dataclass - attributes cannot be changed"""
     from app.models import MessageType, Platform, UnifiedMessage
+
     msg = UnifiedMessage(
         platform=Platform.TELEGRAM,
         platform_user_id="12345",
         unified_user_id="u1",
         message_type=MessageType.TEXT,
-        content="test"
+        content="test",
     )
     # Attempting to set any attribute should raise FrozenInstanceError
     import dataclasses
+
     with pytest.raises(dataclasses.FrozenInstanceError):
         msg.content = "changed"
     with pytest.raises(dataclasses.FrozenInstanceError):
@@ -445,6 +460,7 @@ def test_unified_message_immutable():
 # Section: Webhook Telegram Signature Tests (Batch A)
 # =============================================================================
 
+
 def test_webhook_telegram_signature_valid():
     """Telegram verify_signature with correct secret returns True"""
     from app.security.webhook_verifier import TelegramWebhookVerifier
@@ -456,8 +472,9 @@ def test_webhook_telegram_signature_valid():
     # Telegram uses a plain text shared secret, not an HMAC over the body.
     correct_sig = token
 
-    assert verifier.verify(body, correct_sig) is True, \
+    assert verifier.verify(body, correct_sig) is True, (
         "Correct Telegram signature should return True"
+    )
 
 
 def test_webhook_telegram_signature_invalid():
@@ -468,8 +485,9 @@ def test_webhook_telegram_signature_invalid():
     verifier = TelegramWebhookVerifier(token)
     body = b'{"message":{"from":{"id":123},"text":"hello"}}'
 
-    assert verifier.verify(body, "invalid_signature") is False, \
+    assert verifier.verify(body, "invalid_signature") is False, (
         "Wrong Telegram signature should return False"
+    )
 
 
 def test_webhook_telegram_valid_signature_returns_200():
@@ -485,19 +503,22 @@ def test_webhook_telegram_valid_signature_returns_200():
     token = "valid_bot_token"
     body_bytes = b'{"message":{"from":{"id":123},"text":"test"}}'
 
-    with patch("app.api.process_webhook_message", new_callable=AsyncMock) as mock_proc, \
-         patch("app.api.TELEGRAM_BOT_TOKEN", token):
+    with (
+        patch("app.api.process_webhook_message", new_callable=AsyncMock) as mock_proc,
+        patch("app.api.TELEGRAM_BOT_TOKEN", token),
+    ):
         mock_proc.return_value = ("ok", "rule")
         response = client.post(
             "/api/v1/webhook/telegram",
             content=body_bytes,
             headers={
                 "Content-Type": "application/json",
-                "X-Telegram-Bot-Api-Secret-Token": token
-            }
+                "X-Telegram-Bot-Api-Secret-Token": token,
+            },
         )
-        assert response.status_code == 200, \
-            f"Valid Telegram signature should return 200, got {response.status_code}: {response.json()}"
+        assert response.status_code == 200, (
+            f"Valid Telegram signature should return 200, got {response.status_code}: {response.json()}"  # noqa: E501
+        )
 
 
 def test_webhook_telegram_invalid_signature_returns_401():
@@ -514,15 +535,18 @@ def test_webhook_telegram_invalid_signature_returns_401():
     client = TestClient(app, raise_server_exceptions=False)
 
     try:
-        with patch("app.api.process_webhook_message", new_callable=AsyncMock) as mock_proc:
+        with patch(
+            "app.api.process_webhook_message", new_callable=AsyncMock
+        ) as mock_proc:
             mock_proc.return_value = ("ok", "rule")
             response = client.post(
                 "/api/v1/webhook/telegram",
                 json={"message": {"from": {"id": 123}, "text": "test"}},
-                headers={"X-Telegram-Bot-Api-Secret-Token": "bad_signature"}
+                headers={"X-Telegram-Bot-Api-Secret-Token": "bad_signature"},
             )
-            assert response.status_code == 401, \
-                f"Invalid Telegram signature should return 401, got {response.status_code}: {response.json()}"
+            assert response.status_code == 401, (
+                f"Invalid Telegram signature should return 401, got {response.status_code}: {response.json()}"  # noqa: E501
+            )
     finally:
         os.environ["TELEGRAM_BOT_TOKEN"] = old_token
 
@@ -541,15 +565,18 @@ def test_webhook_telegram_rate_limited_returns_429():
     client = TestClient(app, raise_server_exceptions=False)
 
     try:
-        with patch("app.security.RateLimiter.check", new_callable=AsyncMock) as mock_check:
+        with patch(
+            "app.security.RateLimiter.check", new_callable=AsyncMock
+        ) as mock_check:
             mock_check.return_value = False  # rate limit exceeded
             response = client.post(
                 "/api/v1/webhook/telegram",
                 json={"message": {"from": {"id": 1}, "text": "hi"}},
-                headers={"X-Telegram-Bot-Api-Secret-Token": ""}
+                headers={"X-Telegram-Bot-Api-Secret-Token": ""},
             )
-            assert response.status_code == 429, \
-                f"Rate limited request should return 429, got {response.status_code}: {response.json()}"
+            assert response.status_code == 429, (
+                f"Rate limited request should return 429, got {response.status_code}: {response.json()}"  # noqa: E501
+            )
     finally:
         os.environ["TELEGRAM_BOT_TOKEN"] = old_token
 
@@ -557,6 +584,7 @@ def test_webhook_telegram_rate_limited_returns_429():
 # =============================================================================
 # Section: Webhook LINE Signature Tests (Batch B)
 # =============================================================================
+
 
 def test_webhook_line_signature_valid():
     """LINE verify_signature with correct secret returns True"""
@@ -572,8 +600,9 @@ def test_webhook_line_signature_valid():
     digest = hmac.new(secret.encode(), body, hashlib.sha256).digest()
     correct_sig = base64.b64encode(digest).decode()
 
-    assert verifier.verify(body, correct_sig) is True, \
+    assert verifier.verify(body, correct_sig) is True, (
         "Correct LINE signature should return True"
+    )
 
 
 def test_webhook_line_signature_invalid():
@@ -583,8 +612,9 @@ def test_webhook_line_signature_invalid():
     verifier = LineWebhookVerifier("channel_secret")
     body = b'{"events":[]}'
 
-    assert verifier.verify(body, "invalid_signature") is False, \
+    assert verifier.verify(body, "invalid_signature") is False, (
         "Wrong LINE signature should return False"
+    )
 
 
 def test_webhook_line_valid_signature_returns_200():
@@ -609,18 +639,21 @@ def test_webhook_line_valid_signature_returns_200():
         digest = hmac.new(secret.encode(), body_bytes, hashlib.sha256).digest()
         correct_sig = base64.b64encode(digest).decode()
 
-        with patch("app.api.process_webhook_message", new_callable=AsyncMock) as mock_proc:
+        with patch(
+            "app.api.process_webhook_message", new_callable=AsyncMock
+        ) as mock_proc:
             mock_proc.return_value = ("ok", "rule")
             response = client.post(
                 "/api/v1/webhook/line",
                 content=body_bytes,
                 headers={
                     "Content-Type": "application/json",
-                    "X-Line-Signature": correct_sig
-                }
+                    "X-Line-Signature": correct_sig,
+                },
             )
-            assert response.status_code == 200, \
-                f"Valid LINE signature should return 200, got {response.status_code}: {response.json()}"
+            assert response.status_code == 200, (
+                f"Valid LINE signature should return 200, got {response.status_code}: {response.json()}"  # noqa: E501
+            )
     finally:
         os.environ["LINE_CHANNEL_SECRET"] = old_secret
 
@@ -635,16 +668,19 @@ def test_webhook_line_invalid_signature_returns_401():
 
     client = TestClient(app, raise_server_exceptions=False)
 
-    with patch("app.api.process_webhook_message", new_callable=AsyncMock) as mock_proc, \
-         patch("app.api.LINE_CHANNEL_SECRET", "line_channel_secret"):
+    with (
+        patch("app.api.process_webhook_message", new_callable=AsyncMock) as mock_proc,
+        patch("app.api.LINE_CHANNEL_SECRET", "line_channel_secret"),
+    ):
         mock_proc.return_value = ("ok", "rule")
         response = client.post(
             "/api/v1/webhook/line",
             json={"events": [{"type": "message", "message": {"text": "hi"}}]},
-            headers={"X-Line-Signature": "invalid_signature"}
+            headers={"X-Line-Signature": "invalid_signature"},
         )
-        assert response.status_code == 401, \
-            f"Invalid LINE signature should return 401, got {response.status_code}: {response.json()}"
+        assert response.status_code == 401, (
+            f"Invalid LINE signature should return 401, got {response.status_code}: {response.json()}"  # noqa: E501
+        )
 
 
 def test_webhook_line_rate_limited_returns_429():
@@ -661,15 +697,18 @@ def test_webhook_line_rate_limited_returns_429():
     client = TestClient(app, raise_server_exceptions=False)
 
     try:
-        with patch("app.security.RateLimiter.check", new_callable=AsyncMock) as mock_check:
+        with patch(
+            "app.security.RateLimiter.check", new_callable=AsyncMock
+        ) as mock_check:
             mock_check.return_value = False
             response = client.post(
                 "/api/v1/webhook/line",
                 json={"events": [{"type": "message", "message": {"text": "hi"}}]},
-                headers={"X-Line-Signature": ""}
+                headers={"X-Line-Signature": ""},
             )
-            assert response.status_code == 429, \
-                f"Rate limited LINE request should return 429, got {response.status_code}: {response.json()}"
+            assert response.status_code == 429, (
+                f"Rate limited LINE request should return 429, got {response.status_code}: {response.json()}"  # noqa: E501
+            )
     finally:
         os.environ["LINE_CHANNEL_SECRET"] = old_secret
 
@@ -677,6 +716,7 @@ def test_webhook_line_rate_limited_returns_429():
 # =============================================================================
 # Section: Webhook Messenger Signature Tests (Batch B)
 # =============================================================================
+
 
 def test_webhook_messenger_signature_valid():
     """Messenger verify_signature with correct secret returns True"""
@@ -690,8 +730,9 @@ def test_webhook_messenger_signature_valid():
     body = b'{"entry":[]}'
     expected = "sha1=" + hmac.new(app_secret.encode(), body, hashlib.sha1).hexdigest()
 
-    assert verifier.verify(body, expected) is True, \
+    assert verifier.verify(body, expected) is True, (
         "Correct Messenger signature should return True"
+    )
 
 
 def test_webhook_messenger_signature_invalid():
@@ -701,13 +742,15 @@ def test_webhook_messenger_signature_invalid():
     verifier = MessengerWebhookVerifier("messenger_app_secret")
     body = b'{"entry":[]}'
 
-    assert verifier.verify(body, "sha1=invalid") is False, \
+    assert verifier.verify(body, "sha1=invalid") is False, (
         "Wrong Messenger signature should return False"
+    )
 
 
 # =============================================================================
 # Section: Webhook WhatsApp Signature Tests (Batch B)
 # =============================================================================
+
 
 def test_webhook_whatsapp_signature_valid():
     """WhatsApp verify_signature with correct secret returns True"""
@@ -719,10 +762,13 @@ def test_webhook_whatsapp_signature_valid():
     app_secret = "whatsapp_app_secret"
     verifier = WhatsAppWebhookVerifier(app_secret)
     body = b'{"entry":[]}'
-    expected = "sha256=" + hmac.new(app_secret.encode(), body, hashlib.sha256).hexdigest()
+    expected = (
+        "sha256=" + hmac.new(app_secret.encode(), body, hashlib.sha256).hexdigest()
+    )
 
-    assert verifier.verify(body, expected) is True, \
+    assert verifier.verify(body, expected) is True, (
         "Correct WhatsApp signature should return True"
+    )
 
 
 def test_webhook_whatsapp_signature_invalid():
@@ -732,13 +778,15 @@ def test_webhook_whatsapp_signature_invalid():
     verifier = WhatsAppWebhookVerifier("whatsapp_app_secret")
     body = b'{"entry":[]}'
 
-    assert verifier.verify(body, "sha256=invalid") is False, \
+    assert verifier.verify(body, "sha256=invalid") is False, (
         "Wrong WhatsApp signature should return False"
+    )
 
 
 # =============================================================================
 # Section: Misc Webhook Tests (Batch B)
 # =============================================================================
+
 
 def test_webhook_401_on_invalid_signature():
     """Any webhook with invalid signature returns 401 (cross-platform)"""
@@ -755,15 +803,18 @@ def test_webhook_401_on_invalid_signature():
     client = TestClient(app, raise_server_exceptions=False)
 
     try:
-        with patch("app.api.process_webhook_message", new_callable=AsyncMock) as mock_proc:
+        with patch(
+            "app.api.process_webhook_message", new_callable=AsyncMock
+        ) as mock_proc:
             mock_proc.return_value = ("ok", "rule")
             response = client.post(
                 "/api/v1/webhook/telegram",
                 json={"message": {"from": {"id": 1}, "text": "test"}},
-                headers={"X-Telegram-Bot-Api-Secret-Token": "wrong_signature"}
+                headers={"X-Telegram-Bot-Api-Secret-Token": "wrong_signature"},
             )
-            assert response.status_code == 401, \
-                f"Invalid signature should return 401 across platforms, got {response.status_code}"
+            assert response.status_code == 401, (
+                f"Invalid signature should return 401 across platforms, got {response.status_code}"  # noqa: E501
+            )
     finally:
         os.environ["TELEGRAM_BOT_TOKEN"] = old_token
 
@@ -782,15 +833,18 @@ def test_webhook_429_on_rate_limit_exceeded():
     client = TestClient(app, raise_server_exceptions=False)
 
     try:
-        with patch("app.security.RateLimiter.check", new_callable=AsyncMock) as mock_check:
+        with patch(
+            "app.security.RateLimiter.check", new_callable=AsyncMock
+        ) as mock_check:
             mock_check.return_value = False
             response = client.post(
                 "/api/v1/webhook/telegram",
                 json={"message": {"from": {"id": 1}, "text": "hi"}},
-                headers={"X-Telegram-Bot-Api-Secret-Token": ""}
+                headers={"X-Telegram-Bot-Api-Secret-Token": ""},
             )
-            assert response.status_code == 429, \
+            assert response.status_code == 429, (
                 f"Rate limit exceeded should return 429, got {response.status_code}"
+            )
     finally:
         os.environ["TELEGRAM_BOT_TOKEN"] = old_token
 
@@ -806,21 +860,26 @@ def test_webhook_verifier_registry_resolves_correct_type():
     )
 
     line_verifier = get_verifier("line", "secret")
-    assert isinstance(line_verifier, LineWebhookVerifier), \
-        f"LINE platform should resolve to LineWebhookVerifier, got {type(line_verifier)}"
+    assert isinstance(line_verifier, LineWebhookVerifier), (
+        f"LINE platform should resolve to LineWebhookVerifier, got {type(line_verifier)}"  # noqa: E501
+    )
 
     tg_verifier = get_verifier("telegram", "token")
-    assert isinstance(tg_verifier, TelegramWebhookVerifier), \
-        f"Telegram platform should resolve to TelegramWebhookVerifier, got {type(tg_verifier)}"
+    assert isinstance(tg_verifier, TelegramWebhookVerifier), (
+        f"Telegram platform should resolve to TelegramWebhookVerifier, got {type(tg_verifier)}"  # noqa: E501
+    )
 
     messenger_verifier = get_verifier("messenger", "secret")
-    assert isinstance(messenger_verifier, MessengerWebhookVerifier), \
-        f"Messenger platform should resolve to MessengerWebhookVerifier, got {type(messenger_verifier)}"
+    assert isinstance(messenger_verifier, MessengerWebhookVerifier), (
+        f"Messenger platform should resolve to MessengerWebhookVerifier, got {type(messenger_verifier)}"  # noqa: E501
+    )
 
     whatsapp_verifier = get_verifier("whatsapp", "secret")
-    assert isinstance(whatsapp_verifier, WhatsAppWebhookVerifier), \
-        f"WhatsApp platform should resolve to WhatsAppWebhookVerifier, got {type(whatsapp_verifier)}"
+    assert isinstance(whatsapp_verifier, WhatsAppWebhookVerifier), (
+        f"WhatsApp platform should resolve to WhatsAppWebhookVerifier, got {type(whatsapp_verifier)}"  # noqa: E501
+    )
 
     unknown_verifier = get_verifier("unknown", "secret")
-    assert unknown_verifier is None, \
+    assert unknown_verifier is None, (
         f"Unknown platform should return None, got {type(unknown_verifier)}"
+    )

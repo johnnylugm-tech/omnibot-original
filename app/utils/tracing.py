@@ -1,4 +1,5 @@
 """OpenTelemetry Tracing - Phase 3"""
+
 import os
 
 from opentelemetry import trace
@@ -12,12 +13,15 @@ def setup_tracing(service_name: str = "omnibot") -> None:
     """Initialize OpenTelemetry tracer with OTLP exporter"""
     # Environment variables
     otlp_endpoint = os.getenv(
-        "OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4317")
+        "OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4317"
+    )
 
-    resource = Resource(attributes={
-        "service.name": service_name,
-        "environment": os.getenv("ENV", "development")
-    })
+    resource = Resource(
+        attributes={
+            "service.name": service_name,
+            "environment": os.getenv("ENV", "development"),
+        }
+    )
 
     provider = TracerProvider(resource=resource)
 

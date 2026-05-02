@@ -2,6 +2,7 @@
 ODD (Operational Data Driven) Query Manager - Phase 3
 Contains 13 core analysis SQL queries for KPI and system monitoring.
 """
+
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import text
@@ -17,7 +18,9 @@ class ODDQueryManager:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def execute_query(self, query: str, params: Optional[dict] = None) -> List[Dict[str, Any]]:
+    async def execute_query(
+        self, query: str, params: Optional[dict] = None
+    ) -> List[Dict[str, Any]]:
         result = await self.db.execute(text(query), params or {})
         return [dict(row._mapping) for row in result.fetchall()]
 
@@ -27,19 +30,23 @@ class ODDQueryManager:
         """1. FCR Rate rounded to 2 decimals"""
         sql = """
         SELECT ROUND(
-            CAST(COUNT(CASE WHEN first_contact_resolution = TRUE THEN 1 END) AS NUMERIC) / 
+            CAST(COUNT(CASE WHEN first_contact_resolution = TRUE THEN 1 END)
+                 AS NUMERIC) /
             NULLIF(COUNT(*), 0), 2
         ) as fcr_rate
         FROM conversations;
         """
         res = await self.execute_query(sql)
-        return float(res[0]['fcr_rate']) if res and res[0]['fcr_rate'] is not None else 0.0
+        return (
+            float(res[0]["fcr_rate"]) if res and res[0]["fcr_rate"] is not None else 0.0
+        )
 
     async def get_latency_p95_by_platform(self) -> List[Dict[str, Any]]:
         """2. p95 Latency grouped by platform"""
         sql = """
-        SELECT platform, 
-               PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY response_time_ms) as p95_latency
+        SELECT platform,
+               PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY response_time_ms)
+                 as p95_latency
         FROM conversations
         GROUP BY platform;
         """
@@ -61,7 +68,8 @@ class ODDQueryManager:
         """4. CSAT Avg and p95"""
         sql = """
         SELECT AVG(satisfaction_score) as avg_csat,
-               PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY satisfaction_score) as p95_csat
+               PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY satisfaction_score)
+                 as p95_csat
         FROM conversations
         WHERE satisfaction_score IS NOT NULL;
         """
@@ -72,9 +80,10 @@ class ODDQueryManager:
         """5. Knowledge hit distribution with percentage"""
         sql = """
         WITH total AS (SELECT COUNT(*) as cnt FROM messages WHERE role = 'assistant')
-        SELECT knowledge_source, 
+        SELECT knowledge_source,
                COUNT(*) as count,
-               ROUND(CAST(COUNT(*) AS NUMERIC) / (SELECT cnt FROM total) * 100, 2) as percentage
+               ROUND(CAST(COUNT(*) AS NUMERIC) /
+                 (SELECT cnt FROM total) * 100, 2) as percentage
         FROM messages
         WHERE role = 'assistant'
         GROUP BY knowledge_source;
@@ -96,7 +105,8 @@ class ODDQueryManager:
         sql = """
         SELECT priority,
                ROUND(
-                   CAST(COUNT(CASE WHEN resolved_at <= sla_deadline THEN 1 END) AS NUMERIC) / 
+                   CAST(COUNT(CASE WHEN resolved_at <= sla_deadline THEN 1 END)
+                        AS NUMERIC) /
                    NULLIF(COUNT(*), 0) * 100, 2
                ) as compliance_rate
         FROM escalation_queue
@@ -118,14 +128,19 @@ class ODDQueryManager:
         """9. Security block rate percentage"""
         sql = """
         SELECT ROUND(
-            CAST(COUNT(CASE WHEN risk_level IN ('high', 'critical') THEN 1 END) AS NUMERIC) / 
+            CAST(COUNT(CASE WHEN risk_level IN ('high', 'critical') THEN 1 END)
+                 AS NUMERIC) /
             NULLIF(COUNT(*), 0) * 100, 2
         ) as block_rate
         FROM audit_logs
         WHERE action = 'security_block';
         """
         res = await self.execute_query(sql)
-        return float(res[0]['block_rate']) if res and res[0]['block_rate'] is not None else 0.0
+        return (
+            float(res[0]["block_rate"])
+            if res and res[0]["block_rate"] is not None
+            else 0.0
+        )
 
     # --- Phase 3 Queries ---
 
@@ -145,14 +160,18 @@ class ODDQueryManager:
         sql = """
         SELECT DATE(created_at) as date,
                ROUND(
-                   CAST(COUNT(CASE WHEN pii_types IS NOT NULL THEN 1 END) AS NUMERIC) / 
+                   CAST(COUNT(CASE WHEN pii_types IS NOT NULL THEN 1 END) AS NUMERIC) /
                    NULLIF(COUNT(*), 0) * 100, 2
                ) as masking_rate
         FROM messages
         GROUP BY DATE(created_at);
         """
         res = await self.execute_query(sql)
-        return float(res[0]['masking_rate']) if res and res[0]['masking_rate'] is not None else 0.0
+        return (
+            float(res[0]["masking_rate"])
+            if res and res[0]["masking_rate"] is not None
+            else 0.0
+        )
 
     async def get_rbac_denial_audit(self) -> List[Dict[str, Any]]:
         """12. RBAC denial audit with user/role join"""
@@ -165,11 +184,10 @@ class ODDQueryManager:
         """
         return await self.execute_query(sql)
 
-
     async def get_ab_test_performance(self) -> List[Dict[str, Any]]:
         """13. A/B test variant performance (conversion rate)"""
         sql = """
-        SELECT experiment_id, variant, 
+        SELECT experiment_id, variant,
                AVG(metric_value) as avg_metric,
                SUM(sample_size) as total_samples
         FROM experiment_results
@@ -181,10 +199,14 @@ class ODDQueryManager:
         """14. System availability percentage (Phase 3 KPI)"""
         sql = """
         SELECT ROUND(
-            CAST(COUNT(CASE WHEN status = 'healthy' THEN 1 END) AS NUMERIC) / 
+            CAST(COUNT(CASE WHEN status = 'healthy' THEN 1 END) AS NUMERIC) /
             NULLIF(COUNT(*), 0) * 100, 2
         ) as availability
         FROM health_checks;
         """
         res = await self.execute_query(sql)
-        return float(res[0]['availability']) if res and res[0]['availability'] is not None else 0.0
+        return (
+            float(res[0]["availability"])
+            if res and res[0]["availability"] is not None
+            else 0.0
+        )

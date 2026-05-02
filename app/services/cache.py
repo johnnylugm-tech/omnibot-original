@@ -1,9 +1,11 @@
 """Cache Service - Phase 3"""
+
 from typing import Any, Optional
 
 
 class CacheService:
     """Mockable Cache service for testing"""
+
     def __init__(self, url: str = "redis://localhost:6379/0"):
         self.url = url
 

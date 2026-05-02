@@ -2,6 +2,7 @@
 Phase 2 Hybrid Knowledge Layer V7 — RRF Fusion Tests (Section 17)
 All 30 gap tests for knowledge, hybrid layer, and ODD SQL.
 """
+
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -24,7 +25,7 @@ def mock_db():
     db.execute.return_value = mock_result
 
     def side_effect_add(obj):
-        if hasattr(obj, 'id') and obj.id is None:
+        if hasattr(obj, "id") and obj.id is None:
             obj.id = 1
 
     db.add = MagicMock(side_effect=side_effect_add)
@@ -44,32 +45,37 @@ def client(mock_db):
 # Knowledge Layer API Tests (8 tests)
 # =============================================================================
 
+
 def test_knowledge_post_requires_bearer_auth(client, mock_db):
     """POST /api/v1/knowledge without Bearer token → 401 Unauthorized"""
     response = client.post(
         "/api/v1/knowledge",
-        json={"question": "test", "answer": "test answer", "category": "General"}
+        json={"question": "test", "answer": "test answer", "category": "General"},
     )
-    assert response.status_code == 401, \
+    assert response.status_code == 401, (
         f"Expected 401 without token, got {response.status_code}"
+    )
 
 
 def test_knowledge_post_requires_rbac_knowledge_write(client, mock_db):
     """POST /api/v1/knowledge with agent role (no write permission) → 403 Forbidden"""
     from app.security.rbac import rbac
+
     headers = {"Authorization": f"Bearer {rbac.create_token('agent')}"}
     response = client.post(
         "/api/v1/knowledge",
         json={"question": "test", "answer": "test answer", "category": "General"},
-        headers=headers
+        headers=headers,
     )
-    assert response.status_code == 403, \
+    assert response.status_code == 403, (
         f"Expected 403 for agent without write permission, got {response.status_code}"
+    )
 
 
 def test_knowledge_put_requires_rbac_knowledge_write(client, mock_db):
     """PUT /api/v1/knowledge/{id} with editor role (no write) → 403 Forbidden"""
     from app.security.rbac import rbac
+
     # editor has read + write on knowledge, but not... let me check
     # Actually editor DOES have write. Let's use agent (read-only)
     headers = {"Authorization": f"Bearer {rbac.create_token('agent')}"}
@@ -78,29 +84,38 @@ def test_knowledge_put_requires_rbac_knowledge_write(client, mock_db):
     admin_headers = {"Authorization": f"Bearer {rbac.create_token('admin')}"}
     create_resp = client.post(
         "/api/v1/knowledge",
-        json={"question": "existing", "answer": "existing answer", "category": "General"},
-        headers=admin_headers
+        json={
+            "question": "existing",
+            "answer": "existing answer",
+            "category": "General",
+        },
+        headers=admin_headers,
     )
     # If creation fails (db mock), just use id=1
-    kid = create_resp.json().get("data", {}).get("id", 1) if create_resp.status_code == 200 else 1
+    kid = (
+        create_resp.json().get("data", {}).get("id", 1)
+        if create_resp.status_code == 200
+        else 1
+    )
 
     response = client.put(
-        f"/api/v1/knowledge/{kid}",
-        json={"answer": "updated answer"},
-        headers=headers
+        f"/api/v1/knowledge/{kid}", json={"answer": "updated answer"}, headers=headers
     )
-    assert response.status_code == 403, \
+    assert response.status_code == 403, (
         f"Expected 403 for PUT without write permission, got {response.status_code}"
+    )
 
 
 def test_knowledge_delete_requires_rbac_knowledge_delete(client, mock_db):
-    """DELETE /api/v1/knowledge/{id} with editor role (no delete permission) → 403 Forbidden"""
+    """DELETE /api/v1/knowledge/{id} with editor role (no delete permission) → 403 Forbidden"""  # noqa: E501
     from app.security.rbac import rbac
+
     # editor doesn't have delete permission
     headers = {"Authorization": f"Bearer {rbac.create_token('editor')}"}
     response = client.delete("/api/v1/knowledge/1", headers=headers)
-    assert response.status_code == 403, \
+    assert response.status_code == 403, (
         f"Expected 403 for DELETE without delete permission, got {response.status_code}"
+    )
 
 
 @pytest.mark.asyncio
@@ -142,8 +157,9 @@ async def test_knowledge_layer_rule_match_exact_question():
     results = await layer._rule_match_list("如何付款")
 
     assert len(results) == 1
-    assert results[0].confidence == 0.95, \
+    assert results[0].confidence == 0.95, (
         "Exact question match should yield confidence=0.95"
+    )
 
 
 @pytest.mark.asyncio
@@ -167,8 +183,9 @@ async def test_knowledge_layer_rule_match_ilike_partial():
     results = await layer._rule_match_list("折價")
 
     assert len(results) == 1
-    assert results[0].confidence == 0.7, \
+    assert results[0].confidence == 0.7, (
         "Partial keyword match should yield confidence=0.7"
+    )
 
 
 @pytest.mark.asyncio
@@ -192,13 +209,15 @@ async def test_knowledge_layer_rule_match_limit_5():
     stmt_str = str(captured_stmt)
     # Verify the SQL query includes LIMIT 5 (the query is generated by SQLAlchemy)
     # For async SQLAlchemy with PostgresDialect, limit appears as 'LIMIT 5' or similar
-    assert 'limit' in stmt_str.lower() or '5' in stmt_str, \
+    assert "limit" in stmt_str.lower() or "5" in stmt_str, (
         f"Rule match query must include limit(5), got: {stmt_str}"
+    )
 
 
 # =============================================================================
 # Knowledge Base / Soft Delete (3 tests)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_knowledge_base_keywords_is_postgresql_array():
@@ -207,16 +226,18 @@ async def test_knowledge_base_keywords_is_postgresql_array():
 
     from app.models.database import KnowledgeBase
 
-    keywords_col = KnowledgeBase.__table__.columns.get('keywords')
+    keywords_col = KnowledgeBase.__table__.columns.get("keywords")
     assert keywords_col is not None, "keywords column must exist"
 
     col_type = keywords_col.type
-    assert isinstance(col_type, ARRAY), \
+    assert isinstance(col_type, ARRAY), (
         f"keywords must be ARRAY type, got {type(col_type).__name__}"
+    )
     # Compare item types by name rather than instance (SQLAlchemy Text comparison)
     item_type_name = type(col_type.item_type).__name__
-    assert item_type_name == "Text", \
-        f"keywords ARRAY must be TEXT[] (item type: Text), got item type: {item_type_name}"
+    assert item_type_name == "Text", (
+        f"keywords ARRAY must be TEXT[] (item type: Text), got item type: {item_type_name}"  # noqa: E501
+    )
 
 
 @pytest.mark.asyncio
@@ -239,8 +260,9 @@ async def test_knowledge_query_keywords_matching_uses_any():
 
     stmt_str = str(captured_stmt)
     # .any() compiles to ANY in PostgreSQL
-    assert 'ANY' in stmt_str.upper() or 'keywords' in stmt_str.lower(), \
+    assert "ANY" in stmt_str.upper() or "keywords" in stmt_str.lower(), (
         f"Query must use ANY(keywords) syntax. Got: {stmt_str}"
+    )
 
 
 @pytest.mark.asyncio
@@ -284,32 +306,37 @@ async def test_knowledge_soft_delete_for_rollback():
 # Embedding Tests (2 tests)
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_knowledge_base_embeddings_vector_384():
     """KnowledgeBase.embeddings stores 384-dimension vectors (pgvector)"""
     from app.models.database import KnowledgeBase
 
-    embeddings_col = KnowledgeBase.__table__.columns.get('embeddings')
+    embeddings_col = KnowledgeBase.__table__.columns.get("embeddings")
     assert embeddings_col is not None, "embeddings column must exist"
 
     # The column is JSONB (how pgvector stores vectors in SQLAlchemy async)
     # The actual dimension is validated at INSERT time
     # We verify the model allows embedding storage
     from sqlalchemy.dialects.postgresql import JSONB
-    assert isinstance(embeddings_col.type, JSONB), \
+
+    assert isinstance(embeddings_col.type, JSONB), (
         "embeddings must be JSONB (pgvector storage in SQLAlchemy async)"
+    )
 
 
 @pytest.mark.asyncio
 async def test_knowledge_base_embeddings_dimension_384():
     """HybridKnowledgeV7.EMBEDDING_DIM = 384 (paraphrase-multilingual-MiniLM-L12-v2)"""
-    assert HybridKnowledgeV7.EMBEDDING_DIM == 384, \
+    assert HybridKnowledgeV7.EMBEDDING_DIM == 384, (
         f"EMBEDDING_DIM must be 384, got {HybridKnowledgeV7.EMBEDDING_DIM}"
+    )
 
 
 # =============================================================================
 # Hybrid Layer RRF Tests (7 tests)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_hybrid_layer_rule_match_confidence_above_0_9():
@@ -324,16 +351,23 @@ async def test_hybrid_layer_rule_match_confidence_above_0_9():
     mock_result.scalars.return_value.all.return_value = [mock_row]
     mock_db.execute.return_value = mock_result
 
-    with patch.object(HybridKnowledgeV7, '_rag_search', new_callable=AsyncMock) as mock_rag:
-        mock_rag.return_value = [KnowledgeResult(id=99, content="rag result", confidence=0.8, source="rag")]
+    with patch.object(
+        HybridKnowledgeV7, "_rag_search", new_callable=AsyncMock
+    ) as mock_rag:
+        mock_rag.return_value = [
+            KnowledgeResult(id=99, content="rag result", confidence=0.8, source="rag")
+        ]
 
         layer = HybridKnowledgeV7(db=mock_db)
         result = await layer.query("如何退款")  # exact match → confidence 0.95
 
-        assert result.source == "rule", \
+        assert result.source == "rule", (
             f"confidence > 0.9 should short-circuit to rule, got source={result.source}"
-        mock_rag.assert_not_called(), \
-            "RAG should NOT be called when rule confidence > 0.9"
+        )
+        (
+            mock_rag.assert_not_called(),
+            "RAG should NOT be called when rule confidence > 0.9",
+        )
 
 
 @pytest.mark.asyncio
@@ -352,12 +386,13 @@ async def test_hybrid_layer_rag_search_orders_by_cosine_similarity():
     # First positional arg is the SQL statement (text() construct)
     stmt = call_args[0][0]
     # For text() objects, the SQL string is in the .text attribute
-    if hasattr(stmt, 'text'):
+    if hasattr(stmt, "text"):
         query_str = stmt.text  # This is the actual SQL string
     else:
         query_str = str(stmt)
-    assert "<=>" in query_str or "cosine" in query_str.lower(), \
+    assert "<=>" in query_str or "cosine" in query_str.lower(), (
         f"RAG search must order by cosine similarity (<=>), got: {query_str}"
+    )
 
 
 @pytest.mark.asyncio
@@ -374,13 +409,14 @@ async def test_hybrid_layer_rag_search_uses_embedding_model_filter():
     mock_db.execute.assert_called()
     call_args = mock_db.execute.call_args
     stmt = call_args[0][0]
-    if hasattr(stmt, 'text'):
+    if hasattr(stmt, "text"):
         query_str = stmt.text
     else:
         query_str = str(stmt)
     query_str_lower = query_str.lower()
-    assert "embedding" in query_str_lower or "model" in query_str_lower, \
+    assert "embedding" in query_str_lower or "model" in query_str_lower, (
         f"RAG query must filter by embedding_model, got: {query_str}"
+    )
 
 
 @pytest.mark.asyncio
@@ -402,7 +438,9 @@ async def test_hybrid_layer_rrf_scores_ranked_correctly():
     # id=1 is rank 1 in rule results → highest RRF contribution from rule layer
     rrf_ids = [r.id for r in fused]
     assert 1 in rrf_ids, f"id=1 should appear in RRF results: {rrf_ids}"
-    assert fused[0].id == 1, f"Rank 1 doc (id=1) should be first after fusion, got order={rrf_ids}"
+    assert fused[0].id == 1, (
+        f"Rank 1 doc (id=1) should be first after fusion, got order={rrf_ids}"
+    )
 
 
 @pytest.mark.asyncio
@@ -434,8 +472,9 @@ async def test_hybrid_layer_rrf_respects_k_parameter():
     for r in fused_k60:
         k30_item = next((x for x in fused_k30 if x.id == r.id), None)
         if k30_item:
-            assert r.confidence != k30_item.confidence, \
-                f"k parameter must affect RRF scores: id={r.id}, k60={r.confidence}, k30={k30_item.confidence}"
+            assert r.confidence != k30_item.confidence, (
+                f"k parameter must affect RRF scores: id={r.id}, k60={r.confidence}, k30={k30_item.confidence}"  # noqa: E501
+            )
 
 
 @pytest.mark.asyncio
@@ -446,17 +485,21 @@ async def test_hybrid_layer_rrf_fusion_combines_rule_and_rag():
     mock_result = MagicMock()
     mock_result.scalars.return_value.all.return_value = []
     mock_result.fetchall.side_effect = [
-        [(1, "rule doc content", 0.9)],   # _rule_match_list
-        [],                                # _rag_search (empty, we mock at call time)
+        [(1, "rule doc content", 0.9)],  # _rule_match_list
+        [],  # _rag_search (empty, we mock at call time)
     ]
     mock_db.execute.return_value = mock_result
 
     layer = HybridKnowledgeV7(db=mock_db)
 
-    with patch.object(layer, '_rule_match_list', new_callable=AsyncMock) as mock_rule_list:
-        with patch.object(layer, '_rag_search', new_callable=AsyncMock) as mock_rag:
+    with patch.object(
+        layer, "_rule_match_list", new_callable=AsyncMock
+    ) as mock_rule_list:
+        with patch.object(layer, "_rag_search", new_callable=AsyncMock) as mock_rag:
             mock_rule_list.return_value = [
-                KnowledgeResult(id=10, content="rule doc", confidence=0.85, source="rule")
+                KnowledgeResult(
+                    id=10, content="rule doc", confidence=0.85, source="rule"
+                )
             ]
             mock_rag.return_value = [
                 KnowledgeResult(id=20, content="rag doc", confidence=0.80, source="rag")
@@ -466,8 +509,9 @@ async def test_hybrid_layer_rrf_fusion_combines_rule_and_rag():
 
             assert result is not None
             # At least one result should be from the fused set
-            assert result.id in (10, 20) or result.source in ("rule", "rag"), \
-                f"RRF fusion should return result from rule or rag, got id={result.id}, source={result.source}"
+            assert result.id in (10, 20) or result.source in ("rule", "rag"), (
+                f"RRF fusion should return result from rule or rag, got id={result.id}, source={result.source}"  # noqa: E501
+            )
 
 
 @pytest.mark.asyncio
@@ -487,15 +531,16 @@ async def test_hybrid_layer_escalate_when_all_layers_fail():
         result = await layer.query("xyz no match query")
 
     assert result is not None
-    assert result.source == "escalate", \
+    assert result.source == "escalate", (
         f"All layers fail → escalate, got source={result.source}"
-    assert result.id == -1, \
-        f"Escalate result should have id=-1, got id={result.id}"
+    )
+    assert result.id == -1, f"Escalate result should have id=-1, got id={result.id}"
 
 
 # =============================================================================
 # LLM Override Hook Tests (carried from original file, fixed imports)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_hybrid_layer_llm_generate_returns_result_when_overridden(monkeypatch):
@@ -504,7 +549,9 @@ async def test_hybrid_layer_llm_generate_returns_result_when_overridden(monkeypa
 
     class CustomHybrid(HybridKnowledgeV7):
         async def _llm_generate(self, query, context):
-            return KnowledgeResult(id=99, content="llm generated result", confidence=0.95, source="llm")
+            return KnowledgeResult(
+                id=99, content="llm generated result", confidence=0.95, source="llm"
+            )
 
     mock_db = AsyncMock()
     mock_result = MagicMock()
@@ -514,16 +561,17 @@ async def test_hybrid_layer_llm_generate_returns_result_when_overridden(monkeypa
 
     layer = CustomHybrid(db=mock_db)
 
-    with patch.object(layer, '_rule_match_list', new_callable=AsyncMock) as mock_rule:
-        with patch.object(layer, '_rag_search', new_callable=AsyncMock) as mock_rag:
+    with patch.object(layer, "_rule_match_list", new_callable=AsyncMock) as mock_rule:
+        with patch.object(layer, "_rag_search", new_callable=AsyncMock) as mock_rag:
             mock_rule.return_value = []
             mock_rag.return_value = []
 
             result = await layer.query("test query")
 
             assert result is not None
-            assert result.source == "llm", \
-                f"Expected source='llm' when _llm_generate overridden, got source='{result.source}'"
+            assert result.source == "llm", (
+                f"Expected source='llm' when _llm_generate overridden, got source='{result.source}'"  # noqa: E501
+            )
             assert result.id == 99
 
 
@@ -548,8 +596,9 @@ async def test_hybrid_layer_llm_generate_returns_none_falls_through():
         result = await layer.query("test query")
 
     assert result is not None
-    assert result.source != "llm", \
-        f"Should fall through to escalate when _llm_generate returns None, got source='{result.source}'"
+    assert result.source != "llm", (
+        f"Should fall through to escalate when _llm_generate returns None, got source='{result.source}'"  # noqa: E501
+    )
 
 
 @pytest.mark.asyncio
@@ -569,13 +618,15 @@ async def test_hybrid_layer_returns_knowledge_result_with_correct_source():
 
     layer = HybridKnowledgeV7(db=mock_db)
     result = await layer.query("exact match query")
-    assert result.source == "rule", \
+    assert result.source == "rule", (
         f"Layer 1 exact match should return source='rule', got '{result.source}'"
+    )
 
 
 # =============================================================================
 # Knowledge Layer Escalation Tests (Batch A)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_knowledge_layer_escalate_when_no_match():
@@ -595,9 +646,7 @@ async def test_knowledge_layer_escalate_when_no_match():
         result = await layer.query("完全不匹配的查詢 xyz")
 
     assert result is not None, "Knowledge layer query should always return a result"
-    assert result.source == "escalate", \
+    assert result.source == "escalate", (
         f"No match found → escalate, got source='{result.source}'"
-    assert result.id == -1, \
-        f"Escalate result should have id=-1, got id={result.id}"
-
-
+    )
+    assert result.id == -1, f"Escalate result should have id=-1, got id={result.id}"

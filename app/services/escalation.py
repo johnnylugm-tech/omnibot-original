@@ -1,4 +1,5 @@
 """Escalation manager with SLA tracking - Phase 2"""
+
 from datetime import datetime, timedelta
 from typing import List, Optional, Union
 
@@ -11,6 +12,7 @@ from app.models.database import EscalationQueue, UserFeedback
 
 class ValidationError(Exception):
     """Raised when submitted data fails validation."""
+
     pass
 
 
@@ -23,10 +25,7 @@ class FeedbackManager:
         self.db = db
 
     async def submit_feedback(
-        self,
-        conversation_id: int,
-        rating: str,
-        comment: Optional[str]
+        self, conversation_id: int, rating: str, comment: Optional[str]
     ) -> UserFeedback:
         """Submit user feedback for a conversation.
 
@@ -61,20 +60,29 @@ class EscalationManager:
     """人工轉接管理（含 SLA）- 遵循 SPEC v7.0"""
 
     SLA_BY_PRIORITY: dict[int, int] = {
-        0: 30,   # normal: 30 分鐘內回應
-        1: 15,   # high: 15 分鐘內回應
-        2: 5,    # urgent: 5 分鐘內回應
+        0: 30,  # normal: 30 分鐘內回應
+        1: 15,  # high: 15 分鐘內回應
+        2: 5,  # urgent: 5 分鐘內回應
     }
     SLA_MINUTES = SLA_BY_PRIORITY
 
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create(self, request: EscalationRequest, priority: Union[int, str] = 0) -> int:
+    async def create(
+        self, request: EscalationRequest, priority: Union[int, str] = 0
+    ) -> int:
         """Create escalation ticket with SLA deadline"""
         # Map string priority to numeric p_val
         if isinstance(priority, str):
-            p_map = {"normal": 0, "high": 1, "urgent": 2, "p0": 1, "p1": 0, "p2": 2} # Aligning common aliases
+            p_map = {
+                "normal": 0,
+                "high": 1,
+                "urgent": 2,
+                "p0": 1,
+                "p1": 0,
+                "p2": 2,
+            }  # Aligning common aliases
             # Note: If specific test strings like 'p0' were used inconsistently,
             # we prioritize SPEC definitions over alias naming.
             p_val = p_map.get(priority.lower(), 0)
@@ -88,7 +96,7 @@ class EscalationManager:
             conversation_id=request.conversation_id,
             reason=request.reason,
             priority=p_val,
-            sla_deadline=sla_deadline
+            sla_deadline=sla_deadline,
         )
         self.db.add(ticket)
         await self.db.commit()
@@ -101,13 +109,9 @@ class EscalationManager:
         stmt = (
             select(EscalationQueue)
             .where(
-                EscalationQueue.sla_deadline < now,
-                EscalationQueue.resolved_at == None
+                EscalationQueue.sla_deadline < now, EscalationQueue.resolved_at is None
             )
-            .order_by(
-                desc(EscalationQueue.priority),
-                asc(EscalationQueue.queued_at)
-            )
+            .order_by(desc(EscalationQueue.priority), asc(EscalationQueue.queued_at))
         )
         result = await self.db.execute(stmt)
         return list(result.scalars().all())

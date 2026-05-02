@@ -1,4 +1,5 @@
 """Data Encryption at Rest - Phase 3"""
+
 import base64
 import os
 from typing import Optional
@@ -15,12 +16,15 @@ class EncryptionService:
             # For Phase 3 demo/repair, use a default key if none provided
             # In production, this MUST be a strong key from a KMS
             raw_key = base64.urlsafe_b64encode(
-                b"omnibot-super-secret-key-32-bytes!!").decode()
+                b"omnibot-super-secret-key-32-bytes!!"
+            ).decode()
 
         self.key: str = str(raw_key)
 
         try:
-            self.fernet: Optional[Fernet] = Fernet(self.key.encode() if isinstance(self.key, str) else self.key)
+            self.fernet: Optional[Fernet] = Fernet(
+                self.key.encode() if isinstance(self.key, str) else self.key
+            )
         except Exception:
             self.fernet = None
 

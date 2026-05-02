@@ -12,6 +12,7 @@ def handle_sigterm(signum, frame):
     # Add any cleanup logic here
     sys.exit(0)
 
+
 # Register SIGTERM handler
 signal.signal(signal.SIGTERM, handle_sigterm)
 

@@ -1,4 +1,5 @@
 """PII masking - L4 basic PII de-identification"""
+
 import re
 from typing import List
 
@@ -15,15 +16,9 @@ class PIIMasking:
     # Taiwan phone patterns, email, address, credit card, and national ID
     # Use refined regex patterns
     PATTERNS = {
-        "credit_card": re.compile(
-            r"(?:(?:\d[ -]*?){13,19})"
-        ),
-        "phone": re.compile(
-            r"(?:\+886[- ]?|0)9\d{2}[- ]?\d{3}[- ]?\d{3}"
-        ),
-        "email": re.compile(
-            r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b"
-        ),
+        "credit_card": re.compile(r"(?:(?:\d[ -]*?){13,19})"),
+        "phone": re.compile(r"(?:\+886[- ]?|0)9\d{2}[- ]?\d{3}[- ]?\d{3}"),
+        "email": re.compile(r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b"),
         "address": re.compile(
             r"(?:(?:台|臺)(?:北|中|南|東)?|新北|桃園|高雄|基隆|新竹|嘉義|"
             r"苗栗|彰化|南投|雲林|屏東|宜蘭|花蓮|澎湖|金門|連江)"
@@ -48,6 +43,7 @@ class PIIMasking:
         # Process each PII type
         # We process credit_card separately to ensure Luhn check is applied correctly
         for pii_type, pattern in self.PATTERNS.items():
+
             def replacer(match):
                 nonlocal total_count
                 val = match.group()
@@ -64,7 +60,7 @@ class PIIMasking:
         return PIIMaskResult(
             masked_text=masked,
             mask_count=total_count,
-            pii_types=sorted(list(found_types))
+            pii_types=sorted(list(found_types)),
         )
 
     def should_escalate(self, text: str) -> bool:

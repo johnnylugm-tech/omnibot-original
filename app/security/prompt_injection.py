@@ -1,4 +1,5 @@
 """L3 Prompt Injection Defense - Phase 2"""
+
 import re
 import unicodedata
 from dataclasses import dataclass

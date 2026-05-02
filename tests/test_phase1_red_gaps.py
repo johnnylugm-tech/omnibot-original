@@ -1,4 +1,5 @@
-"""RED Tests: Phase 1 Checklist Gaps - Section 2 (Unified Message), Section 5 (PII), Section 9 (Logger), Section 13 (DB Schema)"""
+"""RED Tests: Phase 1 Checklist Gaps - Section 2 (Unified Message), Section 5 (PII), Section 9 (Logger), Section 13 (DB Schema)"""  # noqa: E501
+
 import json
 import logging
 from datetime import datetime
@@ -11,6 +12,7 @@ from app.models import MessageType, Platform, UnifiedMessage
 # =============================================================================
 # Section 2: Unified Message Format - received_at default
 # =============================================================================
+
 
 class TestUnifiedMessageReceivedAtDefault:
     """test_unified_message_default_received_at"""
@@ -29,21 +31,24 @@ class TestUnifiedMessageReceivedAtDefault:
             platform_user_id="U12345",
             unified_user_id="uuid-abc",
             message_type=MessageType.TEXT,
-            content="hello"
+            content="hello",
             # received_at NOT provided
         )
-        after = datetime.utcnow()
+        datetime.utcnow()
 
         assert msg.received_at is not None, "received_at must be auto-set when omitted"
         assert isinstance(msg.received_at, datetime), "received_at must be datetime"
         # Should be within 5 seconds of now
         delta = abs((msg.received_at - before).total_seconds())
-        assert delta < 5, f"received_at={msg.received_at} not close to creation time (delta={delta}s)"
+        assert delta < 5, (
+            f"received_at={msg.received_at} not close to creation time (delta={delta}s)"
+        )
 
 
 # =============================================================================
 # Section 2: Unified Message Format - reply_token for TELEGRAM
 # =============================================================================
+
 
 class TestUnifiedMessageReplyTokenTelegram:
     """test_unified_message_reply_token_none_for_telegram"""
@@ -60,7 +65,7 @@ class TestUnifiedMessageReplyTokenTelegram:
             unified_user_id="uuid-1",
             message_type=MessageType.TEXT,
             content="hello",
-            reply_token="some-token"  # Telegram doesn't use reply tokens
+            reply_token="some-token",  # Telegram doesn't use reply tokens
         )
         assert msg.reply_token is None, "TELEGRAM platform must not have reply_token"
 
@@ -69,12 +74,14 @@ class TestUnifiedMessageReplyTokenTelegram:
 # Section 2: Unified Message Format - reply_token for LINE
 # =============================================================================
 
+
 class TestUnifiedMessageReplyTokenLINE:
     """test_unified_message_reply_token_set_for_line"""
 
     def test_unified_message_reply_token_set_for_line(self):
         """
-        [RED] When platform=LINE and reply_token is provided, it should be saved correctly.
+        [RED] When platform=LINE and reply_token is provided, it should be
+        saved correctly.
         Expected: reply_token preserved when platform=LINE
         Current behavior: may be None due to platform-specific logic
         """
@@ -84,15 +91,17 @@ class TestUnifiedMessageReplyTokenLINE:
             unified_user_id="uuid-1",
             message_type=MessageType.TEXT,
             content="hello",
-            reply_token=".line.reply.token.here"
+            reply_token=".line.reply.token.here",
         )
-        assert msg.reply_token == ".line.reply.token.here", \
+        assert msg.reply_token == ".line.reply.token.here", (
             f"LINE reply_token not preserved: {msg.reply_token}"
+        )
 
 
 # =============================================================================
 # Section 5: PII Masking - Email
 # =============================================================================
+
 
 class TestPIIMaskingEmail:
     """test_pii_mask_email"""
@@ -104,19 +113,25 @@ class TestPIIMaskingEmail:
         Current behavior: email pattern exists in PIIMasking.PATTERNS
         """
         from app.security.pii_masking import PIIMasking
+
         masking = PIIMasking()
         result = masking.mask("my email is test@example.com")
-        assert "[email_masked]" in result.masked_text, \
+        assert "[email_masked]" in result.masked_text, (
             f"Email not masked. Got: {result.masked_text}"
-        assert "test@example.com" not in result.masked_text, \
+        )
+        assert "test@example.com" not in result.masked_text, (
             f"Email leak: {result.masked_text}"
+        )
         assert result.mask_count >= 1, f"mask_count={result.mask_count}"
-        assert "email" in result.pii_types, f"email not in pii_types: {result.pii_types}"
+        assert "email" in result.pii_types, (
+            f"email not in pii_types: {result.pii_types}"
+        )
 
 
 # =============================================================================
 # Section 9: Structured Logger - extra kwargs -> JSON top-level fields
 # =============================================================================
+
 
 class TestStructuredLoggerExtraFields:
     """test_structured_logger_extra_fields_passed_as_kwargs"""
@@ -156,10 +171,11 @@ class TestStructuredLoggerExtraFields:
 # Section 9: Structured Logger - info() alias
 # =============================================================================
 
+
 class TestStructuredLoggerInfoAlias:
     """test_structured_logger_info_alias_calls_log_with_INFO"""
 
-    def test_structured_logger_info_alias_calls_log_with_INFO(self):
+    def test_structured_logger_info_alias_calls_log_with_INFO(self):  # noqa: N802
         """
         [RED] info() should behave identically to log("INFO", ...).
         Expected: info("msg") logs with level=INFO
@@ -181,20 +197,23 @@ class TestStructuredLoggerInfoAlias:
         assert output, "No output from info()"
         data = json.loads(output)
 
-        assert data["level"] == "INFO", \
+        assert data["level"] == "INFO", (
             f"info() did not produce level=INFO, got: {data.get('level')}"
-        assert data["message"] == "info alias test", \
+        )
+        assert data["message"] == "info alias test", (
             f"message mismatch: {data.get('message')}"
+        )
 
 
 # =============================================================================
 # Section 9: Structured Logger - error() alias
 # =============================================================================
 
+
 class TestStructuredLoggerErrorAlias:
     """test_structured_logger_error_alias_calls_log_with_ERROR"""
 
-    def test_structured_logger_error_alias_calls_log_with_ERROR(self):
+    def test_structured_logger_error_alias_calls_log_with_ERROR(self):  # noqa: N802
         """
         [RED] error() should behave identically to log("ERROR", ...).
         Expected: error("msg") logs with level=ERROR
@@ -216,17 +235,19 @@ class TestStructuredLoggerErrorAlias:
         assert output, "No output from error()"
         data = json.loads(output)
 
-        assert data["level"] == "ERROR", \
+        assert data["level"] == "ERROR", (
             f"error() did not produce level=ERROR, got: {data.get('level')}"
-        assert data["message"] == "error alias test", \
+        )
+        assert data["message"] == "error alias test", (
             f"message mismatch: {data.get('message')}"
-        assert data.get("code") == 404, \
-            f"error kwargs not passed: {data}"
+        )
+        assert data.get("code") == 404, f"error kwargs not passed: {data}"
 
 
 # =============================================================================
 # Section 13: Database Schema - embeddings vector dimension 384
 # =============================================================================
+
 
 class TestKnowledgeBaseEmbeddingsVector:
     """test_knowledge_base_embeddings_vector_384"""
@@ -234,12 +255,13 @@ class TestKnowledgeBaseEmbeddingsVector:
     def test_knowledge_base_embeddings_vector_384(self):
         """
         [RED] knowledge_base.embeddings column must store 384-dimensional vectors.
-        Expected: embedding_model='paraphrase-multilingual-MiniLM-L12-v2' → 384 dims
-        Current behavior: JSONB without dimension constraint (requires pgvector extension)
+        Expected: embedding_model='paraphrase-multilingual-MiniLM-L12-v2' -> 384 dims
+        Current behavior: JSONB without dimension constraint
+        (requires pgvector extension)
         """
         # SQLAlchemy + asyncpg may not be installed in test environment
         # Use importorskip so the test SKIP-s rather than hard-crash
-        sqlalchemy = pytest.importorskip("sqlalchemy")
+        pytest.importorskip("sqlalchemy")
 
         from app.models.database import KnowledgeBase
 
@@ -253,32 +275,37 @@ class TestKnowledgeBaseEmbeddingsVector:
         model_col = kb_table.columns["embedding_model"]
         assert model_col is not None
 
-        # Default model name documents 384-dim: paraphrase-multilingual-MiniLM-L12-v2 → 384
+        # Default model name documents 384-dim: paraphrase-multilingual-MiniLM-L12-v2 → 384  # noqa: E501
         default_model = str(model_col.default.arg) if model_col.default else ""
-        assert "384" in default_model or "mini" in default_model.lower(), \
+        assert "384" in default_model or "mini" in default_model.lower(), (
             f"embedding_model default={default_model} doesn't document 384-dim model"
+        )
 
         # The embeddings column type should be JSONB (stores vector as JSON array)
-        assert embeddings_col.type.__class__.__name__ == "JSONB", \
+        assert embeddings_col.type.__class__.__name__ == "JSONB", (
             f"embeddings must be JSONB, got {embeddings_col.type.__class__.__name__}"
+        )
 
 
 # =============================================================================
 # Section 13: Database Schema - user_feedback check constraint
 # =============================================================================
 
+
 class TestUserFeedbackCheckConstraint:
     """test_user_feedback_check_constraint"""
 
     def test_user_feedback_check_constraint(self):
         """
-        [RED] user_feedback.feedback column must have CHECK constraint for thumbs_up/thumbs_down.
+        [RED] user_feedback.feedback column must have CHECK constraint for
+        thumbs_up/thumbs_down.
         Expected: ALTER TABLE ADD CHECK (feedback IN ('thumbs_up', 'thumbs_down'))
         Current behavior: no CHECK constraint (any VARCHAR accepted)
         """
         # SQLAlchemy doesn't expose CHECK constraint details in ORM metadata easily.
         # Use SCHEMA_SQL raw text check as the source of truth.
-        # The SCHEMA_SQL defines the schema - scan for the CHECK constraint on user_feedback
+        # The SCHEMA_SQL defines the schema - scan for the CHECK constraint
+        # on user_feedback
         # In the raw SQL, the user_feedback table is created without a CHECK.
         # After GREEN phase, a CHECK constraint should be present.
         # We assert it IS present (will fail until implementation).
@@ -286,11 +313,12 @@ class TestUserFeedbackCheckConstraint:
         import re
 
         from app.models.database import SCHEMA_SQL
+
         # Find the user_feedback table block in SCHEMA_SQL
         match = re.search(
             r"CREATE TABLE IF NOT EXISTS user_feedback\s*\(\s*([^;]+)\);",
             SCHEMA_SQL,
-            re.DOTALL
+            re.DOTALL,
         )
         assert match is not None, "user_feedback table not found in SCHEMA_SQL"
 
@@ -301,7 +329,8 @@ class TestUserFeedbackCheckConstraint:
         check_match = re.search(
             r"CHECK\s*\([^)]*feedback[^)]*IN\s*\(\s*['\"]thumbs_up['\"],\s*['\"]thumbs_down['\"]\s*\)\s*\)",
             table_def,
-            re.IGNORECASE
+            re.IGNORECASE,
         )
-        assert check_match is not None, \
-            f"user_feedback.feedback CHECK constraint for thumbs_up/thumbs_down not found in SCHEMA_SQL. Table def: {table_def[:500]}"
+        assert check_match is not None, (
+            f"user_feedback.feedback CHECK constraint for thumbs_up/thumbs_down not found in SCHEMA_SQL. Table def: {table_def[:500]}"  # noqa: E501
+        )

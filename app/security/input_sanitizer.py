@@ -1,4 +1,5 @@
 """Input sanitizer - L2 character normalization"""
+
 import unicodedata
 
 

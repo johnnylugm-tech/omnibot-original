@@ -1,6 +1,6 @@
 import os
 
-os.environ['SIMULATE_LLM'] = 'false'
+os.environ["SIMULATE_LLM"] = "false"
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -18,23 +18,29 @@ async def test_hybrid_knowledge_layer_escalate():
     mock_db.execute.return_value = mock_execute_result
 
     layer = HybridKnowledgeV7(db=mock_db)
-    layer.llm = None # Disable LLM
+    layer.llm = None  # Disable LLM
 
     # Short query or disabled LLM triggers escalation
     res = await layer.query("t")
     assert res is not None
     assert res.source == "escalate"
 
+
 @pytest.mark.asyncio
 async def test_grounding_check():
     mock_db = AsyncMock()
     layer = HybridKnowledgeV7(db=mock_db)
 
-    source = KnowledgeResult(id=1, content="課程資訊包含 Python 與 AI 實戰", confidence=0.9, source="rule")
-    response = KnowledgeResult(id=0, content="這門課程提供 Python 實戰教學", confidence=0.8, source="llm")
+    source = KnowledgeResult(
+        id=1, content="課程資訊包含 Python 與 AI 實戰", confidence=0.9, source="rule"
+    )
+    response = KnowledgeResult(
+        id=0, content="這門課程提供 Python 實戰教學", confidence=0.8, source="llm"
+    )
 
     res = layer.grounding_checker.check(response, [source])
-    assert res['grounded'] is True
+    assert res["grounded"] is True
+
 
 @pytest.mark.asyncio
 async def test_hybrid_knowledge_with_llm_and_grounding():
@@ -49,11 +55,15 @@ async def test_hybrid_knowledge_with_llm_and_grounding():
     layer = HybridKnowledgeV7(db=mock_db, llm_client=True)
 
     # Case A: Grounding succeeds
-    with patch.object(layer.grounding_checker, "check", return_value={"grounded": True, "score": 0.9}):
+    with patch.object(
+        layer.grounding_checker, "check", return_value={"grounded": True, "score": 0.9}
+    ):
         res = await layer.query("課程")
         assert res.source == "llm"
 
     # Case B: Grounding fails
-    with patch.object(layer.grounding_checker, "check", return_value={"grounded": False, "score": 0.4}):
+    with patch.object(
+        layer.grounding_checker, "check", return_value={"grounded": False, "score": 0.4}
+    ):
         res = await layer.query("課程")
         assert res.source == "escalate"

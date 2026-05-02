@@ -1,4 +1,5 @@
 """Service for managing database backups and maintenance."""
+
 import os
 import subprocess
 from datetime import datetime, timedelta
@@ -31,10 +32,13 @@ class BackupService:
                     shell=False,
                     capture_output=True,
                     text=True,
-                    timeout=30
+                    timeout=30,
                 )
                 if result.returncode != 0:
-                    return {"status": "failed", "error": result.stderr or "Script failed"}
+                    return {
+                        "status": "failed",
+                        "error": result.stderr or "Script failed",
+                    }
             else:
                 # Fallback: manually create a file if script missing (e.g. CI)
                 with open(filepath, "w") as f:
@@ -44,7 +48,7 @@ class BackupService:
                 "id": timestamp,
                 "status": "completed",
                 "file": filepath,
-                "created_at": datetime.utcnow().isoformat()
+                "created_at": datetime.utcnow().isoformat(),
             }
         except Exception as e:
             return {"status": "failed", "error": str(e)}
@@ -54,7 +58,9 @@ class BackupService:
         return datetime.utcnow() + timedelta(hours=hours)
 
     async def cleanup_old_backups(self, keep_minimum: int = 3) -> None:
-        """Removes backups older than retention_days, keeping at least keep_minimum newest files."""
+        """Removes backups older than retention_days, keeping at least
+        keep_minimum newest files.
+        """
         files = [
             os.path.join(self.backup_dir, f)
             for f in os.listdir(self.backup_dir)
@@ -89,5 +95,5 @@ class BackupService:
         return {
             "id": backup_id or "latest",
             "status": "completed",
-            "created_at": datetime.utcnow()
+            "created_at": datetime.utcnow(),
         }

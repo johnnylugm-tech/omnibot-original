@@ -1,4 +1,5 @@
 """Unified Emotion Module - Phase 2"""
+
 import math
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -22,7 +23,11 @@ class EmotionScore:
 class EmotionTracker:
     """Emotion tracker with temporal decay (Phase 2)"""
 
-    def __init__(self, history: Optional[List[EmotionScore]] = None, half_life_hours: float = 24.0):
+    def __init__(
+        self,
+        history: Optional[List[EmotionScore]] = None,
+        half_life_hours: float = 24.0,
+    ):
         self.history = history or []
         self.half_life_hours = half_life_hours
 
@@ -41,7 +46,11 @@ class EmotionTracker:
             decay = math.exp(-0.693 * hours_ago / self.half_life_hours)
 
             # Positive contributes +, Negative contributes -
-            raw = score.intensity if score.category == EmotionCategory.POSITIVE else -score.intensity
+            raw = (
+                score.intensity
+                if score.category == EmotionCategory.POSITIVE
+                else -score.intensity
+            )
             if score.category == EmotionCategory.NEUTRAL:
                 raw = 0.0
 

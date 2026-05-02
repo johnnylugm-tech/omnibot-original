@@ -1,19 +1,19 @@
-from app.security.rbac import rbac
-
 """Phase 3 RBAC + A/B Testing + Tracing tests"""
+
 import hashlib
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException, Request
 
-from app.security.rbac import RBACEnforcer
+from app.security.rbac import RBACEnforcer, rbac
 from app.services.ab_test import ABTestManager
 from app.utils.tracing import setup_tracing, tracer
 
 # =============================================================================
 # RBAC Permission Matrix Tests (#25)
 # =============================================================================
+
 
 class TestRBACPermissionMatrix:
     """Test RBAC permission matrix for all 4 roles"""
@@ -40,7 +40,7 @@ class TestRBACPermissionMatrix:
         assert enforcer.check("agent", "knowledge", "delete") is False
 
     def test_rbac_auditor_has_read_only_all(self):
-        """auditor can read all resources (knowledge, conversations, escalate, audit, experiment, system)"""
+        """auditor can read all resources (knowledge, conversations, escalate, audit, experiment, system)"""  # noqa: E501
         enforcer = RBACEnforcer()
         # Auditor can read everything
         assert enforcer.check("auditor", "knowledge", "read") is True
@@ -54,7 +54,7 @@ class TestRBACPermissionMatrix:
         assert enforcer.check("auditor", "conversations", "write") is False
 
     def test_rbac_agent_cannot_write_escalate(self):
-        """agent cannot write escalate queue - note: agent has 'write' for escalate per spec"""
+        """agent cannot write escalate queue - note: agent has 'write' for escalate per spec"""  # noqa: E501
         enforcer = RBACEnforcer()
         # According to the spec, agent has escalate: ["write"]
         # So actually agent CAN write to escalate queue
@@ -125,7 +125,9 @@ class TestRBACRequireDecorator:
         dependency = enforcer.require("knowledge", "delete")
 
         mock_request = MagicMock(spec=Request)
-        mock_request.headers = {"Authorization": f"Bearer {rbac.create_token('editor')}"}
+        mock_request.headers = {
+            "Authorization": f"Bearer {rbac.create_token('editor')}"
+        }
 
         with pytest.raises(HTTPException) as exc_info:
             await dependency(mock_request)
@@ -152,6 +154,7 @@ class TestRBACRequireDecorator:
 # =============================================================================
 # A/B Testing Tests (#27)
 # =============================================================================
+
 
 class TestABTestDeterministic:
     """Test A/B test deterministic assignment"""
@@ -262,15 +265,16 @@ async def test_experiment_abort_returns_all_traffic_to_control():
     mock_exp.traffic_split = {"control": 50, "test_v1": 50}
     mock_exp.variants = {
         "control": {"prompt": "Hello control"},
-        "test_v1": {"prompt": "Hello test v1"}
+        "test_v1": {"prompt": "Hello test v1"},
     }
     mock_result.scalar_one_or_none.return_value = mock_exp
     mock_db.execute.return_value = mock_result
     manager = ABTestManager(mock_db)
     # Aborted status must unconditionally return 'control'
     variant = await manager.get_variant("any_user", 1)
-    assert variant == "control", \
+    assert variant == "control", (
         "get_variant() must return 'control' when experiment status is 'aborted'"
+    )
 
 
 class TestABTestExperimentExecution:
@@ -287,7 +291,7 @@ class TestABTestExperimentExecution:
         mock_exp.traffic_split = {"control": 50, "test_v1": 50}
         mock_exp.variants = {
             "control": {"prompt": "Hello control"},
-            "test_v1": {"prompt": "Hello test v1"}
+            "test_v1": {"prompt": "Hello test v1"},
         }
 
         mock_db.execute.return_value = mock_result
@@ -304,7 +308,9 @@ class TestABTestExperimentExecution:
         else:
             expected_prompt = "Hello test v1"
 
-        assert prompt == expected_prompt, f"Expected prompt '{expected_prompt}' for variant '{user_variant}'"
+        assert prompt == expected_prompt, (
+            f"Expected prompt '{expected_prompt}' for variant '{user_variant}'"
+        )
 
     @pytest.mark.asyncio
     async def test_experiment_abort_returns_control_traffic(self):
@@ -314,7 +320,10 @@ class TestABTestExperimentExecution:
         mock_exp = MagicMock()
         mock_exp.id = 1
         mock_exp.status = "aborted"
-        mock_exp.traffic_split = {"control": 10, "test_v1": 90}  # Even with high test split
+        mock_exp.traffic_split = {
+            "control": 10,
+            "test_v1": 90,
+        }  # Even with high test split
 
         mock_db.execute.return_value = mock_result
         mock_result.scalar_one_or_none.return_value = mock_exp
@@ -324,7 +333,9 @@ class TestABTestExperimentExecution:
         # Multiple users should all get "control" regardless of hash
         for user_id in ["user1", "user2", "user3", "user_99"]:
             variant = await manager.get_variant(user_id, 1)
-            assert variant == "control", f"User {user_id} should get control variant for aborted experiment"
+            assert variant == "control", (
+                f"User {user_id} should get control variant for aborted experiment"
+            )
 
 
 class TestABTestAnalyzeResults:
@@ -332,7 +343,7 @@ class TestABTestAnalyzeResults:
 
     @pytest.mark.asyncio
     async def test_ab_test_analyze_results_returns_metric_data(self):
-        """analyze_results() returns variant + metric_name + metric_value + sample_size"""
+        """analyze_results() returns variant + metric_name + metric_value + sample_size"""  # noqa: E501
         mock_db = AsyncMock()
 
         # Create mock experiment results
@@ -353,7 +364,7 @@ class TestABTestAnalyzeResults:
 
         mock_db.execute.return_value = mock_result
 
-        manager = ABTestManager(mock_db)
+        ABTestManager(mock_db)
 
         # analyze_results should query ExperimentResult and return metric data
         from sqlalchemy import select
@@ -379,7 +390,7 @@ class TestABTestAutoPromote:
         """sample_size < 100 → no promotion"""
         # Test that when sample_size is below threshold, auto_promote returns None
         mock_db = AsyncMock()
-        manager = ABTestManager(mock_db)
+        ABTestManager(mock_db)
 
         # Simulate results with insufficient sample size
         mock_result1 = MagicMock()
@@ -409,7 +420,7 @@ class TestABTestAutoPromote:
     async def test_ab_test_auto_promote_threshold_check(self):
         """lead < 0.05 → no promotion"""
         mock_db = AsyncMock()
-        manager = ABTestManager(mock_db)
+        ABTestManager(mock_db)
 
         # Simulate results where lead is below threshold
         control_result = MagicMock()
@@ -448,7 +459,7 @@ class TestABTestAutoPromote:
     async def test_ab_test_auto_promote_updates_experiment_status(self):
         """promotion → experiment.status = 'completed'"""
         mock_db = AsyncMock()
-        manager = ABTestManager(mock_db)
+        ABTestManager(mock_db)
 
         # Create mock experiment
         mock_exp = MagicMock()
@@ -482,13 +493,15 @@ class TestABTestAutoPromote:
             # Promote - update experiment status
             mock_exp.status = "completed"
 
-        assert mock_exp.status == "completed", "Experiment status should be 'completed' after promotion"
+        assert mock_exp.status == "completed", (
+            "Experiment status should be 'completed' after promotion"
+        )
 
     @pytest.mark.asyncio
     async def test_ab_test_auto_promote_returns_winning_variant(self):
         """returns winning variant name"""
         mock_db = AsyncMock()
-        manager = ABTestManager(mock_db)
+        ABTestManager(mock_db)
 
         control_result = MagicMock()
         control_result.variant = "control"
@@ -523,27 +536,37 @@ class TestABTestAutoPromote:
 # Section 44 G-06: ABTestManager traffic_split JSONB type validation
 # =============================================================================
 
+
 @pytest.mark.asyncio
 async def test_ab_traffic_split_is_valid_jsonb_structure():
-    """traffic_split field must be JSONB with structure {"control": int, "treatment": int}. RED-phase test.
-    
-    Spec: traffic_split in Experiment table must be stored as JSONB (not TEXT/JSON)
-    and must follow the format: {"control": 50, "treatment": 50} where values are integers
+    """
+    traffic_split field must be JSONB with structure
+    {"control": int, "treatment": int}. RED-phase test.
+
+    Spec: traffic_split in Experiment table must be stored as JSONB
+    (not TEXT/JSON) and must follow the format:
+    {"control": 50, "treatment": 50} where values are integers
     representing percentages.
     """
+
     from app.models.database import Experiment
 
     # Verify traffic_split column type is JSONB
-    traffic_split_col = Experiment.__table__.columns.get('traffic_split')
-    assert traffic_split_col is not None, "traffic_split column must exist on Experiment"
+    traffic_split_col = Experiment.__table__.columns.get("traffic_split")
+    assert traffic_split_col is not None, (
+        "traffic_split column must exist on Experiment"
+    )
 
     from sqlalchemy.dialects.postgresql import JSONB
-    assert isinstance(traffic_split_col.type, JSONB), \
+
+    assert isinstance(traffic_split_col.type, JSONB), (
         f"traffic_split must be JSONB type, got {type(traffic_split_col.type)}"
+    )
 
     # Verify the structure is valid JSONB (dict with integer percentages)
     valid_split = {"control": 50, "treatment": 50}
     import json
+
     # Should be serializable to JSON
     json_str = json.dumps(valid_split)
     assert "control" in json_str and "treatment" in json_str
@@ -552,7 +575,7 @@ async def test_ab_traffic_split_is_valid_jsonb_structure():
 @pytest.mark.asyncio
 async def test_ab_traffic_split_sums_to_100():
     """All traffic_split percentages must sum to 100. RED-phase test.
-    
+
     Spec: When getting a variant, the ABTestManager must verify that
     the traffic_split percentages sum to exactly 100. If not, the
     system should raise a ConfigurationError.
@@ -560,7 +583,7 @@ async def test_ab_traffic_split_sums_to_100():
     from app.services.ab_test import ABTestManager
 
     mock_db = AsyncMock()
-    manager = ABTestManager(mock_db)
+    ABTestManager(mock_db)
 
     # Test valid case: sums to 100
     valid_split = {"control": 50, "treatment": 50}
@@ -580,17 +603,20 @@ async def test_ab_traffic_split_sums_to_100():
     # Verify validation logic exists in ABTestManager
     # When get_variant() is called, it should check traffic_split sum
     import inspect
+
     get_variant_source = inspect.getsource(ABTestManager.get_variant)
 
     # The method should validate that percentages sum to 100
     # This check may be in the form of an assertion or conditional
-    assert "100" in get_variant_source or "sum" in get_variant_source.lower(), \
+    assert "100" in get_variant_source or "sum" in get_variant_source.lower(), (
         "get_variant() should validate traffic_split sums to 100"
+    )
 
 
 # =============================================================================
 # OpenTelemetry Tracing Tests (#28)
 # =============================================================================
+
 
 class TestOpenTelemetryTracing:
     """Test OpenTelemetry tracing functionality"""
@@ -599,7 +625,6 @@ class TestOpenTelemetryTracing:
         """handle_message span has platform attribute"""
         # Setup a test tracer
         setup_tracing("test")
-
 
         # Create a span and verify platform attribute can be set
         with tracer.start_as_current_span("test_span") as span:
@@ -621,7 +646,6 @@ class TestOpenTelemetryTracing:
         """emotion_analysis is child of handle_message"""
         setup_tracing("test")
 
-
         with tracer.start_as_current_span("handle_message") as parent_span:
             parent_span.set_attribute("platform", "telegram")
             parent_span.set_attribute("user_id", "user_123")
@@ -639,12 +663,13 @@ class TestOpenTelemetryTracing:
         """knowledge_query is child span"""
         setup_tracing("test")
 
-
-        with tracer.start_as_current_span("handle_message") as parent:
+        with tracer.start_as_current_span("handle_message"):
             with tracer.start_as_current_span("knowledge_query") as child:
                 child.set_attribute("query", "test query")
                 child.set_attribute("source", "rag")
-                assert child.parent is not None, "knowledge_query should be child of handle_message"
+                assert child.parent is not None, (
+                    "knowledge_query should be child of handle_message"
+                )
 
     def test_tracer_sets_knowledge_source_and_confidence_attributes(self):
         """knowledge span has source and confidence"""
@@ -661,6 +686,7 @@ class TestOpenTelemetryTracing:
         """Verify tracer is properly set up in the api module"""
         # The tracer from app.utils.tracing should be available
         from app.utils.tracing import tracer
+
         assert tracer is not None, "Global tracer should be available"
 
         # Should be able to create spans
@@ -676,7 +702,6 @@ class TestTracingIntegration:
     async def test_tracing_span_hierarchy(self):
         """Test that spans are properly nested in a message flow"""
         setup_tracing("test")
-
 
         # Simulate the message processing flow from api/__init__.py
         with tracer.start_as_current_span("process_telegram_message") as handle_span:
@@ -716,9 +741,11 @@ class TestTracingIntegration:
         # Tracing should not raise additional exceptions
         assert True, "Tracing should handle errors gracefully"
 
+
 # =============================================================================
 # Rollback / Abort Tests (#27)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_experiment_abort_sets_status_aborted():
@@ -729,7 +756,7 @@ async def test_experiment_abort_sets_status_aborted():
     from app.services.ab_test import ABTestManager
 
     mock_db = AsyncMock()
-    manager = ABTestManager(mock_db)
+    ABTestManager(mock_db)
 
     # Simulate abort operation
     mock_exp = MagicMock(spec=Experiment)
@@ -740,8 +767,9 @@ async def test_experiment_abort_sets_status_aborted():
     # Trigger abort
     mock_exp.status = "aborted"
 
-    assert mock_exp.status == "aborted", \
+    assert mock_exp.status == "aborted", (
         "After abort(), experiment.status must be 'aborted'"
+    )
 
 
 @pytest.mark.asyncio
@@ -753,7 +781,7 @@ async def test_rollback_experiment_abort_sets_status_aborted():
     from app.services.ab_test import ABTestManager
 
     mock_db = AsyncMock()
-    manager = ABTestManager(mock_db)
+    ABTestManager(mock_db)
 
     mock_exp = MagicMock(spec=Experiment)
     mock_exp.id = 5
@@ -768,8 +796,9 @@ async def test_rollback_experiment_abort_sets_status_aborted():
     # Even if we rollback, the experiment remains aborted
     mock_exp.status = "aborted"  # rollback confirms abort state
 
-    assert mock_exp.status == "aborted", \
+    assert mock_exp.status == "aborted", (
         "After rollback of abort, status must remain 'aborted' (not recovered)"
+    )
 
 
 @pytest.mark.asyncio
@@ -795,5 +824,6 @@ async def test_rollback_experiment_returns_all_traffic_to_control():
     # Rollback does NOT reverse the abort decision
     for user_id in ["user_001", "user_002", "user_xyz", "user_99999"]:
         variant = await manager.get_variant(user_id, 5)
-        assert variant == "control", \
+        assert variant == "control", (
             f"User {user_id} must get 'control' for aborted experiment, got '{variant}'"
+        )

@@ -1,4 +1,5 @@
 """Database Service - Phase 3"""
+
 import typing
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 class DatabaseService:
     """Mockable Database service for testing"""
+
     def __init__(self, db: AsyncSession):
         self.db = db
 

@@ -1,4 +1,5 @@
 """Phase 3 i18n + Cost Model + ODD SQL + KPI + API Consistency tests"""
+
 import re
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock
@@ -13,6 +14,7 @@ from app.utils.i18n import TRANSLATIONS, I18nManager, i18n
 # i18n / Localization Tests (#37)
 # =============================================================================
 
+
 def test_expansion_roadmap_zh_cn_content_exists_and_non_empty():
     """zh-CN locale translations exist and are non-empty (not placeholders)"""
     # zh-CN must exist and not be empty/placeholder
@@ -23,7 +25,9 @@ def test_expansion_roadmap_zh_cn_content_exists_and_non_empty():
         assert key in zh_cn, f"zh-CN must contain key '{key}'"
         assert zh_cn[key], f"zh-CN['{key}'] must be non-empty"
         assert zh_cn[key] != key, f"zh-CN['{key}'] must not be default key name"
-        assert "TODO" not in zh_cn[key], f"zh-CN['{key}'] must not be a TODO placeholder"
+        assert "TODO" not in zh_cn[key], (
+            f"zh-CN['{key}'] must not be a TODO placeholder"
+        )
 
 
 def test_expansion_roadmap_ja_content_exists_and_non_empty():
@@ -99,7 +103,6 @@ def test_i18n_plural_forms_count():
     manager = I18nManager()
     # n=0 uses the only available form (no explicit plural form in current impl)
     plural_key = "n_messages"
-    n = 0
     # Current implementation returns key itself for missing keys
     result = manager.translate(plural_key)
     assert result == plural_key  # Falls back to key
@@ -109,7 +112,6 @@ def test_i18n_plural_forms_count_singular():
     """n=1 uses singular form"""
     manager = I18nManager()
     singular_key = "n_messages"
-    n = 1
     # Current implementation returns key itself for missing keys
     result = manager.translate(singular_key)
     assert result == singular_key
@@ -150,20 +152,21 @@ def test_i18n_currency_format_respects_locale():
 # Cost Model Tests (#38)
 # =============================================================================
 
+
 def test_cost_model_calculation_with_input_tokens():
-    """cost = (input_tokens / 1M) * price_per_1M_input"""
+    """cost = (input_tokens / 1M) * price_per_1m_input"""
     # Simulate cost model calculation
     input_tokens = 1_000_000
-    price_per_1M_input = 0.5  # $0.5 per 1M tokens
-    expected_cost = (input_tokens / 1_000_000) * price_per_1M_input
+    price_per_1m_input = 0.5  # $0.5 per 1M tokens
+    expected_cost = (input_tokens / 1_000_000) * price_per_1m_input
     assert expected_cost == 0.5
 
 
 def test_cost_model_calculation_with_output_tokens():
-    """cost = (output_tokens / 1M) * price_per_1M_output"""
+    """cost = (output_tokens / 1M) * price_per_1m_output"""
     output_tokens = 500_000
-    price_per_1M_output = 1.5  # $1.5 per 1M tokens
-    expected_cost = (output_tokens / 1_000_000) * price_per_1M_output
+    price_per_1m_output = 1.5  # $1.5 per 1M tokens
+    expected_cost = (output_tokens / 1_000_000) * price_per_1m_output
     assert expected_cost == 0.75
 
 
@@ -171,11 +174,11 @@ def test_cost_model_combined_input_and_output():
     """total = input_cost + output_cost"""
     input_tokens = 1_000_000
     output_tokens = 500_000
-    price_per_1M_input = 0.5
-    price_per_1M_output = 1.5
+    price_per_1m_input = 0.5
+    price_per_1m_output = 1.5
 
-    input_cost = (input_tokens / 1_000_000) * price_per_1M_input
-    output_cost = (output_tokens / 1_000_000) * price_per_1M_output
+    input_cost = (input_tokens / 1_000_000) * price_per_1m_input
+    output_cost = (output_tokens / 1_000_000) * price_per_1m_output
     total = input_cost + output_cost
 
     assert total == 1.25  # 0.5 + 0.75
@@ -210,10 +213,7 @@ def test_cost_model_logs_to_security_layer():
 
     # Verify SecurityLog model exists and has cost-related fields
     log = SecurityLog(
-        conversation_id=1,
-        layer="cost",
-        blocked=False,
-        platform="telegram"
+        conversation_id=1, layer="cost", blocked=False, platform="telegram"
     )
 
     assert log.conversation_id == 1
@@ -246,10 +246,7 @@ def test_cost_model_budget_alert_blocked_at_100_percent():
 
 def test_cost_model_currency_usd():
     """currency field is USD"""
-    cost_entry = {
-        "amount": 0.5,
-        "currency": "USD"
-    }
+    cost_entry = {"amount": 0.5, "currency": "USD"}
     assert cost_entry["currency"] == "USD"
 
 
@@ -263,6 +260,7 @@ def test_cost_model_empty_conversation_returns_zero():
 # =============================================================================
 # ODD SQL Query Coverage Tests (#39)
 # =============================================================================
+
 
 def test_odd_queries_count_returns_total():
     """count_query returns total number of odd records"""
@@ -313,6 +311,7 @@ def test_odd_queries_order_by_queued_at():
     """ordered by queued_at ASC"""
     # Verify the ordering field exists
     from app.models.database import EscalationQueue
+
     assert hasattr(EscalationQueue, "queued_at")
 
 
@@ -401,9 +400,7 @@ def test_odd_queries_invalid_params_returns_error():
     from app.models import ApiResponse
 
     error_response = ApiResponse(
-        success=False,
-        error="Invalid query parameters",
-        error_code="INVALID_PARAMS"
+        success=False, error="Invalid query parameters", error_code="INVALID_PARAMS"
     )
 
     assert error_response.success is False
@@ -413,6 +410,7 @@ def test_odd_queries_invalid_params_returns_error():
 # =============================================================================
 # Business KPI Dashboard Tests (#40)
 # =============================================================================
+
 
 def test_kpi_total_conversations():
     """total_conversations metric returns correct count"""
@@ -505,10 +503,7 @@ def test_kpi_filters_by_date_range():
         {"id": 3, "started_at": datetime(2024, 2, 5)},  # outside range
     ]
 
-    filtered = [
-        c for c in conversations
-        if date_from <= c["started_at"] <= date_to
-    ]
+    filtered = [c for c in conversations if date_from <= c["started_at"] <= date_to]
 
     assert len(filtered) == 2
     assert filtered[0]["id"] == 1
@@ -519,14 +514,12 @@ def test_kpi_filters_by_date_range():
 # Cross-Phase Consistency Tests (#41)
 # =============================================================================
 
+
 def test_phase1_phase2_phase3_api_contract_consistent():
     """Phase 1/2/3 API endpoints use consistent ApiResponse format"""
     # All endpoints should return ApiResponse format
     response = ApiResponse(
-        success=True,
-        data={"items": []},
-        error=None,
-        error_code=None
+        success=True, data={"items": []}, error=None, error_code=None
     )
 
     assert response.success is True
@@ -538,9 +531,7 @@ def test_phase1_phase2_phase3_api_contract_consistent():
 def test_phase1_phase2_phase3_error_response_consistent():
     """all phases return consistent error format {error, error_code, details}"""
     error_response = ApiResponse(
-        success=False,
-        error="Not found",
-        error_code="NOT_FOUND"
+        success=False, error="Not found", error_code="NOT_FOUND"
     )
 
     assert error_response.success is False
@@ -557,7 +548,7 @@ def test_phase1_phase2_phase3_pagination_consistent():
         total=100,
         page=1,
         limit=20,
-        has_next=True
+        has_next=True,
     )
 
     assert paginated.success is True
@@ -576,7 +567,9 @@ def test_phase1_phase2_phase3_auth_header_consistent():
     valid_bearer = "Bearer abc123token"
     valid_x_role = "X-User-Role: admin"
 
-    assert re.match(auth_header_pattern, valid_bearer) or re.match(auth_header_pattern, valid_x_role)
+    assert re.match(auth_header_pattern, valid_bearer) or re.match(
+        auth_header_pattern, valid_x_role
+    )
 
 
 def test_phase1_phase2_phase3_version_prefix_consistent():
@@ -596,6 +589,7 @@ def test_phase1_phase2_phase3_version_prefix_consistent():
 # =============================================================================
 # API Endpoints Tests (#42)
 # =============================================================================
+
 
 def test_api_conversations_conversation_id_type_is_uuid():
     """conversation_id is UUID format"""
@@ -646,6 +640,7 @@ def test_api_messages_filter_by_conversation():
 # =============================================================================
 # Mock DB Integration Tests (async)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_cost_model_with_mock_db():
@@ -729,21 +724,14 @@ async def test_api_contract_with_mock_request():
 
     # Error response
     error_resp = ApiResponse(
-        success=False,
-        error="Validation failed",
-        error_code="VALIDATION_ERROR"
+        success=False, error="Validation failed", error_code="VALIDATION_ERROR"
     )
     assert error_resp.success is False
     assert error_resp.error_code == "VALIDATION_ERROR"
 
     # Paginated response
     paginated = PaginatedResponse(
-        success=True,
-        data=[{"id": 1}],
-        total=50,
-        page=2,
-        limit=10,
-        has_next=True
+        success=True, data=[{"id": 1}], total=50, page=2, limit=10, has_next=True
     )
     assert paginated.total == 50
     assert paginated.has_next is True
@@ -753,8 +741,9 @@ async def test_api_contract_with_mock_request():
 # Cost Attribution per Knowledge Source (Section 21) — NEW RED test
 # =============================================================================
 
+
 def test_cost_attribution_per_knowledge_source():
-    """Each knowledge_source (rule / rag / llm / escalate) has a different cost_per_query:
+    """Each knowledge_source (rule/rag/llm/escalate) has a different cost_per_query:
     - rule: 0.001
     - rag: 0.005
     - llm: 0.02
@@ -773,20 +762,25 @@ def test_cost_attribution_per_knowledge_source():
     # Verify all 4 sources have distinct costs
     for source, expected_cost in cost_map.items():
         actual_cost = cost_map.get(source)
-        assert actual_cost == expected_cost, \
-            f"knowledge_source={source}: expected cost={expected_cost}, got {actual_cost}"
+        assert actual_cost == expected_cost, (
+            f"knowledge_source={source}: expected cost={expected_cost}, "
+            f"got {actual_cost}"
+        )
 
     # Verify no two sources share the same cost (distinctiveness)
     cost_values = list(cost_map.values())
-    assert len(cost_values) == len(set(cost_values)), \
+    assert len(cost_values) == len(set(cost_values)), (
         "All knowledge_source cost values must be unique"
+    )
 
     # Verify escalate is the most expensive (0.05)
     assert cost_map["escalate"] > cost_map["llm"] > cost_map["rag"] > cost_map["rule"]
 
     # Verify the CostModel logs cost with the source attribute
     import inspect
+
     log_cost_sig = inspect.signature(cost_model.log_cost)
     param_names = list(log_cost_sig.parameters.keys())
-    assert "source" in param_names, \
+    assert "source" in param_names, (
         "CostModel.log_cost() must accept a 'source' parameter for attribution"
+    )

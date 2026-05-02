@@ -1,4 +1,5 @@
 """Redis Streams Async Worker - Phase 3"""
+
 from typing import Any, List, Sequence
 
 import redis.asyncio as aioredis
@@ -16,7 +17,9 @@ class AsyncMessageProcessor:
         self.group = group
 
     @classmethod
-    async def create(cls, redis_url: str, group: str = "omnibot") -> "AsyncMessageProcessor":
+    async def create(
+        cls, redis_url: str, group: str = "omnibot"
+    ) -> "AsyncMessageProcessor":
         """Factory method to create processor and ensure consumer group exists"""
         redis_client = aioredis.from_url(redis_url)
         instance = cls(redis_client, group)
@@ -59,7 +62,7 @@ class AsyncMessageProcessor:
         consumer_name: str,
         count: int = 10,
         block_ms: int = 5000,
-        id_mode: str = ">"
+        id_mode: str = ">",
     ) -> List[Any]:
         """Consume messages from the group. id_mode='>' for new, id_mode='0' for PEL."""
         streams = await self.redis.xreadgroup(
@@ -100,7 +103,7 @@ class AsyncMessageProcessor:
         stream_name: str,
         consumer_name: str,
         min_idle_time_ms: int,
-        message_ids: Sequence[str]
+        message_ids: Sequence[str],
     ) -> List[Any]:
         """Claim stale messages from another consumer with ID deduplication"""
         # Deduplicate using dict.fromkeys for order preservation
@@ -110,7 +113,7 @@ class AsyncMessageProcessor:
             self.group,
             consumer_name,
             min_idle_time_ms,
-            unique_ids  # type: ignore[arg-type]
+            unique_ids,  # type: ignore[arg-type]
         )
 
     # Alias for backward compatibility

@@ -1,4 +1,5 @@
 """Rate limiter - Token Bucket with Redis support"""
+
 import logging
 import os
 import time
@@ -11,6 +12,7 @@ logger = logging.getLogger("omnibot.rate_limiter")
 @dataclass
 class TokenBucket:
     """Token bucket rate limiter (In-memory fallback)"""
+
     capacity: int
     refill_rate: float
     _tokens: float = 0.0
@@ -23,8 +25,7 @@ class TokenBucket:
     def consume(self, tokens: int = 1) -> bool:
         now = time.monotonic()
         elapsed = now - self._last_refill
-        self._tokens = min(self.capacity, self._tokens +
-                           elapsed * self.refill_rate)
+        self._tokens = min(self.capacity, self._tokens + elapsed * self.refill_rate)
         self._last_refill = now
         if self._tokens >= tokens:
             self._tokens -= tokens
@@ -35,7 +36,12 @@ class TokenBucket:
 class RateLimiter:
     """Per-platform per-user rate limiter with Redis backend and in-memory fallback"""
 
-    def __init__(self, redis_url: Optional[str] = None, default_rps: int = 10, burst_factor: float = 1.0):
+    def __init__(
+        self,
+        redis_url: Optional[str] = None,
+        default_rps: int = 10,
+        burst_factor: float = 1.0,
+    ):
         self._default_rps = default_rps
         self._burst_factor = burst_factor
         self._redis_url = redis_url or os.getenv("REDIS_URL")
@@ -48,7 +54,7 @@ class RateLimiter:
         local capacity = tonumber(ARGV[1])
         local refill_rate = tonumber(ARGV[2])
         local requested = tonumber(ARGV[3])
-        
+
         -- Get Redis server time
         local time = redis.call('TIME')
         local now = tonumber(time[1]) + tonumber(time[2]) / 1000000
@@ -74,9 +80,9 @@ class RateLimiter:
     async def _get_redis(self) -> Any:
         if self._redis is None and self._redis_url:
             import redis.asyncio as aioredis
+
             try:
-                self._redis = aioredis.from_url(
-                    self._redis_url, decode_responses=True)
+                self._redis = aioredis.from_url(self._redis_url, decode_responses=True)
                 if self._redis:
                     await self._redis.ping()
             except Exception as e:
@@ -96,19 +102,20 @@ class RateLimiter:
             try:
                 # result = 1 if allowed, 0 if blocked
                 result = await redis_conn.eval(
-                    self._lua_script, 1, key,
-                    capacity, float(self._default_rps), 1
+                    self._lua_script, 1, key, capacity, float(self._default_rps), 1
                 )
                 return bool(result)
             except Exception as e:
                 logger.warning(
-                    f"Redis rate limit check failed, falling back to in-memory: {e}")
+                    f"Redis rate limit check failed, falling back to in-memory: {e}"
+                )
 
         # Fallback to in-memory
         local_key = f"{platform}:{user_id}"
         if local_key not in self._local_buckets:
             self._local_buckets[local_key] = TokenBucket(
-                capacity, float(self._default_rps))
+                capacity, float(self._default_rps)
+            )
 
         self._local_buckets[local_key].capacity = capacity
         self._local_buckets[local_key].refill_rate = float(self._default_rps)

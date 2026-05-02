@@ -1,4 +1,5 @@
 """High-level KPI management and business intelligence service."""
+
 from datetime import datetime, timedelta
 from typing import Any, Dict, List
 
@@ -44,8 +45,7 @@ class KPIManager:
         """Returns percentage of queries satisfied by knowledge base (rule or rag)."""
         total_stmt = select(func.count(Message.id)).where(Message.role == "assistant")
         hit_stmt = select(func.count(Message.id)).where(
-            Message.role == "assistant",
-            Message.knowledge_source.in_(["rule", "rag"])
+            Message.role == "assistant", Message.knowledge_source.in_(["rule", "rag"])
         )
 
         total = await self.db.execute(total_stmt)
@@ -58,10 +58,12 @@ class KPIManager:
 
     async def get_sla_compliance_rate(self) -> float:
         """Returns percentage of escalations handled within SLA."""
-        total_stmt = select(func.count(EscalationQueue.id)).where(EscalationQueue.resolved_at.isnot(None))
+        total_stmt = select(func.count(EscalationQueue.id)).where(
+            EscalationQueue.resolved_at.isnot(None)
+        )
         compliant_stmt = select(func.count(EscalationQueue.id)).where(
             EscalationQueue.resolved_at.isnot(None),
-            EscalationQueue.resolved_at <= EscalationQueue.sla_deadline
+            EscalationQueue.resolved_at <= EscalationQueue.sla_deadline,
         )
 
         total = await self.db.execute(total_stmt)
@@ -73,19 +75,21 @@ class KPIManager:
         return (compliant.scalar() or 0) / total_val
 
     async def get_revenue_per_conversation(self) -> float:
-        """Calculates cost-adjusted value. Simplified: (Fixed Value - resolution_cost)."""
-        FIXED_VALUE = 1.0  # $1 per conversation
+        """Calculates cost-adjusted value.
+        Simplified: (Fixed Value - resolution_cost).
+        """
+        fixed_value = 1.0  # $1 per conversation
         stmt = select(func.avg(Conversation.resolution_cost))
         result = await self.db.execute(stmt)
-        avg_cost = result.scalar() or 0.0
-        return max(0.0, FIXED_VALUE - avg_cost)
+        avg_cost = float(result.scalar() or 0.0)
+        return max(0.0, fixed_value - avg_cost)
 
     async def get_daily_breakdown(self, days: int = 30) -> List[Dict[str, Any]]:
         """Returns a daily history of key metrics using a group by date."""
         cutoff = datetime.utcnow() - timedelta(days=days)
         # Using text for easier date grouping in Postgres
         stmt = text("""
-            SELECT 
+            SELECT
                 DATE(started_at) as date,
                 COUNT(id) as total,
                 AVG(response_time_ms) as avg_time,
@@ -97,6 +101,11 @@ class KPIManager:
         """)
         result = await self.db.execute(stmt, {"cutoff": cutoff})
         return [
-            {"date": str(row[0]), "total": row[1], "avg_time_ms": row[2], "avg_cost": row[3]}
+            {
+                "date": str(row[0]),
+                "total": row[1],
+                "avg_time_ms": row[2],
+                "avg_cost": row[3],
+            }
             for row in result.fetchall()
         ]

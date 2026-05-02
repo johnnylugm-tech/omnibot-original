@@ -1,4 +1,5 @@
 """Alert management and threshold monitoring."""
+
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, Optional
@@ -9,13 +10,17 @@ from app.utils.logger import StructuredLogger
 
 logger = StructuredLogger("alerts")
 
+
 class AlertCondition(Enum):
     GREATER_THAN = ">"
     LESS_THAN = "<"
     EQUAL = "=="
 
+
 class AlertRule:
-    def __init__(self, metric_name: str, condition: AlertCondition, threshold: float, label: str):
+    def __init__(
+        self, metric_name: str, condition: AlertCondition, threshold: float, label: str
+    ):
         self.metric_name = metric_name
         self.condition = condition
         self.threshold = threshold
@@ -30,17 +35,27 @@ class AlertRule:
             return value == self.threshold
         return False
 
+
 class AlertManager:
     """Monitors metrics and triggers alerts based on rules."""
 
     def __init__(self, webhook_url: Optional[str] = None):
         self.webhook_url = webhook_url
         self.rules = [
-            AlertRule("error_rate", AlertCondition.GREATER_THAN, 0.05, "high_error_rate"),
+            AlertRule(
+                "error_rate", AlertCondition.GREATER_THAN, 0.05, "high_error_rate"
+            ),
             AlertRule("sla_breach", AlertCondition.GREATER_THAN, 0, "sla_breach"),
-            AlertRule("grounding_rate", AlertCondition.LESS_THAN, 0.7, "low_grounding_rate"),
+            AlertRule(
+                "grounding_rate", AlertCondition.LESS_THAN, 0.7, "low_grounding_rate"
+            ),
             AlertRule("p95_latency", AlertCondition.GREATER_THAN, 1.0, "high_latency"),
-            AlertRule("escalation_queue", AlertCondition.GREATER_THAN, 50, "escalation_backlog")
+            AlertRule(
+                "escalation_queue",
+                AlertCondition.GREATER_THAN,
+                50,
+                "escalation_backlog",
+            ),
         ]
 
     async def check_error_rate(self, current_rate: float) -> bool:
@@ -63,7 +78,9 @@ class AlertManager:
         """Checks if grounding rate drops below 70%."""
         for rule in self.rules:
             if rule.metric_name == "grounding_rate" and rule.check(grounding_rate):
-                await self._trigger_alert(rule.label, {"grounding_rate": grounding_rate})
+                await self._trigger_alert(
+                    rule.label, {"grounding_rate": grounding_rate}
+                )
                 return True
         return False
 
@@ -79,7 +96,9 @@ class AlertManager:
         """Checks if escalation queue exceeds 50."""
         for rule in self.rules:
             if rule.metric_name == "escalation_queue" and rule.check(count):
-                await self._trigger_alert("escalation_queue_backlog", {"queue_depth": count})
+                await self._trigger_alert(
+                    "escalation_queue_backlog", {"queue_depth": count}
+                )
                 return True
         return False
 
@@ -92,13 +111,13 @@ class AlertManager:
     async def fire_webhook(self, alert_type: str, details: Dict[str, Any]) -> None:
         """Sends alert notification to external webhook."""
         try:
-            async with httpx.AsyncClient() as client:
-                payload = {
+            async with httpx.AsyncClient():
+                {
                     "alert": alert_type,
                     "timestamp": datetime.utcnow().isoformat(),
-                    "details": details
+                    "details": details,
                 }
                 # await client.post(self.webhook_url, json=payload, timeout=5)
-                pass # Webhook firing logic
+                pass  # Webhook firing logic
         except Exception as e:
             logger.error("alert_webhook_failed", error=str(e))

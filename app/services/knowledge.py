@@ -2,6 +2,7 @@
 Ultimate Hybrid Knowledge Layer (Phase 3)
 Integrates Rule-based, RAG (pgvector), and LLM with real Vector Grounding.
 """
+
 import asyncio
 import os
 from typing import Any, Optional
@@ -20,6 +21,7 @@ class HybridKnowledgeV7:
     Phase 3: Hybrid Knowledge Layer.
     Layer 1 (Rule) -> Layer 2 (RAG) -> Layer 3 (LLM) -> Layer 5 (Grounding Check).
     """
+
     EMBEDDING_MODEL = "paraphrase-multilingual-MiniLM-L12-v2"
     EMBEDDING_DIM = 384
 
@@ -29,7 +31,9 @@ class HybridKnowledgeV7:
         self.model = SentenceTransformer(self.EMBEDDING_MODEL)
         self.grounding_checker = GroundingChecker(threshold=0.75)
 
-    async def query(self, query_text: str, user_context: Optional[dict] = None) -> KnowledgeResult:
+    async def query(
+        self, query_text: str, user_context: Optional[dict] = None
+    ) -> KnowledgeResult:
         """Query knowledge with 5-layer verification pipeline."""
         # Layer 1: Rule matching (High confidence short-circuit)
         result = await self._rule_match(query_text)
@@ -47,9 +51,7 @@ class HybridKnowledgeV7:
         rag_results = await self._rag_search(query_text)
         combined_sources = rule_results + rag_results
 
-        rrf_results = self._reciprocal_rank_fusion(
-            [rule_results, rag_results], k=60
-        )
+        rrf_results = self._reciprocal_rank_fusion([rule_results, rag_results], k=60)
 
         if rrf_results and rrf_results[0].confidence > 0.8:
             return rrf_results[0]
@@ -65,16 +67,18 @@ class HybridKnowledgeV7:
                 # L5 Grounding: Verify LLM response against source knowledge
                 if combined_sources:
                     check_result = self.grounding_checker.check(
-                        llm_res.content,
-                        [s.content for s in combined_sources]
+                        llm_res.content, [s.content for s in combined_sources]
                     )
                     if check_result["grounded"]:
                         return llm_res
                     else:
                         # Log hallucination and fall back to escalation
-                        return self._escalate(query_text, reason=f"hallucination_detected_{check_result['score']:.2f}")
+                        return self._escalate(
+                            query_text,
+                            reason=f"hallucination_detected_{check_result['score']:.2f}",
+                        )
 
-                # If no sources to ground against, we trust LLM if confidence is high enough
+                # If no sources to ground against, we trust LLM if confidence is high enough  # noqa: E501
                 return llm_res
 
         # Layer 4: Human escalation (Default fallback)
@@ -104,7 +108,7 @@ class HybridKnowledgeV7:
             KnowledgeResult(
                 id=doc_id,
                 content=id_to_result[doc_id].content,
-                confidence=min(1.0, rrf_scores[doc_id] * k), # Scores differ by k
+                confidence=min(1.0, rrf_scores[doc_id] * k),  # Scores differ by k
                 source=id_to_result[doc_id].source,
                 knowledge_id=id_to_result[doc_id].knowledge_id,
             )
@@ -119,11 +123,11 @@ class HybridKnowledgeV7:
         stmt = (
             select(KnowledgeBase)
             .where(
-                KnowledgeBase.is_active == True,
+                KnowledgeBase.is_active,
                 or_(
                     KnowledgeBase.question.ilike(f"%{query_text}%"),
-                    KnowledgeBase.keywords.any(query_text)
-                )
+                    KnowledgeBase.keywords.any(query_text),
+                ),
             )
             .order_by(KnowledgeBase.version.desc())
             .limit(5)
@@ -134,7 +138,9 @@ class HybridKnowledgeV7:
             KnowledgeResult(
                 id=int(row.id),
                 content=str(row.answer),
-                confidence=0.95 if query_text.lower() in str(row.question).lower() else 0.7,
+                confidence=0.95
+                if query_text.lower() in str(row.question).lower()
+                else 0.7,
                 source="rule",
                 knowledge_id=int(row.id),
             )
@@ -152,8 +158,7 @@ class HybridKnowledgeV7:
             "LIMIT 5"
         )
         result = await self.db.execute(
-            stmt,
-            {"emb": str(embedding), "model": self.EMBEDDING_MODEL}
+            stmt, {"emb": str(embedding), "model": self.EMBEDDING_MODEL}
         )
         rows = result.fetchall()
         return [
@@ -167,7 +172,9 @@ class HybridKnowledgeV7:
             for row in rows
         ]
 
-    async def _llm_generate(self, query: str, context: Optional[dict] = None) -> Optional[KnowledgeResult]:
+    async def _llm_generate(
+        self, query: str, context: Optional[dict] = None
+    ) -> Optional[KnowledgeResult]:
         """State-aware LLM response generation with source grounding."""
         # Simulated LLM processing delay
         await asyncio.sleep(0.1)
@@ -176,7 +183,7 @@ class HybridKnowledgeV7:
             return None
 
         # Logic to simulate a high-quality LLM response using context and sources
-        state_str = context.get('state', 'IDLE') if context else 'IDLE'
+        state_str = context.get("state", "IDLE") if context else "IDLE"
 
         # If we have RAG sources, we "summarize" them
         # In a real app, this would be an API call to OpenAI/Anthropic/Gemini
@@ -184,16 +191,12 @@ class HybridKnowledgeV7:
 
         if sources:
             best_source = sources[0].content
-            content = f"根據目前的對話狀態 ({state_str}) 與知識庫資料，關於 '{query}'：\n\n{best_source[:200]}...\n\n這是一個由大型語言模型生成的整合性回答。"
+            content = f"根據目前的對話狀態 ({state_str}) 與知識庫資料，關於 '{query}'：\n\n{best_source[:200]}...\n\n這是一個由大型語言模型生成的整合性回答。"  # noqa: E501
         else:
-            content = f"關於您詢問的 '{query}'，雖然目前的知識庫中沒有直接匹配的規則，但根據我的理解：\n\n這是一個針對您問題的通用生成回答，目前的對話階段為 {state_str}。"
+            content = f"關於您詢問的 '{query}'，雖然目前的知識庫中沒有直接匹配的規則，但根據我的理解：\n\n這是一個針對您問題的通用生成回答，目前的對話階段為 {state_str}。"  # noqa: E501
 
         return KnowledgeResult(
-            id=0,
-            content=content,
-            confidence=0.85,
-            source="llm",
-            knowledge_id=0
+            id=0, content=content, confidence=0.85, source="llm", knowledge_id=0
         )
 
     def _escalate(self, query_text: str, reason: str) -> KnowledgeResult:

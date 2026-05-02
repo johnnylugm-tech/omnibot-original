@@ -22,27 +22,43 @@ def test_input_sanitizer():
     assert sanitizer.sanitize("hello\x00world") == "helloworld"
     assert sanitizer.sanitize("你好\u200b") == "你好"
 
+
 def test_pii_masking_phone():
     masking = PIIMasking()
-    assert masking.mask("我的電話是 0912345678").masked_text == "我的電話是 [phone_masked]"
+    assert (
+        masking.mask("我的電話是 0912345678").masked_text == "我的電話是 [phone_masked]"
+    )
+
 
 def test_pii_masking_email():
     masking = PIIMasking()
-    assert masking.mask("email: test@example.com").masked_text == "email: [email_masked]"
+    assert (
+        masking.mask("email: test@example.com").masked_text == "email: [email_masked]"
+    )
+
 
 def test_pii_masking_address():
     masking = PIIMasking()
-    assert masking.mask("住址：台北市信義路五段7號").masked_text == "住址：[address_masked]五段7號"
+    assert (
+        masking.mask("住址：台北市信義路五段7號").masked_text
+        == "住址：[address_masked]五段7號"
+    )
+
 
 def test_pii_should_escalate():
     masking = PIIMasking()
     assert masking.should_escalate("我要修改密碼") is True
     assert masking.should_escalate("你好") is False
 
+
 def test_pii_masking_credit_card():
     masking = PIIMasking()
     # Mock credit card like string
-    assert masking.mask("卡號 4111-1111-1111-1111").masked_text == "卡號 [credit_card_masked]"
+    assert (
+        masking.mask("卡號 4111-1111-1111-1111").masked_text
+        == "卡號 [credit_card_masked]"
+    )
+
 
 def test_line_verifier():
     secret = "channel_secret"
@@ -53,6 +69,7 @@ def test_line_verifier():
     assert verifier.verify(body, signature) is True
     assert verifier.verify(body, "wrong") is False
 
+
 def test_telegram_verifier():
     token = "bot_token"
     verifier = TelegramWebhookVerifier(token)
@@ -62,6 +79,7 @@ def test_telegram_verifier():
     assert verifier.verify(body, signature) is True
     assert verifier.verify(body, "wrong") is False
 
+
 def test_messenger_verifier():
     secret = "app_secret"
     verifier = MessengerWebhookVerifier(secret)
@@ -69,6 +87,7 @@ def test_messenger_verifier():
     signature = "sha1=" + hmac.new(secret.encode(), body, hashlib.sha1).hexdigest()
     assert verifier.verify(body, signature) is True
     assert verifier.verify(body, "wrong") is False
+
 
 def test_whatsapp_verifier():
     secret = "app_secret"
@@ -78,11 +97,13 @@ def test_whatsapp_verifier():
     assert verifier.verify(body, signature) is True
     assert verifier.verify(body, "wrong") is False
 
+
 def test_token_bucket_consume():
     bucket = TokenBucket(capacity=2, refill_rate=1)
     assert bucket.consume(1) is True
     assert bucket.consume(1) is True
     assert bucket.consume(1) is False
+
 
 @pytest.mark.asyncio
 async def test_rate_limiter_per_user():
@@ -91,6 +112,7 @@ async def test_rate_limiter_per_user():
     assert await limiter.check("line", "user1") is False
     assert await limiter.check("line", "user2") is True
     assert await limiter.check("line", "user2") is False
+
 
 def test_prompt_injection_defense():
     defense = PromptInjectionDefense()

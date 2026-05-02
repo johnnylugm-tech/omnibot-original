@@ -2,6 +2,7 @@
 RED Gaps Verification - Phase 2
 Focus: Redis PEL dedup and SLA Threshold correctness.
 """
+
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
@@ -25,14 +26,15 @@ async def test_redis_pending_entries_list_no_duplicate_message_ids():
         stream_name="test_stream",
         consumer_name="new_consumer",
         min_idle_time_ms=30000,
-        message_ids=message_ids
+        message_ids=message_ids,
     )
 
     # Verify xclaim was called with UNIQUE ids
     args, kwargs = mock_redis.xclaim.call_args
-    sent_ids = args[4] # 5th positional arg is message_ids
+    sent_ids = args[4]  # 5th positional arg is message_ids
     assert len(sent_ids) == 2, f"Expected 2 unique IDs, got {len(sent_ids)}"
     assert set(sent_ids) == {"msg-001", "msg-002"}
+
 
 @pytest.mark.asyncio
 async def test_sla_breach_detection_varies_by_priority():
@@ -49,16 +51,22 @@ async def test_sla_breach_detection_varies_by_priority():
     await manager.create(req, priority=0)
     added_0 = mock_db.add.call_args[0][0]
     expected_0 = datetime.utcnow() + timedelta(minutes=30)
-    assert abs((added_0.sla_deadline - expected_0).total_seconds()) < 5, "Priority 0 SLA should be 30 min"
+    assert abs((added_0.sla_deadline - expected_0).total_seconds()) < 5, (
+        "Priority 0 SLA should be 30 min"
+    )
 
     # Test priority 1 -> 15 min (High)
     await manager.create(req, priority=1)
     added_1 = mock_db.add.call_args[0][0]
     expected_1 = datetime.utcnow() + timedelta(minutes=15)
-    assert abs((added_1.sla_deadline - expected_1).total_seconds()) < 5, "Priority 1 SLA should be 15 min"
+    assert abs((added_1.sla_deadline - expected_1).total_seconds()) < 5, (
+        "Priority 1 SLA should be 15 min"
+    )
 
     # Test priority 2 -> 5 min (Urgent)
     await manager.create(req, priority=2)
     added_2 = mock_db.add.call_args[0][0]
     expected_2 = datetime.utcnow() + timedelta(minutes=5)
-    assert abs((added_2.sla_deadline - expected_2).total_seconds()) < 5, "Priority 2 SLA should be 5 min"
+    assert abs((added_2.sla_deadline - expected_2).total_seconds()) < 5, (
+        "Priority 2 SLA should be 5 min"
+    )

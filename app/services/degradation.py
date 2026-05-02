@@ -1,11 +1,10 @@
-from typing import Optional
-
 """
 Degradation Manager - Phase 3 Resilience
 Handles automatic service level switching based on performance and failure metrics.
 """
+
 from enum import IntEnum
-from typing import Dict
+from typing import Dict, Optional
 
 
 class DegradationLevel(IntEnum):
@@ -18,47 +17,77 @@ class DegradationLevel(IntEnum):
 
 class DegradationManager:
     """
-    Manager to monitor metrics and determine the current service level.
-    Follows Spec ID 36.
+    Manages service degradation levels based on error rates and latency.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, thresholds: Optional[Dict] = None):
+        self.thresholds = thresholds or {
+            "error_rate": 0.1,  # 10% error rate triggers degradation
+            "latency_ms": 2000,  # 2s latency triggers degradation
+            "consecutive_failures": 3,
+        }
         self.current_level = DegradationLevel.LEVEL_0
-        self.llm_failure_count = 0
-        self.db_latency_p95 = 0.0
-        self.llm_latency_p95 = 0.0
+        self.consecutive_failures = 0
 
-    def update_metrics(self, llm_latency: Optional[float] = None, llm_success: Optional[bool] = None, db_latency: Optional[float] = None) -> None:
-        """Update system metrics and recalculate degradation level"""
-        if llm_latency is not None:
-            self.llm_latency_p95 = llm_latency  # Simple tracking for TDD
-
-        if llm_success is False:
-            self.llm_failure_count += 1
-        elif llm_success is True:
-            self.llm_failure_count = 0  # Reset on success
-
-        if db_latency is not None:
-            self.db_latency_p95 = db_latency
-
-        # Determine level
-        if self.llm_failure_count > 3:
-            self.current_level = DegradationLevel.LEVEL_2
-        elif self.llm_latency_p95 > 3.0:
-            self.current_level = DegradationLevel.LEVEL_1
-        elif self.db_latency_p95 > 2.0:
-            self.current_level = DegradationLevel.LEVEL_3
+    def update_metrics(
+        self,
+        error_rate: float = 0.0,
+        latency_ms: float = 0,
+        llm_latency: float = 0,
+        llm_success: bool = True,
+        db_latency: float = 0.0,
+    ) -> DegradationLevel:
+        """Update system metrics and potentially change degradation level"""
+        if not llm_success:
+            self.consecutive_failures += 1
         else:
-            self.current_level = DegradationLevel.LEVEL_0
+            self.consecutive_failures = 0
+
+        # Degradation logic (Phase 3 spec)
+        if (
+            self.consecutive_failures >= self.thresholds["consecutive_failures"]
+            or error_rate > self.thresholds["error_rate"]
+        ):
+            if self.current_level < DegradationLevel.LEVEL_2:
+                self.current_level = DegradationLevel.LEVEL_2
+        elif db_latency > 2.0:
+            self.current_level = DegradationLevel.LEVEL_3
+        elif (
+            llm_latency > self.thresholds["latency_ms"] / 1000.0
+            and self.current_level == DegradationLevel.LEVEL_0
+        ):
+            self.current_level = DegradationLevel.LEVEL_1
+        else:
+            # Recovery logic (simplified)
+            if self.consecutive_failures == 0 and error_rate < 0.05:
+                self.current_level = DegradationLevel.LEVEL_0
+
+        return self.current_level
 
     def get_allowed_layers(self) -> Dict[str, bool]:
-        """Returns which layers are currently active"""
-        if self.current_level == DegradationLevel.LEVEL_0:
-            return {"rule": True, "rag": True, "llm": True, "cache_only": False}
+        """Returns which knowledge layers are allowed at current level"""
+        layers = {
+            "rule": True,
+            "rag": True,
+            "llm": True,
+            "cache_only": False,
+            "maintenance": False,
+        }
+
         if self.current_level == DegradationLevel.LEVEL_1:
-            return {"rule": True, "rag": True, "llm": False, "cache_only": False}
-        if self.current_level == DegradationLevel.LEVEL_2:
-            return {"rule": True, "rag": False, "llm": False, "cache_only": False}
-        if self.current_level == DegradationLevel.LEVEL_3:
-            return {"rule": False, "rag": False, "llm": False, "cache_only": True}
-        return {"maintenance": True, "rule": False, "rag": False, "llm": False, "cache_only": False}
+            layers["llm"] = False
+        elif self.current_level == DegradationLevel.LEVEL_2:
+            layers["rag"] = False
+            layers["llm"] = False
+        elif self.current_level == DegradationLevel.LEVEL_3:
+            layers["rule"] = False
+            layers["rag"] = False
+            layers["llm"] = False
+            layers["cache_only"] = True
+        elif self.current_level == DegradationLevel.LEVEL_4:
+            layers["rule"] = False
+            layers["rag"] = False
+            layers["llm"] = False
+            layers["maintenance"] = True
+
+        return layers

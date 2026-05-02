@@ -3,6 +3,7 @@ Atomic TDD Tests for Phase 1-3: ODD SQL Accuracy (#40)
 Focus: Numerical accuracy of 13 analysis SQLs using a Data Factory.
 All 11 gap tests for ODD SQL queries.
 """
+
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -18,6 +19,7 @@ def mock_db():
 # =============================================================================
 # ODD SQL Gap Tests (11 tests)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_odd_csat_query_calculates_avg_and_p95(mock_db):
@@ -47,9 +49,15 @@ async def test_odd_knowledge_hit_distribution_includes_percentage(mock_db):
     """Knowledge hit distribution query must include percentage column"""
     mock_result = MagicMock()
     mock_result.fetchall.return_value = [
-        MagicMock(_mapping={"knowledge_source": "rule", "count": 40, "percentage": 40.0}),
-        MagicMock(_mapping={"knowledge_source": "rag", "count": 35, "percentage": 35.0}),
-        MagicMock(_mapping={"knowledge_source": "llm", "count": 25, "percentage": 25.0}),
+        MagicMock(
+            _mapping={"knowledge_source": "rule", "count": 40, "percentage": 40.0}
+        ),
+        MagicMock(
+            _mapping={"knowledge_source": "rag", "count": 35, "percentage": 35.0}
+        ),
+        MagicMock(
+            _mapping={"knowledge_source": "llm", "count": 25, "percentage": 25.0}
+        ),
     ]
     mock_db.execute.return_value = mock_result
 
@@ -66,8 +74,9 @@ async def test_odd_knowledge_hit_distribution_includes_percentage(mock_db):
 
     args, _ = mock_db.execute.call_args
     query = str(args[0]).lower()
-    assert "percentage" in query or "round" in query, \
+    assert "percentage" in query or "round" in query, (
         "Query must calculate percentage from count/total"
+    )
 
 
 @pytest.mark.asyncio
@@ -75,8 +84,14 @@ async def test_odd_feedback_query_joins_messages(mock_db):
     """Feedback query must JOIN messages table"""
     mock_result = MagicMock()
     mock_result.fetchall.return_value = [
-        MagicMock(_mapping={"feedback": "good", "comment": "thanks",
-                           "message_content": "help response", "platform": "telegram"})
+        MagicMock(
+            _mapping={
+                "feedback": "good",
+                "comment": "thanks",
+                "message_content": "help response",
+                "platform": "telegram",
+            }
+        )
     ]
     mock_db.execute.return_value = mock_result
 
@@ -88,8 +103,9 @@ async def test_odd_feedback_query_joins_messages(mock_db):
 
     args, _ = mock_db.execute.call_args
     query = str(args[0]).lower()
-    assert "join" in query and "messages" in query, \
+    assert "join" in query and "messages" in query, (
         "Feedback query must JOIN messages table"
+    )
 
 
 @pytest.mark.asyncio
@@ -113,8 +129,9 @@ async def test_odd_sla_compliance_query_calculates_by_priority(mock_db):
 
     args, _ = mock_db.execute.call_args
     query = str(args[0]).lower()
-    assert "group by" in query and "priority" in query, \
+    assert "group by" in query and "priority" in query, (
         "SLA query must GROUP BY priority"
+    )
 
 
 @pytest.mark.asyncio
@@ -122,9 +139,13 @@ async def test_odd_emotion_stats_query_groups_by_date_and_category(mock_db):
     """Emotion stats query must GROUP BY date AND category"""
     mock_result = MagicMock()
     mock_result.fetchall.return_value = [
-        MagicMock(_mapping={"date": "2024-01-15", "category": "positive", "count": 120}),
+        MagicMock(
+            _mapping={"date": "2024-01-15", "category": "positive", "count": 120}
+        ),
         MagicMock(_mapping={"date": "2024-01-15", "category": "negative", "count": 30}),
-        MagicMock(_mapping={"date": "2024-01-14", "category": "positive", "count": 100}),
+        MagicMock(
+            _mapping={"date": "2024-01-14", "category": "positive", "count": 100}
+        ),
     ]
     mock_db.execute.return_value = mock_result
 
@@ -140,17 +161,14 @@ async def test_odd_emotion_stats_query_groups_by_date_and_category(mock_db):
     args, _ = mock_db.execute.call_args
     query = str(args[0]).lower()
     assert "group by" in query, "Emotion query must have GROUP BY"
-    assert "date" in query or "created_at" in query, \
-        "Emotion query must group by date"
+    assert "date" in query or "created_at" in query, "Emotion query must group by date"
 
 
 @pytest.mark.asyncio
 async def test_odd_security_block_rate_query_calculates_percentage(mock_db):
-    """Security block rate query calculates percentage: COUNT(risk IN ('high','critical')) / COUNT(*) * 100"""
+    """Security block rate query calculates percentage: COUNT(risk IN ('high','critical')) / COUNT(*) * 100"""  # noqa: E501
     mock_result = MagicMock()
-    mock_result.fetchall.return_value = [
-        MagicMock(_mapping={"block_rate": 12.34})
-    ]
+    mock_result.fetchall.return_value = [MagicMock(_mapping={"block_rate": 12.34})]
     mock_db.execute.return_value = mock_result
 
     manager = ODDQueryManager(mock_db)
@@ -160,10 +178,12 @@ async def test_odd_security_block_rate_query_calculates_percentage(mock_db):
 
     args, _ = mock_db.execute.call_args
     query = str(args[0]).lower()
-    assert "percent" in query or "* 100" in query or "100" in query, \
+    assert "percent" in query or "* 100" in query or "100" in query, (
         "Security block rate query must multiply by 100 for percentage"
-    assert "high" in query or "critical" in query, \
+    )
+    assert "high" in query or "critical" in query, (
         "Security block rate must check risk_level"
+    )
 
 
 @pytest.mark.asyncio
@@ -172,7 +192,7 @@ async def test_odd_latency_p95_query_grouped_by_platform(mock_db):
     mock_result = MagicMock()
     mock_result.fetchall.return_value = [
         MagicMock(_mapping={"platform": "telegram", "p95_latency": 150.0}),
-        MagicMock(_mapping={"platform": "line", "p95_latency": 200.0})
+        MagicMock(_mapping={"platform": "line", "p95_latency": 200.0}),
     ]
     mock_db.execute.return_value = mock_result
 
@@ -185,10 +205,10 @@ async def test_odd_latency_p95_query_grouped_by_platform(mock_db):
 
     args, _ = mock_db.execute.call_args
     query = str(args[0]).lower()
-    assert "percentile_cont(0.95)" in query, \
+    assert "percentile_cont(0.95)" in query, (
         "Query must use PERCENTILE_CONT(0.95) WITHIN GROUP"
-    assert "group by" in query and "platform" in query, \
-        "Query must GROUP BY platform"
+    )
+    assert "group by" in query and "platform" in query, "Query must GROUP BY platform"
 
 
 @pytest.mark.asyncio
@@ -210,19 +230,17 @@ async def test_odd_knowledge_hit_query_aggregates_by_source(mock_db):
 
     args, _ = mock_db.execute.call_args
     query = str(args[0]).lower()
-    assert "group by" in query and "knowledge_source" in query, \
+    assert "group by" in query and "knowledge_source" in query, (
         "Query must GROUP BY knowledge_source"
-    assert "count(*)" in query or "count(" in query, \
-        "Query must use COUNT aggregate"
+    )
+    assert "count(*)" in query or "count(" in query, "Query must use COUNT aggregate"
 
 
 @pytest.mark.asyncio
 async def test_odd_fcr_rate_query_rounds_to_2_decimals(mock_db):
     """FCR rate query uses ROUND(..., 2) for 2 decimal precision"""
     mock_result = MagicMock()
-    mock_result.fetchall.return_value = [
-        MagicMock(_mapping={"fcr_rate": 0.67})
-    ]
+    mock_result.fetchall.return_value = [MagicMock(_mapping={"fcr_rate": 0.67})]
     mock_db.execute.return_value = mock_result
 
     manager = ODDQueryManager(mock_db)
@@ -238,15 +256,33 @@ async def test_odd_fcr_rate_query_rounds_to_2_decimals(mock_db):
 
 @pytest.mark.asyncio
 async def test_odd_ab_experiment_results_query_shows_running_only(mock_db):
-    """A/B experiment query should show only running experiments (variant aggregation)"""
+    """A/B experiment query should show only running experiments (variant aggregation)"""  # noqa: E501
     mock_result = MagicMock()
     mock_result.fetchall.return_value = [
-        MagicMock(_mapping={"experiment_id": 1, "variant": "control",
-                           "avg_metric": 0.05, "total_samples": 500}),
-        MagicMock(_mapping={"experiment_id": 1, "variant": "test_v1",
-                           "avg_metric": 0.08, "total_samples": 500}),
-        MagicMock(_mapping={"experiment_id": 2, "variant": "control",
-                           "avg_metric": 0.03, "total_samples": 300}),
+        MagicMock(
+            _mapping={
+                "experiment_id": 1,
+                "variant": "control",
+                "avg_metric": 0.05,
+                "total_samples": 500,
+            }
+        ),
+        MagicMock(
+            _mapping={
+                "experiment_id": 1,
+                "variant": "test_v1",
+                "avg_metric": 0.08,
+                "total_samples": 500,
+            }
+        ),
+        MagicMock(
+            _mapping={
+                "experiment_id": 2,
+                "variant": "control",
+                "avg_metric": 0.03,
+                "total_samples": 300,
+            }
+        ),
     ]
     mock_db.execute.return_value = mock_result
 
@@ -262,8 +298,9 @@ async def test_odd_ab_experiment_results_query_shows_running_only(mock_db):
     args, _ = mock_db.execute.call_args
     query = str(args[0]).lower()
     assert "group by" in query, "A/B query must use GROUP BY"
-    assert "experiment_id" in query and "variant" in query, \
+    assert "experiment_id" in query and "variant" in query, (
         "A/B query must group by experiment_id and variant"
+    )
 
 
 @pytest.mark.asyncio
@@ -271,8 +308,16 @@ async def test_odd_cost_per_resolution_query_divides_total_cost_by_resolved(mock
     """Cost per resolution: SUM(resolution_cost) / COUNT(resolved conversations)"""
     mock_result = MagicMock()
     mock_result.fetchall.return_value = [
-        MagicMock(_mapping={"knowledge_source": "rule", "total_cost": 100.0, "resolutions": 50}),
-        MagicMock(_mapping={"knowledge_source": "rag", "total_cost": 45.5, "resolutions": 30}),
+        MagicMock(
+            _mapping={
+                "knowledge_source": "rule",
+                "total_cost": 100.0,
+                "resolutions": 50,
+            }
+        ),
+        MagicMock(
+            _mapping={"knowledge_source": "rag", "total_cost": 45.5, "resolutions": 30}
+        ),
     ]
     mock_db.execute.return_value = mock_result
 
@@ -285,17 +330,21 @@ async def test_odd_cost_per_resolution_query_divides_total_cost_by_resolved(mock
 
     args, _ = mock_db.execute.call_args
     query = str(args[0]).lower()
-    assert "join" in query or "conversations" in query, \
+    assert "join" in query or "conversations" in query, (
         "Cost query must JOIN conversations"
-    assert "group by" in query and "knowledge_source" in query, \
+    )
+    assert "group by" in query and "knowledge_source" in query, (
         "Cost query must GROUP BY knowledge_source"
-    assert "sum(" in query or "total_cost" in query, \
+    )
+    assert "sum(" in query or "total_cost" in query, (
         "Cost query must aggregate using SUM"
+    )
 
 
 # =============================================================================
 # Pre-existing tests (preserved)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_id_40_01_fcr_rate_calculation(mock_db):
@@ -320,7 +369,7 @@ async def test_id_40_02_latency_p95_grouped_by_platform(mock_db):
     mock_result = MagicMock()
     mock_result.fetchall.return_value = [
         MagicMock(_mapping={"platform": "telegram", "p95_latency": 150.0}),
-        MagicMock(_mapping={"platform": "line", "p95_latency": 200.0})
+        MagicMock(_mapping={"platform": "line", "p95_latency": 200.0}),
     ]
     mock_db.execute.return_value = mock_result
 
@@ -343,7 +392,7 @@ async def test_id_40_10_knowledge_source_cost(mock_db):
     mock_result.fetchall.return_value = [
         MagicMock(_mapping={"knowledge_source": "rule", "total_cost": 0.0}),
         MagicMock(_mapping={"knowledge_source": "rag", "total_cost": 15.5}),
-        MagicMock(_mapping={"knowledge_source": "llm", "total_cost": 42.0})
+        MagicMock(_mapping={"knowledge_source": "llm", "total_cost": 42.0}),
     ]
     mock_db.execute.return_value = mock_result
 
@@ -360,10 +409,22 @@ async def test_id_40_13_ab_test_performance(mock_db):
     """13. A/B test variant performance"""
     mock_result = MagicMock()
     mock_result.fetchall.return_value = [
-        MagicMock(_mapping={"experiment_id": 1, "variant": "control",
-                           "avg_metric": 0.05, "total_samples": 500}),
-        MagicMock(_mapping={"experiment_id": 1, "variant": "test_v1",
-                           "avg_metric": 0.08, "total_samples": 500})
+        MagicMock(
+            _mapping={
+                "experiment_id": 1,
+                "variant": "control",
+                "avg_metric": 0.05,
+                "total_samples": 500,
+            }
+        ),
+        MagicMock(
+            _mapping={
+                "experiment_id": 1,
+                "variant": "test_v1",
+                "avg_metric": 0.08,
+                "total_samples": 500,
+            }
+        ),
     ]
     mock_db.execute.return_value = mock_result
 
@@ -377,6 +438,7 @@ async def test_id_40_13_ab_test_performance(mock_db):
 # =============================================================================
 # Cost Estimation Tests (Batch A + Batch B - 7 tests)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_cost_estimation_layer1_zero():
@@ -396,17 +458,21 @@ async def test_cost_estimation_layer1_zero():
     layer = HybridKnowledgeV7(db=mock_db)
 
     # Layer 1 rule match uses no LLM tokens - cost is $0
-    result = await layer.query("exact match query")
+    await layer.query("exact match query")
 
     # Rule-based lookup uses SQL query only - no LLM cost
     # The cost model should reflect zero cost for Layer 1
     from app.utils.cost_model import CostModel
+
     cost_model = CostModel()
 
     # Layer 1 uses 0 tokens (rule matching only)
-    layer1_cost = cost_model.calculate_cost("gpt-4", prompt_tokens=0, completion_tokens=0)
-    assert layer1_cost == 0.0, \
+    layer1_cost = cost_model.calculate_cost(
+        "gpt-4", prompt_tokens=0, completion_tokens=0
+    )
+    assert layer1_cost == 0.0, (
         f"Layer 1 (rule-based) cost should be $0, got ${layer1_cost}"
+    )
 
 
 @pytest.mark.asyncio
@@ -420,12 +486,14 @@ async def test_cost_estimation_layer2_per_query():
     # Typical RAG query: ~100 prompt tokens (query embedding), ~50 completion tokens
     # gemini-pro pricing: $0.00025/1K prompt + $0.0005/1K completion
     # = 0.1 * 0.00025 + 0.05 * 0.0005 = $0.000025 + $0.000025 = $0.00005
-    layer2_cost = cost_model.calculate_cost("gemini-pro", prompt_tokens=100, completion_tokens=50)
+    layer2_cost = cost_model.calculate_cost(
+        "gemini-pro", prompt_tokens=100, completion_tokens=50
+    )
 
-    assert layer2_cost > 0, \
-        f"Layer 2 (RAG) cost should be > $0, got ${layer2_cost}"
-    assert layer2_cost < 0.001, \
+    assert layer2_cost > 0, f"Layer 2 (RAG) cost should be > $0, got ${layer2_cost}"
+    assert layer2_cost < 0.001, (
         f"Layer 2 (RAG) cost should be < $0.001 per query, got ${layer2_cost}"
+    )
 
 
 @pytest.mark.asyncio
@@ -438,13 +506,15 @@ async def test_cost_estimation_layer3_per_query():
     # Layer 3 LLM generation: typical ~500 prompt tokens + ~200 completion tokens
     # gpt-4 pricing: $0.03/1K prompt + $0.06/1K completion
     # = 0.5 * 0.03 + 0.2 * 0.06 = $0.015 + $0.012 = $0.027
-    layer3_cost = cost_model.calculate_cost("gpt-4", prompt_tokens=500, completion_tokens=200)
+    layer3_cost = cost_model.calculate_cost(
+        "gpt-4", prompt_tokens=500, completion_tokens=200
+    )
 
-    assert layer3_cost > 0, \
-        f"Layer 3 (LLM) cost should be > $0, got ${layer3_cost}"
+    assert layer3_cost > 0, f"Layer 3 (LLM) cost should be > $0, got ${layer3_cost}"
     # gpt-4 at 500+200 tokens should be more expensive than Layer 2
-    assert layer3_cost > 0.01, \
+    assert layer3_cost > 0.01, (
         f"Layer 3 (LLM) cost should be > $0.01 per query, got ${layer3_cost}"
+    )
 
 
 @pytest.mark.asyncio
@@ -469,18 +539,20 @@ async def test_monthly_cost_under_500_at_100k_conversations():
     layer3_cost_per = cost_model.calculate_cost("gpt-4", 500, 200)
 
     total_cost = (
-        layer1_conv * layer1_cost_per +
-        layer2_conv * layer2_cost_per +
-        layer3_conv * layer3_cost_per
+        layer1_conv * layer1_cost_per
+        + layer2_conv * layer2_cost_per
+        + layer3_conv * layer3_cost_per
     )
 
-    assert total_cost < 500, \
+    assert total_cost < 500, (
         f"100k conversations should cost < $500/month, got ${total_cost:.2f}"
+    )
 
 
 # =============================================================================
 # ODD SQL - Monthly Cost By Layer Query (Batch B)
 # =============================================================================
+
 
 @pytest.mark.asyncio
 async def test_odd_monthly_cost_query_estimates_by_layer():
@@ -503,13 +575,13 @@ async def test_odd_monthly_cost_query_estimates_by_layer():
     # Verify rule source has $0 cost
     rule_cost = next((c for c in costs if c["knowledge_source"] == "rule"), None)
     assert rule_cost is not None, "rule source should be in cost results"
-    assert rule_cost["total_cost"] == 0.0, \
+    assert rule_cost["total_cost"] == 0.0, (
         f"Rule-based Layer 1 should cost $0, got ${rule_cost['total_cost']}"
+    )
 
     args, _ = mock_db.execute.call_args
     query = str(args[0]).lower()
-    assert "knowledge_source" in query, \
-        "Cost query must group by knowledge_source"
+    assert "knowledge_source" in query, "Cost query must group by knowledge_source"
 
 
 @pytest.mark.asyncio
@@ -531,8 +603,9 @@ async def test_odd_pii_audit_query_sums_by_date():
     # Verify the query groups by date
     args, _ = mock_db.execute.call_args
     query = str(args[0]).lower()
-    assert "date" in query or "created_at" in query, \
+    assert "date" in query or "created_at" in query, (
         "PII audit query must include date grouping"
+    )
 
 
 @pytest.mark.asyncio
@@ -541,11 +614,9 @@ async def test_odd_rbac_audit_query_joins_users_and_roles():
     mock_db = AsyncMock()
     mock_result = MagicMock()
     mock_result.fetchall.return_value = [
-        MagicMock(_mapping={
-            "role": "agent",
-            "resource": "knowledge",
-            "denial_count": 5
-        }),
+        MagicMock(
+            _mapping={"role": "agent", "resource": "knowledge", "denial_count": 5}
+        ),
     ]
     mock_db.execute.return_value = mock_result
 
@@ -553,12 +624,14 @@ async def test_odd_rbac_audit_query_joins_users_and_roles():
     denials = await manager.get_rbac_denial_audit()
 
     assert len(denials) >= 1
-    assert "role" in denials[0], f"RBAC audit must include role, got {denials[0].keys()}"
-    assert "resource" in denials[0], f"RBAC audit must include resource, got {denials[0].keys()}"
+    assert "role" in denials[0], (
+        f"RBAC audit must include role, got {denials[0].keys()}"
+    )
+    assert "resource" in denials[0], (
+        f"RBAC audit must include resource, got {denials[0].keys()}"
+    )
 
     args, _ = mock_db.execute.call_args
     query = str(args[0]).lower()
-    assert "join" in query, \
-        "RBAC audit query must use JOIN to connect tables"
-    assert "audit_logs" in query, \
-        "RBAC audit query must reference audit_logs table"
+    assert "join" in query, "RBAC audit query must use JOIN to connect tables"
+    assert "audit_logs" in query, "RBAC audit query must reference audit_logs table"

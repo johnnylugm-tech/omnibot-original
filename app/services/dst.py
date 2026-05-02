@@ -1,4 +1,5 @@
 """Dialogue State Tracking (DST) - Phase 2"""
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -26,6 +27,7 @@ class DialogueSlot:
 @dataclass
 class DialogueState:
     """Represents the current state of a conversation (Phase 2)"""
+
     conversation_id: int
     current_state: ConversationState = ConversationState.IDLE
     primary_intent: Optional[str] = None
@@ -61,13 +63,20 @@ class DSTManager:
     def get_state(self, conversation_id: int) -> DialogueState:
         if conversation_id not in self._states:
             self._states[conversation_id] = DialogueState(
-                conversation_id=conversation_id)
+                conversation_id=conversation_id
+            )
         return self._states[conversation_id]
 
     def update_state(self, state: DialogueState) -> None:
         self._states[state.conversation_id] = state
 
-    def process_turn(self, conversation_id: Optional[int] = None, intent: Optional[str] = None, slots: Optional[Dict[str, str]] = None, conv_id: Optional[int] = None) -> DialogueState:
+    def process_turn(
+        self,
+        conversation_id: Optional[int] = None,
+        intent: Optional[str] = None,
+        slots: Optional[Dict[str, str]] = None,
+        conv_id: Optional[int] = None,
+    ) -> DialogueState:
         cid = conversation_id if conversation_id is not None else conv_id
         if cid is None:
             raise ValueError("conversation_id or conv_id must be provided")
@@ -97,14 +106,20 @@ class DSTManager:
                 state.slots[name].value = value
 
         # Check for missing slots
-        if state.current_state in [ConversationState.INTENT_DETECTED, ConversationState.SLOT_FILLING]:
+        if state.current_state in [
+            ConversationState.INTENT_DETECTED,
+            ConversationState.SLOT_FILLING,
+        ]:
             if not state.missing_slots():
                 state.current_state = ConversationState.PROCESSING
             else:
                 state.current_state = ConversationState.SLOT_FILLING
 
         # Escalation logic (more than 3 turns in slot filling)
-        if state.current_state == ConversationState.SLOT_FILLING and state.turn_count >= 3:
+        if (
+            state.current_state == ConversationState.SLOT_FILLING
+            and state.turn_count >= 3
+        ):
             state.current_state = ConversationState.ESCALATED
 
         state.turn_count += 1

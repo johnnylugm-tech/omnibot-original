@@ -13,6 +13,7 @@ Phase 3 Gate:   4 tests
 A/B Test Gate:  1 test
 Total:         13 tests
 """
+
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -22,6 +23,7 @@ from app.services.odd_queries import ODDQueryManager
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def mock_db():
@@ -37,6 +39,7 @@ def mock_db():
 # ---------------------------------------------------------------------------
 # Phase 1 Release Gate
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_gate_p1_fcr_at_least_50_percent(mock_db):
@@ -82,7 +85,7 @@ async def test_gate_p1_p95_latency_under_3s(mock_db):
     # Scenario: telegram=1800ms, line=2200ms — both below 3000ms threshold
     mock_result.fetchall.return_value = [
         MagicMock(_mapping={"platform": "telegram", "p95_latency": 1800.0}),
-        MagicMock(_mapping={"platform": "line",     "p95_latency": 2200.0}),
+        MagicMock(_mapping={"platform": "line", "p95_latency": 2200.0}),
     ]
     mock_db.execute.return_value = mock_result
 
@@ -194,6 +197,7 @@ async def test_gate_p1_all_3_odd_sql_executable(mock_db):
 # Phase 2 Release Gate
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_gate_p2_fcr_at_least_80_percent(mock_db):
     """
@@ -264,7 +268,7 @@ async def test_gate_p2_p95_latency_under_1(mock_db):
     mock_result = MagicMock()
     mock_result.fetchall.return_value = [
         MagicMock(_mapping={"platform": "telegram", "p95_latency": 1200.0}),
-        MagicMock(_mapping={"platform": "line",     "p95_latency": 1100.0}),
+        MagicMock(_mapping={"platform": "line", "p95_latency": 1100.0}),
     ]
     mock_db.execute.return_value = mock_result
 
@@ -295,9 +299,7 @@ async def test_gate_p2_security_block_rate_measurable(mock_db):
     Release cannot proceed if the security block rate query cannot execute.
     """
     mock_result = MagicMock()
-    mock_result.fetchall.return_value = [
-        MagicMock(_mapping={"block_rate": 0.05})
-    ]
+    mock_result.fetchall.return_value = [MagicMock(_mapping={"block_rate": 0.05})]
     mock_db.execute.return_value = mock_result
 
     manager = ODDQueryManager(mock_db)
@@ -317,6 +319,7 @@ async def test_gate_p2_security_block_rate_measurable(mock_db):
 # ---------------------------------------------------------------------------
 # Phase 3 Release Gate
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_gate_p3_fcr_at_least_90_percent(mock_db):
@@ -360,7 +363,7 @@ async def test_gate_p3_p95_latency_under_1s(mock_db):
     mock_result = MagicMock()
     mock_result.fetchall.return_value = [
         MagicMock(_mapping={"platform": "telegram", "p95_latency": 850.0}),
-        MagicMock(_mapping={"platform": "line",     "p95_latency": 920.0}),
+        MagicMock(_mapping={"platform": "line", "p95_latency": 920.0}),
     ]
     mock_db.execute.return_value = mock_result
 
@@ -442,6 +445,7 @@ async def test_gate_p3_all_4_rbac_roles_tested(mock_db):
 # A/B Test Gate
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_gate_p3_ab_autopromote_logic_verified(mock_db):
     """
@@ -482,18 +486,22 @@ async def test_gate_p3_ab_autopromote_logic_verified(mock_db):
     # Simulate a result where variant_a converts at 12% vs control at 6%
     mock_result_2 = MagicMock()
     mock_result_2.fetchall.return_value = [
-        MagicMock(_mapping={
-            "experiment_id": 1,
-            "variant": "control",
-            "avg_metric": 0.06,
-            "total_samples": 200,
-        }),
-        MagicMock(_mapping={
-            "experiment_id": 1,
-            "variant": "variant_a",
-            "avg_metric": 0.12,
-            "total_samples": 200,
-        }),
+        MagicMock(
+            _mapping={
+                "experiment_id": 1,
+                "variant": "control",
+                "avg_metric": 0.06,
+                "total_samples": 200,
+            }
+        ),
+        MagicMock(
+            _mapping={
+                "experiment_id": 1,
+                "variant": "variant_a",
+                "avg_metric": 0.12,
+                "total_samples": 200,
+            }
+        ),
     ]
     mock_db.execute.return_value = mock_result_2
 
@@ -501,18 +509,22 @@ async def test_gate_p3_ab_autopromote_logic_verified(mock_db):
     # Results are fetched via ODDQueryManager.get_ab_test_performance()
     mock_result_2 = MagicMock()
     mock_result_2.fetchall.return_value = [
-        MagicMock(_mapping={
-            "experiment_id": 1,
-            "variant": "control",
-            "avg_metric": 0.06,
-            "total_samples": 200,
-        }),
-        MagicMock(_mapping={
-            "experiment_id": 1,
-            "variant": "variant_a",
-            "avg_metric": 0.12,
-            "total_samples": 200,
-        }),
+        MagicMock(
+            _mapping={
+                "experiment_id": 1,
+                "variant": "control",
+                "avg_metric": 0.06,
+                "total_samples": 200,
+            }
+        ),
+        MagicMock(
+            _mapping={
+                "experiment_id": 1,
+                "variant": "variant_a",
+                "avg_metric": 0.12,
+                "total_samples": 200,
+            }
+        ),
     ]
     mock_db.execute.return_value = mock_result_2
 
@@ -520,7 +532,7 @@ async def test_gate_p3_ab_autopromote_logic_verified(mock_db):
     ab_results = await odd_manager.get_ab_test_performance()
     assert len(ab_results) == 2, "A/B gate: expected 2 variant results"
 
-    control   = next(r for r in ab_results if r["variant"] == "control")
+    control = next(r for r in ab_results if r["variant"] == "control")
     variant_a = next(r for r in ab_results if r["variant"] == "variant_a")
 
     # Validate sample-size minimum: each variant must have >= 100 samples
