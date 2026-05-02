@@ -276,18 +276,11 @@ async def process_webhook_message(
         cost_map = {"rule": 0.001, "rag": 0.005, "llm": 0.02, "escalate": 0.05}
         raw_cost = cost_map.get(knowledge_source, 0.0)
 
-        # Apply Daily Cap
-        today = datetime.utcnow().date()
-        daily_spend_stmt = (
-            select(func.sum(Conversation.resolution_cost))
-            .where(text("DATE(started_at) = :today"))
-            .params(today=today)
-        )
-        daily_spend_result = await db.execute(daily_spend_stmt)
-        current_daily_spend = float(daily_spend_result.scalar() or 0.0)
-
-        cost = cost_model.apply_daily_cap(
-            current_daily_spend, raw_cost, cap=DAILY_COST_CAP
+        # Apply Daily Cap via Redis (eliminates N+1 SQL query per message)
+        cost = await cost_model.apply_daily_cap(
+            next_cost=raw_cost,
+            cap=DAILY_COST_CAP,
+            redis_url=REDIS_URL,
         )
 
         if cost < raw_cost:
