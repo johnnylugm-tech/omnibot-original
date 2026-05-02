@@ -176,28 +176,38 @@ class HybridKnowledgeV7:
         self, query: str, context: Optional[dict] = None
     ) -> Optional[KnowledgeResult]:
         """State-aware LLM response generation with source grounding."""
-        # Simulated LLM processing delay
-        await asyncio.sleep(0.1)
+        from app.services.llm_provider import get_llm_provider
 
         if len(query) < 2:
             return None
 
-        # Logic to simulate a high-quality LLM response using context and sources
         state_str = context.get("state", "IDLE") if context else "IDLE"
-
-        # If we have RAG sources, we "summarize" them
-        # In a real app, this would be an API call to OpenAI/Anthropic/Gemini
         sources = await self._rag_search(query)
 
+        # Build prompt with RAG context
+        prompt_parts = [f"對話狀態: {state_str}"]
         if sources:
-            best_source = sources[0].content
-            content = f"根據目前的對話狀態 ({state_str}) 與知識庫資料，關於 '{query}'：\n\n{best_source[:200]}...\n\n這是一個由大型語言模型生成的整合性回答。"  # noqa: E501
-        else:
-            content = f"關於您詢問的 '{query}'，雖然目前的知識庫中沒有直接匹配的規則，但根據我的理解：\n\n這是一個針對您問題的通用生成回答，目前的對話階段為 {state_str}。"  # noqa: E501
+            prompt_parts.append("相關知識庫內容:")
+            for s in sources[:3]:
+                prompt_parts.append(f"- {s.content[:300]}")
 
-        return KnowledgeResult(
-            id=0, content=content, confidence=0.85, source="llm", knowledge_id=0
-        )
+        prompt_parts.append(f"\n使用者問題: {query}")
+        prompt = "\n".join(prompt_parts)
+
+        # Call real LLM provider
+        provider = get_llm_provider()
+        response = await provider.generate(prompt)
+
+        if response:
+            return KnowledgeResult(
+                id=0,
+                content=response,
+                confidence=0.9,
+                source="llm",
+                knowledge_id=0,
+            )
+        # Fallback: escalate if provider fails
+        return self._escalate(query, "LLM provider unavailable")
 
     def _escalate(self, query_text: str, reason: str) -> KnowledgeResult:
         """Escalates to human agent with reason."""
