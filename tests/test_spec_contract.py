@@ -1,27 +1,32 @@
 import pytest
-from unittest.mock import MagicMock, patch
-from app.services.odd_queries import ODDQueryManager
+import datetime
 
-@pytest.fixture
-def query_manager(mock_db):
-    return ODDQueryManager(mock_db)
-
-@pytest.mark.asyncio
 @pytest.mark.spec
-async def test_fcr_phase3_target_90_percent(query_manager):
-    """SPEC: FCR must be >= 90%"""
-    with patch.object(query_manager, 'execute_query', return_value=[{'fcr_rate': 0.95}]):
-        rate = await query_manager.get_fcr_rate()
-        assert rate >= 0.90
+def test_pii_masking_luhn_check_contract():
+    """SPEC: PIIMaskingV2 must perform Luhn check on credit cards and only mask valid ones."""
+    raise NotImplementedError("TDD: verify PIIMaskingV2 Luhn check behavior")
 
-@pytest.mark.asyncio
 @pytest.mark.spec
-async def test_availability_99_9_percent_monthly(query_manager):
-    """SPEC: System availability must be >= 99.9%"""
-    assert hasattr(query_manager, 'get_system_availability')
+def test_rate_limiter_token_bucket_contract():
+    """SPEC: RateLimiter must consume tokens and return False when capacity is exceeded."""
+    raise NotImplementedError("TDD: verify TokenBucket consume logic")
 
-@pytest.mark.asyncio
 @pytest.mark.spec
-async def test_p95_latency_under_1s(query_manager):
-    """SPEC: p95 response time < 1.0s"""
-    assert hasattr(query_manager, 'get_latency_p95_by_platform')
+def test_prompt_injection_defense_contract():
+    """SPEC: PromptInjectionDefense check_input must return is_safe=False for suspicious patterns."""
+    raise NotImplementedError("TDD: verify PromptInjectionDefense blocks 'ignore previous instructions'")
+
+@pytest.mark.spec
+def test_emotion_tracker_escalation_contract():
+    """SPEC: EmotionTracker should_escalate() must return True when consecutive negative emotions >= 3."""
+    raise NotImplementedError("TDD: verify EmotionTracker escalation threshold")
+
+@pytest.mark.spec
+def test_rbac_enforcement_contract():
+    """SPEC: RBACEnforcer must raise PermissionError if role lacks the required action on the resource."""
+    raise NotImplementedError("TDD: verify RBACEnforcer permission logic")
+
+@pytest.mark.spec
+def test_ip_whitelist_forbidden_contract():
+    """SPEC: IPWhitelist must reject non-whitelisted IPs with 403 Forbidden."""
+    raise NotImplementedError("TDD: verify IPWhitelist CIDR matching logic")

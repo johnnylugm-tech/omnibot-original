@@ -1,0 +1,7 @@
+{
+  "scaffold_date": "2026-05-02T10:05:00Z",
+  "spec_sources": ["SPEC/omnibot-phase-1.md", "SPEC/omnibot-phase-2.md", "SPEC/omnibot-phase-3.md"],
+  "contracts_found": 6,
+  "tests_written": 6,
+  "status": "RED"
+}
