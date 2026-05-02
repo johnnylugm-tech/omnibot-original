@@ -21,7 +21,8 @@ from app.models.database import (
     User,
     EmotionHistory,
     KnowledgeBase,
-    get_db
+    get_db,
+    AsyncSessionLocal
 )
 from app.security import (
     InputSanitizer,
@@ -86,7 +87,6 @@ async def automated_monitoring_loop():
             async with AsyncSessionLocal() as db:
                 kpi = KPIManager(db)
                 # 1. Check SLA breaches
-                breach_count = len(await kpi.db.execute(select(Conversation).where(Conversation.status == "escalated"))) # Simple proxy
                 # Wait, use real SLA logic from EscalationManager
                 from app.services.escalation import EscalationManager
                 esc_manager = EscalationManager(db)
