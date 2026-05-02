@@ -35,3 +35,4 @@ backups/
 .idea/
 *.swp
 *.swo
+.worktrees/
