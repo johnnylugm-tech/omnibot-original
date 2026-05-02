@@ -4,6 +4,7 @@ Integrates Rule-based, RAG (pgvector), and LLM with real Vector Grounding.
 """
 
 import asyncio
+import functools
 import os
 from typing import Any, Optional
 
@@ -14,6 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import KnowledgeResult
 from app.models.database import KnowledgeBase
 from app.services.grounding import GroundingChecker
+
+
+@functools.lru_cache(maxsize=1)
+def _get_embedding_model(model_name: str) -> SentenceTransformer:
+    """Module-level singleton: load SentenceTransformer once, reuse across requests."""
+    return SentenceTransformer(model_name)
 
 
 class HybridKnowledgeV7:
@@ -28,7 +35,8 @@ class HybridKnowledgeV7:
     def __init__(self, db: AsyncSession, llm_client: Any = None) -> None:
         self.db = db
         self.llm = llm_client
-        self.model = SentenceTransformer(self.EMBEDDING_MODEL)
+        # Use module-level singleton to avoid reloading 240MB model on every request
+        self.model = _get_embedding_model(self.EMBEDDING_MODEL)
         self.grounding_checker = GroundingChecker(threshold=0.75)
 
     async def query(
