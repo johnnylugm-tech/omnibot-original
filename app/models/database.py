@@ -174,8 +174,8 @@ class UserFeedback(Base):
     )
 
 
-class SecurityLog(Base):
-    """Security event logs"""
+class _DeprecatedSecurityLog(Base):
+    """Security event logs — DEPRECATED: no app service imports this model"""
 
     __tablename__ = "security_logs"
 
@@ -187,6 +187,10 @@ class SecurityLog(Base):
     source_ip = Column(String(45))
     platform = Column(String(20))
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# DEPRECATED: SecurityLog never instantiated by any app service
+SecurityLog = _DeprecatedSecurityLog
 
 
 class EmotionHistory(Base):
@@ -201,23 +205,25 @@ class EmotionHistory(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
 
 
-class EdgeCase(Base):
-    """Tracking for grounding failures and unusual inputs (Phase 2)"""
+class _DeprecatedEdgeCase(Base):
+    """Tracking for grounding failures and unusual inputs (Phase 2) — DEPRECATED"""
 
     __tablename__ = "edge_cases"
 
     id = Column(Integer, primary_key=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id"))
     message_id = Column(Integer, ForeignKey("messages.id"))
-    # grounding_fail | unusual_input
     case_type = Column(String(50), nullable=False)
     raw_content = Column(Text)
     llm_output = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
-class SchemaMigration(Base):
-    """Tracking schema versions (Phase 3)"""
+EdgeCase = _DeprecatedEdgeCase  # DEPRECATED: never imported by app services
+
+
+class _DeprecatedSchemaMigration(Base):
+    """Tracking schema versions (Phase 3) — DEPRECATED"""
 
     __tablename__ = "schema_migrations"
 
@@ -227,20 +233,26 @@ class SchemaMigration(Base):
     checksum = Column(String(64), nullable=False)
 
 
-class Role(Base):
-    """RBAC Role definitions"""
+SchemaMigration = _DeprecatedSchemaMigration  # DEPRECATED: never used by app
+
+
+class _DeprecatedRole(Base):
+    """RBAC Role definitions — DEPRECATED"""
 
     __tablename__ = "roles"
 
     id = Column(Integer, primary_key=True)
     name = Column(String(50), unique=True, nullable=False)
     description = Column(Text)
-    permissions = Column(JSONB, nullable=False)  # Map of resource -> actions
+    permissions = Column(JSONB, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
-class RoleAssignment(Base):
-    """User-to-Role assignments"""
+Role = _DeprecatedRole  # DEPRECATED: rbac.py uses inline dicts, not this model
+
+
+class _DeprecatedRoleAssignment(Base):
+    """User-to-Role assignments — DEPRECATED"""
 
     __tablename__ = "role_assignments"
 
@@ -253,8 +265,11 @@ class RoleAssignment(Base):
     __table_args__ = (UniqueConstraint("user_id", "role_id", name="uq_user_role"),)
 
 
-class PIIAuditLog(Base):
-    """Audit logs for PII masking actions"""
+RoleAssignment = _DeprecatedRoleAssignment  # DEPRECATED
+
+
+class _DeprecatedPIIAuditLog(Base):
+    """Audit logs for PII masking actions — DEPRECATED"""
 
     __tablename__ = "pii_audit_log"
 
@@ -271,6 +286,9 @@ class PIIAuditLog(Base):
             action.in_(["mask", "unmask", "restore"]), name="ck_pii_action"
         ),
     )
+
+
+PIIAuditLog = _DeprecatedPIIAuditLog  # DEPRECATED: never used by app services
 
 
 class Experiment(Base):
@@ -303,8 +321,8 @@ class ExperimentResult(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
-class RetryLog(Base):
-    """Log of retried operations"""
+class _DeprecatedRetryLog(Base):
+    """Log of retried operations — DEPRECATED"""
 
     __tablename__ = "retry_log"
 
@@ -315,6 +333,9 @@ class RetryLog(Base):
     error_message = Column(Text)
     status = Column(String(20), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+RetryLog = _DeprecatedRetryLog  # DEPRECATED: never used by app services
 
 
 # SQL Schema (for direct execution without ORM)
