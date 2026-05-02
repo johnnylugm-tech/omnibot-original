@@ -91,6 +91,7 @@ class DSTManager:
             state.current_state = ConversationState.INTENT_DETECTED
 
         # Update slots
+        slots = slots or {}
         for name, value in slots.items():
             if name in state.slots:
                 state.slots[name].value = value

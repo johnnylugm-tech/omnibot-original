@@ -703,7 +703,7 @@ async def update_knowledge(
         if hasattr(k, key):
             setattr(k, key, value)
             
-    k.version += 1
+    k.version = int(k.version) + 1  # type: ignore
     await db.commit()
     return {"success": True, "data": {"id": id}}
 
@@ -722,7 +722,7 @@ async def delete_knowledge(
     if not k:
         raise HTTPException(status_code=404, detail="Knowledge entry not found")
         
-    k.is_active = False
+    k.is_active = False  # type: ignore
     await db.commit()
     return {"success": True, "data": {"deleted": True}}
 

@@ -12,7 +12,7 @@ Security properties:
 import ipaddress
 import logging
 import os
-from typing import List, Optional
+from typing import List, Optional, Union
 
 logger = logging.getLogger("omnibot.ip_whitelist")
 
@@ -48,7 +48,7 @@ class IPWhitelist:
                       If None, reads from IP_WHITELIST_ENABLED environment variable,
                       which defaults to False (bypass when not configured).
         """
-        self._networks: List[ipaddress.IPv4Network | ipaddress.IPv6Network] = []
+        self._networks: List[Union[ipaddress.IPv4Network, ipaddress.IPv6Network]] = []
         self._whitelist_cidrs: List[str] = []
 
         # Determine enforcement mode
@@ -96,7 +96,7 @@ class IPWhitelist:
             network = ipaddress.ip_network(cidr, strict=False)
             self._networks.append(network)
             self._whitelist_cidrs.append(cidr)
-            logger.info(f"ip_whitelist_added", cidr=cidr, total=len(self._networks))
+            logger.info(f"ip_whitelist_added: cidr={cidr}, total={len(self._networks)}")
         except ValueError as e:
             raise IPWhitelistError(f"Invalid CIDR notation '{cidr}': {e}")
 

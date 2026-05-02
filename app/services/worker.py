@@ -109,7 +109,7 @@ class AsyncMessageProcessor:
             self.group,
             consumer_name,
             min_idle_time_ms,
-            unique_ids
+            unique_ids  # type: ignore[arg-type]
         )
 
     # Alias for backward compatibility
