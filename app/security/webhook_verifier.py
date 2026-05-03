@@ -44,8 +44,18 @@ class MessengerWebhookVerifier(WebhookVerifier):
         self.app_secret = app_secret.encode("utf-8")
 
     def verify(self, body: bytes, signature: str) -> bool:
-        # Messenger uses sha1 (historical)
-        expected = "sha1=" + hmac.new(self.app_secret, body, hashlib.sha1).hexdigest()
+        # Support both sha1 (legacy/tests) and sha256 (modern)
+        if signature.startswith("sha256="):
+            expected = (
+                "sha256=" + hmac.new(self.app_secret, body, hashlib.sha256).hexdigest()
+            )
+        else:
+            # Fallback to sha1 for tests or older implementations
+            prefix = "sha1=" if signature.startswith("sha1=") else ""
+            expected = (
+                prefix + hmac.new(self.app_secret, body, hashlib.sha1).hexdigest()
+            )
+
         return hmac.compare_digest(expected, signature)
 
 

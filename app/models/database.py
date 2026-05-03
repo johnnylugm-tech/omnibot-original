@@ -50,7 +50,7 @@ class User(Base):
         nullable=False,
         default=lambda: __import__("uuid").uuid4(),
     )
-    platform = Column(String(20), nullable=False)
+    platform = Column(String(20), nullable=True)
     platform_user_id = Column(String(100), nullable=False)
     profile = Column(JSONB)
     preference_tags: Any = Column(ARRAY(Text))
@@ -69,7 +69,7 @@ class Conversation(Base):
 
     id = Column(Integer, primary_key=True)
     unified_user_id = Column(UUID(as_uuid=True), ForeignKey("users.unified_user_id"))
-    platform = Column(String(20), nullable=False)
+    platform = Column(String(20), nullable=True)
     started_at = Column(DateTime, default=datetime.utcnow)
     ended_at = Column(DateTime)
     status = Column(String(20), default="active")

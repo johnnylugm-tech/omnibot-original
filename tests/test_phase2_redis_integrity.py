@@ -50,9 +50,9 @@ def test_alembic_migration_001_upgrade_creates_phase1_tables():
     upgrade_body = inspect.getsource(mod.upgrade)
 
     # Normalize body for easier checking
-    upgrade_body_normalized = upgrade_body.replace(
-        " ", ""
-    ).replace("\n", "").replace("'", "\"")
+    upgrade_body_normalized = (
+        upgrade_body.replace(" ", "").replace("\n", "").replace("'", '"')
+    )
 
     for table in phase1_tables:
         assert f'create_table("{table}"' in upgrade_body_normalized, (
@@ -106,7 +106,7 @@ def test_alembic_migration_001_downgrade_reverses():
     import inspect
 
     downgrade_body = inspect.getsource(mod.downgrade)
-    downgrade_body_normalized = downgrade_body.replace(" ", "").replace("'", "\"")
+    downgrade_body_normalized = downgrade_body.replace(" ", "").replace("'", '"')
 
     for table in tables_to_drop:
         assert f'drop_table("{table}"' in downgrade_body_normalized, (

@@ -18,7 +18,7 @@ async def test_id_36_05_webhook_falls_back_to_rag_on_high_llm_latency():
     """GREEN: If LLM latency > 3s, webhook should skip Layer 3 (LLM) and use Layer 2 (RAG)"""  # noqa: E501
     from app.services.knowledge import KnowledgeResult
 
-    with patch("app.api.HybridKnowledgeV7") as MockKnowledge:  # noqa: N806
+    with patch("app.api.routes.webhooks.HybridKnowledgeV7") as MockKnowledge:  # noqa: N806
         mock_instance = MockKnowledge.return_value
         # Mock result for the query, ensure it is awaitable
         mock_instance.query = AsyncMock(

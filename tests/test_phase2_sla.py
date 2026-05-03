@@ -262,7 +262,7 @@ def test_error_llm_timeout_504(client_with_mock_db, mock_db_for_error_tests):
     endpoint must return HTTP 504 with detail "LLM_TIMEOUT".
     """
     with patch(
-        "app.api.process_webhook_message", new_callable=AsyncMock
+        "app.api.routes.webhooks.process_webhook_message", new_callable=AsyncMock
     ) as mock_process:
         mock_process.side_effect = TimeoutError("LLM request timed out")
 

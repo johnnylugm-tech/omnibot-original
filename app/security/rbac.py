@@ -50,22 +50,16 @@ class RBACEnforcer:
     """RBAC logic and FastAPI middleware/dependency helpers"""
 
     # In production, use environment variable
-    SECRET_KEY = os.getenv(
-        "OMNIBOT_SECRET_KEY", "prod_fallback_needs_env_var_override"
-    )
+    SECRET_KEY = os.getenv("OMNIBOT_SECRET_KEY", "prod_fallback_needs_env_var_override")
 
-    def __init__(
-        self, permissions: Dict[str, Dict[str, List[str]]] = ROLE_PERMISSIONS
-    ):
+    def __init__(self, permissions: Dict[str, Dict[str, List[str]]] = ROLE_PERMISSIONS):
         self._permissions = permissions
 
     def create_token(self, role: str) -> str:
         """Helper for tests and trusted systems to create a signed token"""
         payload = {"role": role}
         payload_json = json.dumps(payload).encode()
-        payload_b64 = (
-            base64.urlsafe_b64encode(payload_json).decode().rstrip("=")
-        )
+        payload_b64 = base64.urlsafe_b64encode(payload_json).decode().rstrip("=")
 
         signature = hmac.new(
             self.SECRET_KEY.encode(), payload_b64.encode(), hashlib.sha256
@@ -94,18 +88,13 @@ class RBACEnforcer:
 
             # Decode payload
             padding = "=" * (4 - len(payload_b64) % 4)
-            payload_json = base64.urlsafe_b64decode(
-                payload_b64 + padding
-            ).decode()
+            payload_json = base64.urlsafe_b64decode(payload_b64 + padding).decode()
             return json.loads(payload_json)
 
         except Exception:
             raise HTTPException(
                 status_code=401,
-                detail=(
-                    "Could not validate credentials: "
-                    "Invalid or expired token"
-                ),
+                detail=("Could not validate credentials: Invalid or expired token"),
             )
 
     def check(self, role: str, resource: str, action: str) -> bool:

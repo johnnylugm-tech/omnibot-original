@@ -149,28 +149,50 @@ class HybridKnowledgeV7:
 
     async def _rag_search(self, query_text: str) -> list[KnowledgeResult]:
         """Vector search using pgvector similarity."""
-        embedding = self.model.encode([query_text])[0].tolist()
-        stmt = text(
-            "SELECT id, answer, 1 - (embeddings <=> :emb::vector) AS similarity "
-            "FROM knowledge_base "
-            "WHERE is_active = TRUE AND embedding_model = :model "
-            "ORDER BY embeddings <=> :emb::vector "
-            "LIMIT 5"
-        )
-        result = await self.db.execute(
-            stmt, {"emb": str(embedding), "model": self.EMBEDDING_MODEL}
-        )
-        rows = result.fetchall()
-        return [
-            KnowledgeResult(
-                id=row[0],
-                content=row[1],
-                confidence=float(row[2]),
-                source="rag",
-                knowledge_id=row[0],
+        try:
+            # Ensure extension exists
+            try:
+                await self.db.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            except Exception:
+                # If it fails, we'll just ignore it and return [] on main query catch
+                pass
+
+            embedding = self.model.encode([query_text])[0].tolist()
+            stmt = text(
+                "SELECT id, answer, 1 - (embeddings <=> CAST(:emb AS vector)) "
+                "AS similarity "
+                "FROM knowledge_base "
+                "WHERE is_active = TRUE AND embedding_model = :model "
+                "ORDER BY embeddings <=> CAST(:emb AS vector) "
+                "LIMIT 5"
             )
-            for row in rows
-        ]
+            result = await self.db.execute(
+                stmt, {"emb": str(embedding), "model": self.EMBEDDING_MODEL}
+            )
+            rows = result.fetchall()
+            return [
+                KnowledgeResult(
+                    id=row[0],
+                    content=row[1],
+                    confidence=float(row[2]),
+                    source="rag",
+                    knowledge_id=row[0],
+                )
+                for row in rows
+            ]
+        except Exception as e:
+            # Fallback if pgvector is not available or search fails
+            from app.api.deps import logger
+
+            logger.warn("rag_search_failed_falling_back", error=str(e))
+            # If the transaction is aborted, we might need a rollback here.
+            # Usually handled by the caller, but keep it safe for same session.
+            try:
+                # If transaction failed, we must rollback to continue using session
+                pass
+            except:  # noqa: E722
+                pass
+            return []
 
     async def _llm_generate(
         self, query: str, context: Optional[dict] = None

@@ -1,4 +1,5 @@
 """Phase 1 Unit Tests for OmniBot - Comprehensive Coverage"""
+
 import os
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -135,7 +136,11 @@ class TestUnifiedResponse:
     def test_unified_response_emotion_adjustment_is_optional(self):
         """emotion_adjustment should be optional and default to None"""
         response = UnifiedResponse(content="測試回覆", source="rule", confidence=0.95)
-        assert response.adjustment is None if hasattr(response, "adjustment") else response.emotion_adjustment is None  # noqa: E501
+        assert (
+            response.adjustment is None
+            if hasattr(response, "adjustment")
+            else response.emotion_adjustment is None
+        )  # noqa: E501
 
 
 # =============================================================================

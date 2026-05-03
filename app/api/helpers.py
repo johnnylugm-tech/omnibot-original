@@ -1,5 +1,7 @@
 """API Helper utilities for webhook processing and user management."""
 
+from typing import Any
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,14 +24,17 @@ async def get_or_create_user(
     return user
 
 
-async def get_active_conversation(db: AsyncSession, user_id: int) -> Conversation:
+async def get_active_conversation(
+    db: AsyncSession, unified_user_id: Any, platform: str
+) -> Conversation:
     stmt = select(Conversation).where(
-        Conversation.user_id == user_id, Conversation.status != "resolved"
+        Conversation.unified_user_id == unified_user_id,
+        Conversation.status != "resolved",
     )
     result = await db.execute(stmt)
     conv = result.scalar_one_or_none()
     if not conv:
-        conv = Conversation(user_id=user_id)
+        conv = Conversation(unified_user_id=unified_user_id, platform=platform)
         db.add(conv)
         await db.flush()
     return conv

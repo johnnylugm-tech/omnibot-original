@@ -504,7 +504,9 @@ def test_webhook_telegram_valid_signature_returns_200():
     body_bytes = b'{"message":{"from":{"id":123},"text":"test"}}'
 
     with (
-        patch("app.api.process_webhook_message", new_callable=AsyncMock) as mock_proc,
+        patch(
+            "app.api.routes.webhooks.process_webhook_message", new_callable=AsyncMock
+        ) as mock_proc,
         patch("app.api.TELEGRAM_BOT_TOKEN", token),
     ):
         mock_proc.return_value = ("ok", "rule")
@@ -536,7 +538,7 @@ def test_webhook_telegram_invalid_signature_returns_401():
 
     try:
         with patch(
-            "app.api.process_webhook_message", new_callable=AsyncMock
+            "app.api.routes.webhooks.process_webhook_message", new_callable=AsyncMock
         ) as mock_proc:
             mock_proc.return_value = ("ok", "rule")
             response = client.post(
@@ -640,7 +642,7 @@ def test_webhook_line_valid_signature_returns_200():
         correct_sig = base64.b64encode(digest).decode()
 
         with patch(
-            "app.api.process_webhook_message", new_callable=AsyncMock
+            "app.api.routes.webhooks.process_webhook_message", new_callable=AsyncMock
         ) as mock_proc:
             mock_proc.return_value = ("ok", "rule")
             response = client.post(
@@ -669,7 +671,9 @@ def test_webhook_line_invalid_signature_returns_401():
     client = TestClient(app, raise_server_exceptions=False)
 
     with (
-        patch("app.api.process_webhook_message", new_callable=AsyncMock) as mock_proc,
+        patch(
+            "app.api.routes.webhooks.process_webhook_message", new_callable=AsyncMock
+        ) as mock_proc,
         patch("app.api.LINE_CHANNEL_SECRET", "line_channel_secret"),
     ):
         mock_proc.return_value = ("ok", "rule")
@@ -804,7 +808,7 @@ def test_webhook_401_on_invalid_signature():
 
     try:
         with patch(
-            "app.api.process_webhook_message", new_callable=AsyncMock
+            "app.api.routes.webhooks.process_webhook_message", new_callable=AsyncMock
         ) as mock_proc:
             mock_proc.return_value = ("ok", "rule")
             response = client.post(

@@ -101,7 +101,7 @@ def test_rate_limit_429(client):
         assert "請求頻率過高" in response.json()["detail"]
 
 
-@patch("app.api.process_webhook_message", new_callable=AsyncMock)
+@patch("app.api.routes.webhooks.process_webhook_message", new_callable=AsyncMock)
 @patch("app.api.get_or_create_user", new_callable=AsyncMock)
 @patch("app.api.get_active_conversation", new_callable=AsyncMock)
 def test_telegram_webhook_normal(mock_get_conv, mock_get_user, mock_process, client):
@@ -115,7 +115,7 @@ def test_telegram_webhook_normal(mock_get_conv, mock_get_user, mock_process, cli
 
 def test_llm_timeout_504(client):
     with patch(
-        "app.api.process_webhook_message", new_callable=AsyncMock
+        "app.api.routes.webhooks.process_webhook_message", new_callable=AsyncMock
     ) as mock_process:
         mock_process.side_effect = TimeoutError("LLM request timed out")
 
